@@ -6,7 +6,7 @@ const connectionConfig: sql.config = {
   server: 'SERVER-TRIAL\\NAPINDOSQL',
   database: 'NAPINDO',
   options: {
-    encrypt: true,
+    encrypt: false,
     trustServerCertificate: true,
   },
 }

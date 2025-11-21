@@ -64917,7 +64917,7 @@ async function loginUser(payload) {
   let whereClause = "WHERE USERNAME = @username AND PASSWORD = @password";
   if (division) {
     request2.input("division", sql.VarChar(128), division);
-    whereClause += " AND DIVISI = @division";
+    whereClause += " AND DIVISION = @division";
   }
   const query = `SELECT TOP (1) * FROM dbo.PENGGUNA ${whereClause}`;
   const result = await request2.query(query);
@@ -64926,7 +64926,7 @@ async function loginUser(payload) {
     return null;
   }
   const resolvedUsername = user.USERNAME ?? user.username ?? username;
-  const resolvedDivision = user.DIVISI ?? user.divisi ?? (division ?? null);
+  const resolvedDivision = user.DIVISION ?? user.division ?? (division ?? null);
   const resolvedName = user.NAMA ?? user.nama ?? null;
   return {
     username: resolvedUsername,
@@ -64938,6 +64938,22 @@ async function closePool() {
   if (!pool) return;
   await pool.close();
   pool = null;
+}
+async function fetchUserHints() {
+  const currentPool = await ensurePool();
+  const result = await currentPool.request().query("SELECT DISTINCT USERNAME, DIVISION FROM dbo.PENGGUNA ORDER BY USERNAME ASC");
+  const usernames = /* @__PURE__ */ new Set();
+  const divisions = /* @__PURE__ */ new Set();
+  for (const row of result.recordset ?? []) {
+    const username = row.USERNAME ?? row.username;
+    const division = row.DIVISION ?? row.division;
+    if (username) usernames.add(String(username));
+    if (division) divisions.add(String(division));
+  }
+  return {
+    usernames: Array.from(usernames),
+    divisions: Array.from(divisions)
+  };
 }
 const __dirname$1 = path$2.dirname(node_url.fileURLToPath(typeof document === "undefined" ? require("url").pathToFileURL(__filename).href : _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("main.cjs", document.baseURI).href));
 process.env.APP_ROOT = path$2.join(__dirname$1, "..");
@@ -64986,6 +65002,14 @@ function registerDatabaseHandlers() {
         return { success: false, message: "Username, password, atau divisi tidak cocok." };
       }
       return { success: true, user };
+    } catch (error2) {
+      return { success: false, message: error2 instanceof Error ? error2.message : String(error2) };
+    }
+  });
+  electron.ipcMain.handle("db:userHints", async () => {
+    try {
+      const hints = await fetchUserHints();
+      return { success: true, hints };
     } catch (error2) {
       return { success: false, message: error2 instanceof Error ? error2.message : String(error2) };
     }

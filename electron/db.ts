@@ -69,7 +69,7 @@ export async function loginUser(payload: LoginPayload) {
 
   if (division) {
     request.input('division', sql.VarChar(128), division)
-    whereClause += ' AND DIVISI = @division'
+    whereClause += ' AND DIVISION = @division'
   }
 
   const query = `SELECT TOP (1) * FROM dbo.PENGGUNA ${whereClause}`
@@ -83,7 +83,7 @@ export async function loginUser(payload: LoginPayload) {
 
   const resolvedUsername = (user.USERNAME as string | undefined) ?? (user.username as string | undefined) ?? username
   const resolvedDivision =
-    (user.DIVISI as string | undefined) ?? (user.divisi as string | undefined) ?? (division ?? null)
+    (user.DIVISION as string | undefined) ?? (user.division as string | undefined) ?? (division ?? null)
   const resolvedName = (user.NAMA as string | undefined) ?? (user.nama as string | undefined) ?? null
 
   return {
@@ -98,4 +98,27 @@ export async function closePool() {
 
   await pool.close()
   pool = null
+}
+
+export async function fetchUserHints() {
+  const currentPool = await ensurePool()
+  const result = await currentPool
+    .request()
+    .query('SELECT DISTINCT USERNAME, DIVISION FROM dbo.PENGGUNA ORDER BY USERNAME ASC')
+
+  const usernames = new Set<string>()
+  const divisions = new Set<string>()
+
+  for (const row of result.recordset ?? []) {
+    const username = (row.USERNAME as string | undefined) ?? (row.username as string | undefined)
+    const division = (row.DIVISION as string | undefined) ?? (row.division as string | undefined)
+
+    if (username) usernames.add(String(username))
+    if (division) divisions.add(String(division))
+  }
+
+  return {
+    usernames: Array.from(usernames),
+    divisions: Array.from(divisions),
+  }
 }

@@ -22,6 +22,14 @@ declare namespace NodeJS {
 }
 
 // Used in Renderer process, expose in `preload.ts`
+type DatabaseResponse<T = unknown> =
+  | { success: true; rows?: T[]; serverTime?: unknown }
+  | { success: false; message: string }
+
 interface Window {
   ipcRenderer: import('electron').IpcRenderer
+  database: {
+    testConnection: () => Promise<DatabaseResponse>
+    fetchTableData: <T = unknown>(tableName: string) => Promise<DatabaseResponse<T>>
+  }
 }

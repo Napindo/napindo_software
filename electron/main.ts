@@ -1,7 +1,7 @@
 import { app, BrowserWindow, ipcMain } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
-import { closePool, fetchTopRows, loginUser, testConnection } from './db.js'
+import { closePool, fetchTopRows, fetchUserHints, loginUser, testConnection } from './db.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -74,6 +74,15 @@ function registerDatabaseHandlers() {
       }
 
       return { success: true, user }
+    } catch (error) {
+      return { success: false, message: error instanceof Error ? error.message : String(error) }
+    }
+  })
+
+  ipcMain.handle('db:userHints', async () => {
+    try {
+      const hints = await fetchUserHints()
+      return { success: true, hints }
     } catch (error) {
       return { success: false, message: error instanceof Error ? error.message : String(error) }
     }

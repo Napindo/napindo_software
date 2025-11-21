@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 
 type RendererDatabaseResponse<T = unknown> =
-  | { success: true; rows?: T[]; serverTime?: unknown; user?: T }
+  | { success: true; rows?: T[]; serverTime?: unknown; user?: T; hints?: T }
   | { success: false; message: string }
 
 interface Window {
@@ -11,5 +11,6 @@ interface Window {
     login: (
       payload: { username: string; password: string; division?: string | null },
     ) => Promise<RendererDatabaseResponse<{ username: string; division?: string | null; name?: string | null }>>
+    userHints: () => Promise<RendererDatabaseResponse<{ usernames: string[]; divisions: string[] }>>
   }
 }

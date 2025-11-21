@@ -1,40 +1,59 @@
+"use strict";
 var __defProp = Object.defineProperty;
 var __defNormalProp = (obj2, key2, value) => key2 in obj2 ? __defProp(obj2, key2, { enumerable: true, configurable: true, writable: true, value }) : obj2[key2] = value;
 var __publicField = (obj2, key2, value) => __defNormalProp(obj2, typeof key2 !== "symbol" ? key2 + "" : key2, value);
 var _a, _b;
-import { app, BrowserWindow, ipcMain } from "electron";
-import { fileURLToPath } from "node:url";
-import path$2 from "node:path";
-import require$$0$3 from "events";
-import require$$1$1 from "tty";
-import require$$1$2, { promisify } from "util";
-import require$$0$2 from "os";
-import require$$4$1 from "timers";
-import require$$0$4, { Readable as Readable$1 } from "stream";
-import crypto$2, { createHash } from "crypto";
-import require$$0$8 from "dns";
-import require$$3$1 from "constants";
-import http$1, { createServer } from "http";
-import https$2 from "https";
-import require$$0$5 from "buffer";
-import os$1, { EOL } from "node:os";
-import util$5, { inspect as inspect$2 } from "node:util";
-import process$1 from "node:process";
-import require$$0$6 from "net";
-import require$$1$3 from "tls";
-import require$$2$1 from "assert";
-import require$$5$2 from "url";
-import http$2 from "node:http";
-import https$3 from "node:https";
-import zlib from "node:zlib";
-import { Transform } from "node:stream";
-import fs$3, { readFile } from "fs";
-import path$1 from "path";
-import * as child_process from "child_process";
-import child_process__default from "child_process";
-import require$$0$7 from "dgram";
-import require$$2$2 from "punycode";
-import require$$1$4 from "string_decoder";
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const electron = require("electron");
+const node_url = require("node:url");
+const path$2 = require("node:path");
+const require$$0$3 = require("events");
+const require$$1$1 = require("tty");
+const require$$1$2 = require("util");
+const require$$0$2 = require("os");
+const require$$4$1 = require("timers");
+const require$$0$4 = require("stream");
+const crypto$2 = require("crypto");
+const require$$0$8 = require("dns");
+const require$$3$1 = require("constants");
+const http$1 = require("http");
+const https$2 = require("https");
+const require$$0$5 = require("buffer");
+const os$1 = require("node:os");
+const util$5 = require("node:util");
+const process$1 = require("node:process");
+const require$$0$6 = require("net");
+const require$$1$3 = require("tls");
+const require$$2$1 = require("assert");
+const require$$5$2 = require("url");
+const http$2 = require("node:http");
+const https$3 = require("node:https");
+const zlib = require("node:zlib");
+const node_stream = require("node:stream");
+const fs$3 = require("fs");
+const path$1 = require("path");
+const child_process = require("child_process");
+const require$$0$7 = require("dgram");
+const require$$2$2 = require("punycode");
+const require$$1$4 = require("string_decoder");
+var _documentCurrentScript = typeof document !== "undefined" ? document.currentScript : null;
+function _interopNamespaceDefault(e) {
+  const n = Object.create(null, { [Symbol.toStringTag]: { value: "Module" } });
+  if (e) {
+    for (const k in e) {
+      if (k !== "default") {
+        const d = Object.getOwnPropertyDescriptor(e, k);
+        Object.defineProperty(n, k, d.get ? d : {
+          enumerable: true,
+          get: () => e[k]
+        });
+      }
+    }
+  }
+  n.default = e;
+  return Object.freeze(n);
+}
+const child_process__namespace = /* @__PURE__ */ _interopNamespaceDefault(child_process);
 var commonjsGlobal = typeof globalThis !== "undefined" ? globalThis : typeof window !== "undefined" ? window : typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : {};
 function getDefaultExportFromCjs(x) {
   return x && x.__esModule && Object.prototype.hasOwnProperty.call(x, "default") ? x["default"] : x;
@@ -366,7 +385,7 @@ var hasRequiredBrowser;
 function requireBrowser() {
   if (hasRequiredBrowser) return browser.exports;
   hasRequiredBrowser = 1;
-  (function(module, exports$1) {
+  (function(module2, exports$1) {
     exports$1.formatArgs = formatArgs;
     exports$1.save = save;
     exports$1.load = load;
@@ -474,7 +493,7 @@ function requireBrowser() {
       typeof navigator !== "undefined" && navigator.userAgent && navigator.userAgent.toLowerCase().match(/applewebkit\/(\d+)/);
     }
     function formatArgs(args) {
-      args[0] = (this.useColors ? "%c" : "") + this.namespace + (this.useColors ? " %c" : " ") + args[0] + (this.useColors ? "%c " : " ") + "+" + module.exports.humanize(this.diff);
+      args[0] = (this.useColors ? "%c" : "") + this.namespace + (this.useColors ? " %c" : " ") + args[0] + (this.useColors ? "%c " : " ") + "+" + module2.exports.humanize(this.diff);
       if (!this.useColors) {
         return;
       }
@@ -522,8 +541,8 @@ function requireBrowser() {
       } catch (error2) {
       }
     }
-    module.exports = requireCommon()(exports$1);
-    const { formatters } = module.exports;
+    module2.exports = requireCommon()(exports$1);
+    const { formatters } = module2.exports;
     formatters.j = function(v) {
       try {
         return JSON.stringify(v);
@@ -654,7 +673,7 @@ var hasRequiredNode$1;
 function requireNode$1() {
   if (hasRequiredNode$1) return node$1.exports;
   hasRequiredNode$1 = 1;
-  (function(module, exports$1) {
+  (function(module2, exports$1) {
     const tty = require$$1$1;
     const util = require$$1$2;
     exports$1.init = init2;
@@ -782,7 +801,7 @@ function requireNode$1() {
         const colorCode = "\x1B[3" + (c < 8 ? c : "8;5;" + c);
         const prefix = `  ${colorCode};1m${name2} \x1B[0m`;
         args[0] = prefix + args[0].split("\n").join("\n" + prefix);
-        args.push(colorCode + "m+" + module.exports.humanize(this.diff) + "\x1B[0m");
+        args.push(colorCode + "m+" + module2.exports.humanize(this.diff) + "\x1B[0m");
       } else {
         args[0] = getDate() + name2 + " " + args[0];
       }
@@ -813,8 +832,8 @@ function requireNode$1() {
         debug2.inspectOpts[keys3[i]] = exports$1.inspectOpts[keys3[i]];
       }
     }
-    module.exports = requireCommon()(exports$1);
-    const { formatters } = module.exports;
+    module2.exports = requireCommon()(exports$1);
+    const { formatters } = module2.exports;
     formatters.o = function(v) {
       this.inspectOpts.colors = this.useColors;
       return util.inspect(v, this.inspectOpts).split("\n").map((str) => str.trim()).join(" ");
@@ -1888,13 +1907,13 @@ function callbackOrPromise(func) {
     });
   });
 }
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", { value: true });
   const Pool_1 = Pool$1;
   exports$1.Pool = Pool_1.Pool;
   const TimeoutError_12 = TimeoutError$2;
   exports$1.TimeoutError = TimeoutError_12.TimeoutError;
-  module.exports = {
+  module2.exports = {
     Pool: Pool_1.Pool,
     TimeoutError: TimeoutError_12.TimeoutError
   };
@@ -1955,7 +1974,7 @@ let ConnectionError$5 = class ConnectionError extends MSSQLError$5 {
 var connectionError = ConnectionError$5;
 var shared$5 = { exports: {} };
 var datatypes = { exports: {} };
-(function(module) {
+(function(module2) {
   const objectHasProperty2 = utils.objectHasProperty;
   const inspect2 = Symbol.for("nodejs.util.inspect.custom");
   const TYPES2 = {
@@ -2059,8 +2078,8 @@ var datatypes = { exports: {} };
       return { type: TYPES2.Variant };
     }
   };
-  module.exports.TYPES = TYPES2;
-  module.exports.DECLARATIONS = {};
+  module2.exports.TYPES = TYPES2;
+  module2.exports.DECLARATIONS = {};
   const zero = function(value, length) {
     if (length == null) length = 2;
     value = String(value);
@@ -2075,13 +2094,13 @@ var datatypes = { exports: {} };
     if (objectHasProperty2(TYPES2, key2)) {
       const value = TYPES2[key2];
       value.declaration = key2.toLowerCase();
-      module.exports.DECLARATIONS[value.declaration] = value;
+      module2.exports.DECLARATIONS[value.declaration] = value;
       ((key3, value2) => {
         value2[inspect2] = () => `[sql.${key3}]`;
       })(key2, value);
     }
   }
-  module.exports.declare = (type2, options) => {
+  module2.exports.declare = (type2, options) => {
     switch (type2) {
       case TYPES2.VarChar:
       case TYPES2.VarBinary:
@@ -2105,7 +2124,7 @@ var datatypes = { exports: {} };
         return type2.declaration;
     }
   };
-  module.exports.cast = (value, type2, options) => {
+  module2.exports.cast = (value, type2, options) => {
     if (value == null) {
       return null;
     }
@@ -2325,7 +2344,7 @@ Table$1.parseName = function parseName(name2) {
   }
 };
 var table = Table$1;
-(function(module) {
+(function(module2) {
   const TYPES2 = datatypesExports.TYPES;
   const Table2 = table;
   let PromiseLibrary = Promise;
@@ -2392,12 +2411,12 @@ var table = Table$1;
         return TYPES2.NVarChar;
     }
   };
-  module.exports = {
+  module2.exports = {
     driver,
     getTypeByValue,
     map
   };
-  Object.defineProperty(module.exports, "Promise", {
+  Object.defineProperty(module2.exports, "Promise", {
     get: () => {
       return PromiseLibrary;
     },
@@ -2405,7 +2424,7 @@ var table = Table$1;
       PromiseLibrary = value;
     }
   });
-  Object.defineProperty(module.exports, "valueHandler", {
+  Object.defineProperty(module2.exports, "valueHandler", {
     enumerable: true,
     value: /* @__PURE__ */ new Map(),
     writable: false,
@@ -3233,7 +3252,7 @@ let ConnectionPool$1 = class ConnectionPool extends EventEmitter$4 {
 };
 var connectionPool$1 = ConnectionPool$1;
 var globalConnection$3 = { exports: {} };
-(function(module) {
+(function(module2) {
   const shared2 = sharedExports;
   let globalConnection2 = null;
   const globalConnectionHandlers = {};
@@ -3322,7 +3341,7 @@ var globalConnection$3 = { exports: {} };
     const strings = values2.shift();
     return new shared2.driver.Request()._template(strings, values2, "batch");
   }
-  module.exports = {
+  module2.exports = {
     batch,
     close,
     connect,
@@ -3331,7 +3350,7 @@ var globalConnection$3 = { exports: {} };
     query,
     removeListener
   };
-  Object.defineProperty(module.exports, "pool", {
+  Object.defineProperty(module2.exports, "pool", {
     get: () => {
       return globalConnection2;
     },
@@ -4387,7 +4406,7 @@ let Transaction$2 = class Transaction extends EventEmitter$1 {
 };
 Transaction$2.defaultIsolationLevel = ISOLATION_LEVEL$1.READ_COMMITTED;
 var transaction$2 = Transaction$2;
-(function(module) {
+(function(module2) {
   const ConnectionPool3 = connectionPool$1;
   const PreparedStatement2 = preparedStatement;
   const Request3 = request$2;
@@ -4398,7 +4417,7 @@ var transaction$2 = Transaction$2;
   const ISOLATION_LEVEL2 = isolationlevel;
   const { TYPES: TYPES2 } = datatypesExports;
   const { connect, close, on, off, removeListener, query, batch } = globalConnectionExports;
-  module.exports = {
+  module2.exports = {
     ConnectionPool: ConnectionPool3,
     Transaction: Transaction4,
     Request: Request3,
@@ -4431,7 +4450,7 @@ var transaction$2 = Transaction$2;
       batch
     }
   };
-  Object.defineProperty(module.exports, "Promise", {
+  Object.defineProperty(module2.exports, "Promise", {
     enumerable: true,
     get: () => {
       return shared2.Promise;
@@ -4440,7 +4459,7 @@ var transaction$2 = Transaction$2;
       shared2.Promise = value;
     }
   });
-  Object.defineProperty(module.exports, "valueHandler", {
+  Object.defineProperty(module2.exports, "valueHandler", {
     enumerable: true,
     value: shared2.valueHandler,
     writable: false,
@@ -4448,15 +4467,15 @@ var transaction$2 = Transaction$2;
   });
   for (const key2 in TYPES2) {
     const value = TYPES2[key2];
-    module.exports.exports[key2] = value;
-    module.exports.exports[key2.toUpperCase()] = value;
+    module2.exports.exports[key2] = value;
+    module2.exports.exports[key2.toUpperCase()] = value;
   }
 })(base);
 var baseExports = base.exports;
 var tedious = {};
 var bulkLoad = { exports: {} };
 var writableTrackingBuffer = { exports: {} };
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -4689,7 +4708,7 @@ var writableTrackingBuffer = { exports: {} };
   }
   var _default2 = WritableTrackingBuffer;
   exports$1.default = _default2;
-  module.exports = WritableTrackingBuffer;
+  module2.exports = WritableTrackingBuffer;
 })(writableTrackingBuffer, writableTrackingBuffer.exports);
 var writableTrackingBufferExports = writableTrackingBuffer.exports;
 var token = {};
@@ -5104,7 +5123,7 @@ class SSPIToken extends Token {
   }
 }
 token.SSPIToken = SSPIToken;
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -5558,7 +5577,7 @@ token.SSPIToken = SSPIToken;
   }
   var _default2 = BulkLoad;
   exports$1.default = _default2;
-  module.exports = BulkLoad;
+  module2.exports = BulkLoad;
 })(bulkLoad, bulkLoad.exports);
 var bulkLoadExports = bulkLoad.exports;
 var connection = { exports: {} };
@@ -11859,7 +11878,7 @@ var hasRequiredSafeBuffer;
 function requireSafeBuffer() {
   if (hasRequiredSafeBuffer) return safeBuffer.exports;
   hasRequiredSafeBuffer = 1;
-  (function(module, exports$1) {
+  (function(module2, exports$1) {
     var buffer2 = require$$0$5;
     var Buffer2 = buffer2.Buffer;
     function copyProps(src2, dst) {
@@ -11868,7 +11887,7 @@ function requireSafeBuffer() {
       }
     }
     if (Buffer2.from && Buffer2.alloc && Buffer2.allocUnsafe && Buffer2.allocUnsafeSlow) {
-      module.exports = buffer2;
+      module2.exports = buffer2;
     } else {
       copyProps(buffer2, exports$1);
       exports$1.Buffer = SafeBuffer;
@@ -12656,14 +12675,14 @@ var constants$1 = {
 const debug$8 = typeof process === "object" && process.env && process.env.NODE_DEBUG && /\bsemver\b/i.test(process.env.NODE_DEBUG) ? (...args) => console.error("SEMVER", ...args) : () => {
 };
 var debug_1$3 = debug$8;
-(function(module, exports$1) {
+(function(module2, exports$1) {
   const {
     MAX_SAFE_COMPONENT_LENGTH: MAX_SAFE_COMPONENT_LENGTH2,
     MAX_SAFE_BUILD_LENGTH: MAX_SAFE_BUILD_LENGTH2,
     MAX_LENGTH: MAX_LENGTH2
   } = constants$1;
   const debug2 = debug_1$3;
-  exports$1 = module.exports = {};
+  exports$1 = module2.exports = {};
   const re2 = exports$1.re = [];
   const safeRe = exports$1.safeRe = [];
   const src2 = exports$1.src = [];
@@ -16951,7 +16970,7 @@ class LoopbackClient {
       throw NodeAuthError.createLoopbackServerAlreadyExistsError();
     }
     const authCodeListener = new Promise((resolve, reject) => {
-      this.server = createServer(async (req2, res) => {
+      this.server = http$1.createServer(async (req2, res) => {
         const url = req2.url;
         if (!url) {
           res.end(errorTemplate || "Error occurred loading redirectUrl");
@@ -17503,7 +17522,7 @@ let AbortError$3 = class AbortError extends Error {
   }
 };
 function log(message2, ...args) {
-  process$1.stderr.write(`${util$5.format(message2, ...args)}${EOL}`);
+  process$1.stderr.write(`${util$5.format(message2, ...args)}${os$1.EOL}`);
 }
 const debugEnvVariable = typeof process !== "undefined" && process.env && process.env.DEBUG || void 0;
 let enabledString;
@@ -18065,7 +18084,7 @@ function isError$1(e) {
   }
   return false;
 }
-const custom = inspect$2.custom;
+const custom = util$5.inspect.custom;
 const RedactedString = "REDACTED";
 const defaultAllowedHeaderNames = [
   "x-ms-client-request-id",
@@ -18292,7 +18311,7 @@ function isStreamComplete(stream2) {
 function isArrayBuffer(body) {
   return body && typeof body.byteLength === "number";
 }
-class ReportTransform extends Transform {
+class ReportTransform extends node_stream.Transform {
   constructor(progressCallback) {
     super();
     __publicField(this, "loadedBytes", 0);
@@ -19674,14 +19693,14 @@ function makeAsyncIterable(webStream) {
 function ensureNodeStream(stream2) {
   if (stream2 instanceof ReadableStream) {
     makeAsyncIterable(stream2);
-    return Readable$1.fromWeb(stream2);
+    return require$$0$4.Readable.fromWeb(stream2);
   } else {
     return stream2;
   }
 }
 function toStream(source) {
   if (source instanceof Uint8Array) {
-    return Readable$1.from(Buffer.from(source));
+    return require$$0$4.Readable.from(Buffer.from(source));
   } else if (isBlob(source)) {
     return ensureNodeStream(source.stream());
   } else {
@@ -19691,7 +19710,7 @@ function toStream(source) {
 async function concat$1(sources) {
   return function() {
     const streams2 = sources.map((x) => typeof x === "function" ? x() : x).map(toStream);
-    return Readable$1.from(async function* () {
+    return require$$0$4.Readable.from(async function* () {
       for (const stream2 of streams2) {
         for await (const chunk of stream2) {
           yield chunk;
@@ -22518,7 +22537,7 @@ const cliCredentialInternals = {
     }
     return new Promise((resolve, reject) => {
       try {
-        child_process__default.execFile("az", [
+        child_process.execFile("az", [
           "account",
           "get-access-token",
           "--output",
@@ -22612,7 +22631,7 @@ const processUtils = {
    */
   execFile(file, params, options) {
     return new Promise((resolve, reject) => {
-      child_process.execFile(file, params, options, (error2, stdout, stderr) => {
+      child_process__namespace.execFile(file, params, options, (error2, stdout, stderr) => {
         if (Buffer.isBuffer(stdout)) {
           stdout = stdout.toString("utf8");
         }
@@ -22814,7 +22833,7 @@ class ClientSecretCredential {
     });
   }
 }
-const readFileAsync$2 = promisify(readFile);
+const readFileAsync$2 = require$$1$2.promisify(fs$3.readFile);
 async function parseCertificate(configuration, sendCertificateChain) {
   const certificateParts = {};
   const certificate = configuration.certificate;
@@ -22835,7 +22854,7 @@ async function parseCertificate(configuration, sendCertificateChain) {
   if (publicKeys.length === 0) {
     throw new Error("The file at the specified path does not contain a PEM-encoded certificate.");
   }
-  certificateParts.thumbprint = createHash("sha1").update(Buffer.from(publicKeys[0], "base64")).digest("hex").toUpperCase();
+  certificateParts.thumbprint = crypto$2.createHash("sha1").update(Buffer.from(publicKeys[0], "base64")).digest("hex").toUpperCase();
   return certificateParts;
 }
 class MsalClientCertificate extends MsalNode {
@@ -23363,7 +23382,7 @@ function prepareRequestOptions$3(scopes, clientId, resourceId) {
   });
 }
 function readFileAsync$1(path2, options) {
-  return new Promise((resolve, reject) => readFile(path2, options, (err, data) => {
+  return new Promise((resolve, reject) => fs$3.readFile(path2, options, (err, data) => {
     if (err) {
       reject(err);
     }
@@ -23426,7 +23445,7 @@ const arcMsi = {
 };
 const msiName$2 = "ManagedIdentityCredential - Token Exchange";
 const logger$8 = credentialLogger(msiName$2);
-const readFileAsync = promisify(fs$3.readFile);
+const readFileAsync = require$$1$2.promisify(fs$3.readFile);
 function prepareRequestOptions$2(scopes, clientAssertion, clientId) {
   var _a2;
   const bodyParams = {
@@ -23923,7 +23942,7 @@ var defineLazyProp = (object, propertyName, fn) => {
   return object;
 };
 const path = path$1;
-const childProcess = child_process__default;
+const childProcess = child_process;
 const { promises: fs, constants: fsConstants } = fs$3;
 const isWsl = isWslExports;
 const isDocker = isDocker_1;
@@ -23997,10 +24016,10 @@ const baseOpen = async (options) => {
       app: singleApp
     }));
   }
-  let { name: app2, arguments: appArguments = [] } = options.app || {};
+  let { name: app, arguments: appArguments = [] } = options.app || {};
   appArguments = [...appArguments];
-  if (Array.isArray(app2)) {
-    return pTryEach(app2, (appName) => baseOpen({
+  if (Array.isArray(app)) {
+    return pTryEach(app, (appName) => baseOpen({
       ...options,
       app: {
         name: appName,
@@ -24022,10 +24041,10 @@ const baseOpen = async (options) => {
     if (options.newInstance) {
       cliArguments.push("--new");
     }
-    if (app2) {
-      cliArguments.push("-a", app2);
+    if (app) {
+      cliArguments.push("-a", app);
     }
-  } else if (platform === "win32" || isWsl && !isInsideContainer() && !app2) {
+  } else if (platform === "win32" || isWsl && !isInsideContainer() && !app) {
     const mountPoint = await getWslDrivesMountPoint();
     command = isWsl ? `${mountPoint}c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe` : `${process.env.SYSTEMROOT}\\System32\\WindowsPowerShell\\v1.0\\powershell`;
     cliArguments.push(
@@ -24042,8 +24061,8 @@ const baseOpen = async (options) => {
     if (options.wait) {
       encodedArguments.push("-Wait");
     }
-    if (app2) {
-      encodedArguments.push(`"\`"${app2}\`""`, "-ArgumentList");
+    if (app) {
+      encodedArguments.push(`"\`"${app}\`""`, "-ArgumentList");
       if (options.target) {
         appArguments.unshift(options.target);
       }
@@ -24056,8 +24075,8 @@ const baseOpen = async (options) => {
     }
     options.target = Buffer.from(encodedArguments.join(" "), "utf16le").toString("base64");
   } else {
-    if (app2) {
-      command = app2;
+    if (app) {
+      command = app;
     } else {
       const isBundled = !__dirname || __dirname === "/";
       let exeLocalXdgOpen = false;
@@ -24301,9 +24320,9 @@ class MsalOpenBrowser extends MsalNode {
           cleanup();
         });
       };
-      const app2 = http$1.createServer(requestListener);
-      const server = stoppable(app2);
-      const listen = app2.listen(this.port, this.hostname, () => this.logger.info(`InteractiveBrowserCredential listening on port ${this.port}!`));
+      const app = http$1.createServer(requestListener);
+      const server = stoppable(app);
+      const listen = app.listen(this.port, this.hostname, () => this.logger.info(`InteractiveBrowserCredential listening on port ${this.port}!`));
       function cleanup() {
         if (listen) {
           listen.close();
@@ -24316,8 +24335,8 @@ class MsalOpenBrowser extends MsalNode {
           server.stop();
         }
       }
-      app2.on("connection", (socket) => socketToDestroy.push(socket));
-      app2.on("error", (err) => {
+      app.on("connection", (socket) => socketToDestroy.push(socket));
+      app.on("error", (err) => {
         cleanup();
         const code = err.code;
         if (code === "EACCES" || code === "EADDRINUSE") {
@@ -24330,7 +24349,7 @@ class MsalOpenBrowser extends MsalNode {
           reject(new CredentialUnavailableError(`InteractiveBrowserCredential: Failed to start the necessary web server. Error: ${err.message}`));
         }
       });
-      app2.on("listening", () => {
+      app.on("listening", () => {
         const openPromise = this.openAuthCodeUrl(scopes, options);
         const abortSignal2 = options === null || options === void 0 ? void 0 : options.abortSignal;
         if (abortSignal2) {
@@ -24703,7 +24722,7 @@ const src = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty(
 }, Symbol.toStringTag, { value: "Module" }));
 const require$$5$1 = /* @__PURE__ */ getAugmentedNamespace(src);
 var debug$3 = { exports: {} };
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -24805,7 +24824,7 @@ var debug$3 = { exports: {} };
   }
   var _default2 = Debug;
   exports$1.default = _default2;
-  module.exports = Debug;
+  module2.exports = Debug;
 })(debug$3, debug$3.exports);
 var debugExports = debug$3.exports;
 var instanceLookup$1 = {};
@@ -25535,7 +25554,7 @@ function packetLength(potentialPacketBuffer) {
   return potentialPacketBuffer.readUInt16BE(OFFSET.Length);
 }
 var preloginPayload = { exports: {} };
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -25751,7 +25770,7 @@ var preloginPayload = { exports: {} };
   }
   var _default2 = PreloginPayload;
   exports$1.default = _default2;
-  module.exports = PreloginPayload;
+  module2.exports = PreloginPayload;
 })(preloginPayload, preloginPayload.exports);
 var preloginPayloadExports = preloginPayload.exports;
 var login7Payload = { exports: {} };
@@ -25773,7 +25792,7 @@ tdsVersions.versionsByValue = versionsByValue;
 for (const name2 in versions) {
   versionsByValue[versions[name2]] = name2;
 }
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -26095,7 +26114,7 @@ for (const name2 in versions) {
   }
   var _default2 = Login7Payload;
   exports$1.default = _default2;
-  module.exports = Login7Payload;
+  module2.exports = Login7Payload;
 })(login7Payload, login7Payload.exports);
 var login7PayloadExports = login7Payload.exports;
 var ntlmPayload = { exports: {} };
@@ -26109,14 +26128,14 @@ var md4 = { exports: {} };
  * @copyright Yi-Cyuan Chen 2015-2027
  * @license MIT
  */
-(function(module) {
+(function(module2) {
   (function() {
     var root = typeof window === "object" ? window : {};
     var NODE_JS = !root.JS_MD4_NO_NODE_JS && typeof process === "object" && process.versions && process.versions.node;
     if (NODE_JS) {
       root = commonjsGlobal;
     }
-    var COMMON_JS = !root.JS_MD4_NO_COMMON_JS && true && module.exports;
+    var COMMON_JS = !root.JS_MD4_NO_COMMON_JS && true && module2.exports;
     var ARRAY_BUFFER = !root.JS_MD4_NO_ARRAY_BUFFER && typeof ArrayBuffer !== "undefined";
     var HEX_CHARS = "0123456789abcdef".split("");
     var EXTRA = [128, 32768, 8388608, -2147483648];
@@ -26472,14 +26491,14 @@ var md4 = { exports: {} };
     Md4.prototype.buffer = Md4.prototype.arrayBuffer;
     var exports$1 = createMethod();
     if (COMMON_JS) {
-      module.exports = exports$1;
+      module2.exports = exports$1;
     } else {
       root.md4 = exports$1;
     }
   })();
 })(md4);
 var md4Exports = md4.exports;
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -26651,7 +26670,7 @@ var md4Exports = md4.exports;
   }
   var _default2 = NTLMResponsePayload;
   exports$1.default = _default2;
-  module.exports = NTLMResponsePayload;
+  module2.exports = NTLMResponsePayload;
 })(ntlmPayload, ntlmPayload.exports);
 var ntlmPayloadExports = ntlmPayload.exports;
 var request$1 = { exports: {} };
@@ -26726,7 +26745,7 @@ types.SQLServerStatementColumnEncryptionSetting = SQLServerStatementColumnEncryp
   SQLServerStatementColumnEncryptionSetting2[SQLServerStatementColumnEncryptionSetting2["ResultSetOnly"] = 2] = "ResultSetOnly";
   SQLServerStatementColumnEncryptionSetting2[SQLServerStatementColumnEncryptionSetting2["Disabled"] = 3] = "Disabled";
 })(SQLServerStatementColumnEncryptionSetting || (types.SQLServerStatementColumnEncryptionSetting = SQLServerStatementColumnEncryptionSetting = {}));
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -27025,7 +27044,7 @@ types.SQLServerStatementColumnEncryptionSetting = SQLServerStatementColumnEncryp
   }
   var _default2 = Request3;
   exports$1.default = _default2;
-  module.exports = Request3;
+  module2.exports = Request3;
 })(request$1, request$1.exports);
 var requestExports = request$1.exports;
 var rpcrequestPayload = { exports: {} };
@@ -27049,7 +27068,7 @@ function writeToTrackingBuffer(buffer2, txnDescriptor, outstandingRequestCount) 
   data.writeUInt32LE(data.length, 0);
   return buffer2;
 }
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -27143,11 +27162,11 @@ function writeToTrackingBuffer(buffer2, txnDescriptor, outstandingRequestCount) 
   }
   var _default2 = RpcRequestPayload;
   exports$1.default = _default2;
-  module.exports = RpcRequestPayload;
+  module2.exports = RpcRequestPayload;
 })(rpcrequestPayload, rpcrequestPayload.exports);
 var rpcrequestPayloadExports = rpcrequestPayload.exports;
 var sqlbatchPayload = { exports: {} };
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -27183,7 +27202,7 @@ var sqlbatchPayload = { exports: {} };
   }
   var _default2 = SqlBatchPayload;
   exports$1.default = _default2;
-  module.exports = SqlBatchPayload;
+  module2.exports = SqlBatchPayload;
 })(sqlbatchPayload, sqlbatchPayload.exports);
 var sqlbatchPayloadExports = sqlbatchPayload.exports;
 var messageIo = { exports: {} };
@@ -27222,7 +27241,7 @@ class DuplexPair {
 }
 var nativeDuplexpair = DuplexPair;
 var message = { exports: {} };
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -27244,7 +27263,7 @@ var message = { exports: {} };
   }
   var _default2 = Message;
   exports$1.default = _default2;
-  module.exports = Message;
+  module2.exports = Message;
 })(message, message.exports);
 var messageExports = message.exports;
 var incomingMessageStream = { exports: {} };
@@ -29677,10 +29696,10 @@ var hasRequired_stream_transform;
 function require_stream_transform() {
   if (hasRequired_stream_transform) return _stream_transform;
   hasRequired_stream_transform = 1;
-  _stream_transform = Transform2;
+  _stream_transform = Transform;
   var _require$codes = requireErrors().codes, ERR_METHOD_NOT_IMPLEMENTED = _require$codes.ERR_METHOD_NOT_IMPLEMENTED, ERR_MULTIPLE_CALLBACK = _require$codes.ERR_MULTIPLE_CALLBACK, ERR_TRANSFORM_ALREADY_TRANSFORMING = _require$codes.ERR_TRANSFORM_ALREADY_TRANSFORMING, ERR_TRANSFORM_WITH_LENGTH_0 = _require$codes.ERR_TRANSFORM_WITH_LENGTH_0;
   var Duplex2 = require_stream_duplex();
-  inheritsExports(Transform2, Duplex2);
+  inheritsExports(Transform, Duplex2);
   function afterTransform(er, data) {
     var ts = this._transformState;
     ts.transforming = false;
@@ -29699,8 +29718,8 @@ function require_stream_transform() {
       this._read(rs.highWaterMark);
     }
   }
-  function Transform2(options) {
-    if (!(this instanceof Transform2)) return new Transform2(options);
+  function Transform(options) {
+    if (!(this instanceof Transform)) return new Transform(options);
     Duplex2.call(this, options);
     this._transformState = {
       afterTransform: afterTransform.bind(this),
@@ -29728,14 +29747,14 @@ function require_stream_transform() {
       done(this, null, null);
     }
   }
-  Transform2.prototype.push = function(chunk, encoding) {
+  Transform.prototype.push = function(chunk, encoding) {
     this._transformState.needTransform = false;
     return Duplex2.prototype.push.call(this, chunk, encoding);
   };
-  Transform2.prototype._transform = function(chunk, encoding, cb) {
+  Transform.prototype._transform = function(chunk, encoding, cb) {
     cb(new ERR_METHOD_NOT_IMPLEMENTED("_transform()"));
   };
-  Transform2.prototype._write = function(chunk, encoding, cb) {
+  Transform.prototype._write = function(chunk, encoding, cb) {
     var ts = this._transformState;
     ts.writecb = cb;
     ts.writechunk = chunk;
@@ -29745,7 +29764,7 @@ function require_stream_transform() {
       if (ts.needTransform || rs.needReadable || rs.length < rs.highWaterMark) this._read(rs.highWaterMark);
     }
   };
-  Transform2.prototype._read = function(n) {
+  Transform.prototype._read = function(n) {
     var ts = this._transformState;
     if (ts.writechunk !== null && !ts.transforming) {
       ts.transforming = true;
@@ -29754,7 +29773,7 @@ function require_stream_transform() {
       ts.needTransform = true;
     }
   };
-  Transform2.prototype._destroy = function(err, cb) {
+  Transform.prototype._destroy = function(err, cb) {
     Duplex2.prototype._destroy.call(this, err, function(err2) {
       cb(err2);
     });
@@ -29775,11 +29794,11 @@ function require_stream_passthrough() {
   if (hasRequired_stream_passthrough) return _stream_passthrough;
   hasRequired_stream_passthrough = 1;
   _stream_passthrough = PassThrough;
-  var Transform2 = require_stream_transform();
-  inheritsExports(PassThrough, Transform2);
+  var Transform = require_stream_transform();
+  inheritsExports(PassThrough, Transform);
   function PassThrough(options) {
     if (!(this instanceof PassThrough)) return new PassThrough(options);
-    Transform2.call(this, options);
+    Transform.call(this, options);
   }
   PassThrough.prototype._transform = function(chunk, encoding, cb) {
     cb(null, chunk);
@@ -29869,14 +29888,14 @@ function requirePipeline() {
   pipeline_1 = pipeline;
   return pipeline_1;
 }
-(function(module, exports$1) {
+(function(module2, exports$1) {
   var Stream2 = require$$0$4;
   if (process.env.READABLE_STREAM === "disable" && Stream2) {
-    module.exports = Stream2.Readable;
-    Object.assign(module.exports, Stream2);
-    module.exports.Stream = Stream2;
+    module2.exports = Stream2.Readable;
+    Object.assign(module2.exports, Stream2);
+    module2.exports.Stream = Stream2;
   } else {
-    exports$1 = module.exports = require_stream_readable();
+    exports$1 = module2.exports = require_stream_readable();
     exports$1.Stream = Stream2 || exports$1;
     exports$1.Readable = exports$1;
     exports$1.Writable = require_stream_writable();
@@ -30248,7 +30267,7 @@ bl.exports = BufferListStream;
 bl.exports.BufferListStream = BufferListStream;
 bl.exports.BufferList = BufferList;
 var blExports = bl.exports;
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -30333,11 +30352,11 @@ var blExports = bl.exports;
   }
   var _default2 = IncomingMessageStream;
   exports$1.default = _default2;
-  module.exports = IncomingMessageStream;
+  module2.exports = IncomingMessageStream;
 })(incomingMessageStream, incomingMessageStream.exports);
 var incomingMessageStreamExports = incomingMessageStream.exports;
 var outgoingMessageStream = { exports: {} };
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -30413,10 +30432,10 @@ var outgoingMessageStream = { exports: {} };
   }
   var _default2 = OutgoingMessageStream;
   exports$1.default = _default2;
-  module.exports = OutgoingMessageStream;
+  module2.exports = OutgoingMessageStream;
 })(outgoingMessageStream, outgoingMessageStream.exports);
 var outgoingMessageStreamExports = outgoingMessageStream.exports;
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -30594,7 +30613,7 @@ var outgoingMessageStreamExports = outgoingMessageStream.exports;
   }
   var _default2 = MessageIO;
   exports$1.default = _default2;
-  module.exports = MessageIO;
+  module2.exports = MessageIO;
 })(messageIo, messageIo.exports);
 var messageIoExports = messageIo.exports;
 var tokenStreamParser = {};
@@ -30956,7 +30975,7 @@ class Collation {
 collation.Collation = Collation;
 var dataType = {};
 var _null$1 = { exports: {} };
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -30983,12 +31002,12 @@ var _null$1 = { exports: {} };
   };
   var _default2 = Null;
   exports$1.default = _default2;
-  module.exports = Null;
+  module2.exports = Null;
 })(_null$1, _null$1.exports);
 var _nullExports = _null$1.exports;
 var tinyint = { exports: {} };
 var intn = { exports: {} };
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -31015,10 +31034,10 @@ var intn = { exports: {} };
   };
   var _default2 = IntN;
   exports$1.default = _default2;
-  module.exports = IntN;
+  module2.exports = IntN;
 })(intn, intn.exports);
 var intnExports = intn.exports;
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -31071,12 +31090,12 @@ var intnExports = intn.exports;
   };
   var _default2 = TinyInt;
   exports$1.default = _default2;
-  module.exports = TinyInt;
+  module2.exports = TinyInt;
 })(tinyint, tinyint.exports);
 var tinyintExports = tinyint.exports;
 var bit = { exports: {} };
 var bitn = { exports: {} };
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -31103,10 +31122,10 @@ var bitn = { exports: {} };
   };
   var _default2 = BitN;
   exports$1.default = _default2;
-  module.exports = BitN;
+  module2.exports = BitN;
 })(bitn, bitn.exports);
 var bitnExports = bitn.exports;
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -31152,11 +31171,11 @@ var bitnExports = bitn.exports;
   };
   var _default2 = Bit;
   exports$1.default = _default2;
-  module.exports = Bit;
+  module2.exports = Bit;
 })(bit, bit.exports);
 var bitExports = bit.exports;
 var smallint = { exports: {} };
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -31209,11 +31228,11 @@ var smallint = { exports: {} };
   };
   var _default2 = SmallInt;
   exports$1.default = _default2;
-  module.exports = SmallInt;
+  module2.exports = SmallInt;
 })(smallint, smallint.exports);
 var smallintExports = smallint.exports;
 var int = { exports: {} };
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -31266,12 +31285,12 @@ var int = { exports: {} };
   };
   var _default2 = Int;
   exports$1.default = _default2;
-  module.exports = Int;
+  module2.exports = Int;
 })(int, int.exports);
 var intExports = int.exports;
 var smalldatetime = { exports: {} };
 var datetimen = { exports: {} };
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -31298,10 +31317,10 @@ var datetimen = { exports: {} };
   };
   var _default2 = DateTimeN;
   exports$1.default = _default2;
-  module.exports = DateTimeN;
+  module2.exports = DateTimeN;
 })(datetimen, datetimen.exports);
 var datetimenExports = datetimen.exports;
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -31363,12 +31382,12 @@ var datetimenExports = datetimen.exports;
   };
   var _default2 = SmallDateTime;
   exports$1.default = _default2;
-  module.exports = SmallDateTime;
+  module2.exports = SmallDateTime;
 })(smalldatetime, smalldatetime.exports);
 var smalldatetimeExports = smalldatetime.exports;
 var real = { exports: {} };
 var floatn = { exports: {} };
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -31395,10 +31414,10 @@ var floatn = { exports: {} };
   };
   var _default2 = FloatN;
   exports$1.default = _default2;
-  module.exports = FloatN;
+  module2.exports = FloatN;
 })(floatn, floatn.exports);
 var floatnExports = floatn.exports;
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -31446,12 +31465,12 @@ var floatnExports = floatn.exports;
   };
   var _default2 = Real;
   exports$1.default = _default2;
-  module.exports = Real;
+  module2.exports = Real;
 })(real, real.exports);
 var realExports = real.exports;
 var money = { exports: {} };
 var moneyn = { exports: {} };
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -31478,10 +31497,10 @@ var moneyn = { exports: {} };
   };
   var _default2 = MoneyN;
   exports$1.default = _default2;
-  module.exports = MoneyN;
+  module2.exports = MoneyN;
 })(moneyn, moneyn.exports);
 var moneynExports = moneyn.exports;
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -31533,7 +31552,7 @@ var moneynExports = moneyn.exports;
   };
   var _default2 = Money;
   exports$1.default = _default2;
-  module.exports = Money;
+  module2.exports = Money;
 })(money, money.exports);
 var moneyExports = money.exports;
 var datetime = { exports: {} };
@@ -42016,7 +42035,7 @@ const jsJoda_esm = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.definePr
   use
 }, Symbol.toStringTag, { value: "Module" }));
 const require$$0$1 = /* @__PURE__ */ getAugmentedNamespace(jsJoda_esm);
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -42096,11 +42115,11 @@ const require$$0$1 = /* @__PURE__ */ getAugmentedNamespace(jsJoda_esm);
   };
   var _default2 = DateTime;
   exports$1.default = _default2;
-  module.exports = DateTime;
+  module2.exports = DateTime;
 })(datetime, datetime.exports);
 var datetimeExports = datetime.exports;
 var float = { exports: {} };
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -42147,12 +42166,12 @@ var float = { exports: {} };
   };
   var _default2 = Float;
   exports$1.default = _default2;
-  module.exports = Float;
+  module2.exports = Float;
 })(float, float.exports);
 var floatExports = float.exports;
 var decimal = { exports: {} };
 var decimaln = { exports: {} };
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -42179,10 +42198,10 @@ var decimaln = { exports: {} };
   };
   var _default2 = DecimalN;
   exports$1.default = _default2;
-  module.exports = DecimalN;
+  module2.exports = DecimalN;
 })(decimaln, decimaln.exports);
 var decimalnExports = decimaln.exports;
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -42289,12 +42308,12 @@ var decimalnExports = decimaln.exports;
   };
   var _default2 = Decimal;
   exports$1.default = _default2;
-  module.exports = Decimal;
+  module2.exports = Decimal;
 })(decimal, decimal.exports);
 var decimalExports = decimal.exports;
 var numeric = { exports: {} };
 var numericn = { exports: {} };
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -42321,10 +42340,10 @@ var numericn = { exports: {} };
   };
   var _default2 = NumericN;
   exports$1.default = _default2;
-  module.exports = NumericN;
+  module2.exports = NumericN;
 })(numericn, numericn.exports);
 var numericnExports = numericn.exports;
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -42430,11 +42449,11 @@ var numericnExports = numericn.exports;
   };
   var _default2 = Numeric;
   exports$1.default = _default2;
-  module.exports = Numeric;
+  module2.exports = Numeric;
 })(numeric, numeric.exports);
 var numericExports = numeric.exports;
 var smallmoney = { exports: {} };
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -42485,11 +42504,11 @@ var smallmoney = { exports: {} };
   };
   var _default2 = SmallMoney;
   exports$1.default = _default2;
-  module.exports = SmallMoney;
+  module2.exports = SmallMoney;
 })(smallmoney, smallmoney.exports);
 var smallmoneyExports = smallmoney.exports;
 var bigint = { exports: {} };
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -42543,11 +42562,11 @@ var bigint = { exports: {} };
   };
   var _default2 = BigInt2;
   exports$1.default = _default2;
-  module.exports = BigInt2;
+  module2.exports = BigInt2;
 })(bigint, bigint.exports);
 var bigintExports = bigint.exports;
 var image = { exports: {} };
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -42601,7 +42620,7 @@ var image = { exports: {} };
   };
   var _default2 = Image;
   exports$1.default = _default2;
-  module.exports = Image;
+  module2.exports = Image;
 })(image, image.exports);
 var imageExports = image.exports;
 var text = { exports: {} };
@@ -53024,10 +53043,10 @@ function requireEncodings() {
       requireDbcsData()
     ];
     for (var i = 0; i < modules.length; i++) {
-      var module = modules[i];
-      for (var enc in module)
-        if (Object.prototype.hasOwnProperty.call(module, enc))
-          exports$1[enc] = module[enc];
+      var module2 = modules[i];
+      for (var enc in module2)
+        if (Object.prototype.hasOwnProperty.call(module2, enc))
+          exports$1[enc] = module2[enc];
     }
   })(encodings);
   return encodings;
@@ -53039,14 +53058,14 @@ function requireStreams() {
   hasRequiredStreams = 1;
   var Buffer2 = safer_1.Buffer;
   streams = function(stream_module) {
-    var Transform2 = stream_module.Transform;
+    var Transform = stream_module.Transform;
     function IconvLiteEncoderStream(conv, options) {
       this.conv = conv;
       options = options || {};
       options.decodeStrings = false;
-      Transform2.call(this, options);
+      Transform.call(this, options);
     }
-    IconvLiteEncoderStream.prototype = Object.create(Transform2.prototype, {
+    IconvLiteEncoderStream.prototype = Object.create(Transform.prototype, {
       constructor: { value: IconvLiteEncoderStream }
     });
     IconvLiteEncoderStream.prototype._transform = function(chunk, encoding, done) {
@@ -53084,9 +53103,9 @@ function requireStreams() {
       this.conv = conv;
       options = options || {};
       options.encoding = this.encoding = "utf8";
-      Transform2.call(this, options);
+      Transform.call(this, options);
     }
-    IconvLiteDecoderStream.prototype = Object.create(Transform2.prototype, {
+    IconvLiteDecoderStream.prototype = Object.create(Transform.prototype, {
       constructor: { value: IconvLiteDecoderStream }
     });
     IconvLiteDecoderStream.prototype._transform = function(chunk, encoding, done) {
@@ -53127,9 +53146,9 @@ function requireStreams() {
   };
   return streams;
 }
-(function(module) {
+(function(module2) {
   var Buffer2 = safer_1.Buffer;
-  var bomHandling$1 = bomHandling, iconv = module.exports;
+  var bomHandling$1 = bomHandling, iconv = module2.exports;
   iconv.encodings = null;
   iconv.defaultCharUnicode = "�";
   iconv.defaultCharSingleByte = "?";
@@ -53239,7 +53258,7 @@ function requireStreams() {
   }
 })(lib);
 var libExports = lib.exports;
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -53308,7 +53327,7 @@ var libExports = lib.exports;
   };
   var _default2 = Text;
   exports$1.default = _default2;
-  module.exports = Text;
+  module2.exports = Text;
 })(text, text.exports);
 var textExports = text.exports;
 var uniqueidentifier = { exports: {} };
@@ -53340,7 +53359,7 @@ for (let i = 0; i < hexDigits.length; i++) {
 function guidToArray(guid) {
   return [CHARCODEMAP[guid.charCodeAt(6)][guid.charCodeAt(7)], CHARCODEMAP[guid.charCodeAt(4)][guid.charCodeAt(5)], CHARCODEMAP[guid.charCodeAt(2)][guid.charCodeAt(3)], CHARCODEMAP[guid.charCodeAt(0)][guid.charCodeAt(1)], CHARCODEMAP[guid.charCodeAt(11)][guid.charCodeAt(12)], CHARCODEMAP[guid.charCodeAt(9)][guid.charCodeAt(10)], CHARCODEMAP[guid.charCodeAt(16)][guid.charCodeAt(17)], CHARCODEMAP[guid.charCodeAt(14)][guid.charCodeAt(15)], CHARCODEMAP[guid.charCodeAt(19)][guid.charCodeAt(20)], CHARCODEMAP[guid.charCodeAt(21)][guid.charCodeAt(22)], CHARCODEMAP[guid.charCodeAt(24)][guid.charCodeAt(25)], CHARCODEMAP[guid.charCodeAt(26)][guid.charCodeAt(27)], CHARCODEMAP[guid.charCodeAt(28)][guid.charCodeAt(29)], CHARCODEMAP[guid.charCodeAt(30)][guid.charCodeAt(31)], CHARCODEMAP[guid.charCodeAt(32)][guid.charCodeAt(33)], CHARCODEMAP[guid.charCodeAt(34)][guid.charCodeAt(35)]];
 }
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -53388,11 +53407,11 @@ function guidToArray(guid) {
   };
   var _default2 = UniqueIdentifier;
   exports$1.default = _default2;
-  module.exports = UniqueIdentifier;
+  module2.exports = UniqueIdentifier;
 })(uniqueidentifier, uniqueidentifier.exports);
 var uniqueidentifierExports = uniqueidentifier.exports;
 var ntext = { exports: {} };
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -53449,11 +53468,11 @@ var ntext = { exports: {} };
   };
   var _default2 = NText;
   exports$1.default = _default2;
-  module.exports = NText;
+  module2.exports = NText;
 })(ntext, ntext.exports);
 var ntextExports = ntext.exports;
 var varbinary = { exports: {} };
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -53568,11 +53587,11 @@ var varbinary = { exports: {} };
   };
   var _default2 = VarBinary;
   exports$1.default = _default2;
-  module.exports = VarBinary;
+  module2.exports = VarBinary;
 })(varbinary, varbinary.exports);
 var varbinaryExports = varbinary.exports;
 var varchar = { exports: {} };
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -53684,11 +53703,11 @@ var varchar = { exports: {} };
   };
   var _default2 = VarChar;
   exports$1.default = _default2;
-  module.exports = VarChar;
+  module2.exports = VarChar;
 })(varchar, varchar.exports);
 var varcharExports = varchar.exports;
 var binary = { exports: {} };
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -53753,11 +53772,11 @@ var binary = { exports: {} };
   };
   var _default2 = Binary;
   exports$1.default = _default2;
-  module.exports = Binary;
+  module2.exports = Binary;
 })(binary, binary.exports);
 var binaryExports = binary.exports;
 var char = { exports: {} };
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -53843,11 +53862,11 @@ var char = { exports: {} };
   };
   var _default2 = Char;
   exports$1.default = _default2;
-  module.exports = Char;
+  module2.exports = Char;
 })(char, char.exports);
 var charExports = char.exports;
 var nvarchar = { exports: {} };
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -53977,11 +53996,11 @@ var nvarchar = { exports: {} };
   };
   var _default2 = NVarChar;
   exports$1.default = _default2;
-  module.exports = NVarChar;
+  module2.exports = NVarChar;
 })(nvarchar, nvarchar.exports);
 var nvarcharExports = nvarchar.exports;
 var nchar = { exports: {} };
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -54075,11 +54094,11 @@ var nchar = { exports: {} };
   };
   var _default2 = NChar;
   exports$1.default = _default2;
-  module.exports = NChar;
+  module2.exports = NChar;
 })(nchar, nchar.exports);
 var ncharExports = nchar.exports;
 var xml = { exports: {} };
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -54106,11 +54125,11 @@ var xml = { exports: {} };
   };
   var _default2 = XML;
   exports$1.default = _default2;
-  module.exports = XML;
+  module2.exports = XML;
 })(xml, xml.exports);
 var xmlExports = xml.exports;
 var time = { exports: {} };
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -54206,11 +54225,11 @@ var time = { exports: {} };
   };
   var _default2 = Time;
   exports$1.default = _default2;
-  module.exports = Time;
+  module2.exports = Time;
 })(time, time.exports);
 var timeExports = time.exports;
 var date = { exports: {} };
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -54268,11 +54287,11 @@ var date = { exports: {} };
   };
   var _default2 = Date2;
   exports$1.default = _default2;
-  module.exports = Date2;
+  module2.exports = Date2;
 })(date, date.exports);
 var dateExports = date.exports;
 var datetime2 = { exports: {} };
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -54380,11 +54399,11 @@ var datetime2 = { exports: {} };
   };
   var _default2 = DateTime2;
   exports$1.default = _default2;
-  module.exports = DateTime2;
+  module2.exports = DateTime2;
 })(datetime2, datetime2.exports);
 var datetime2Exports = datetime2.exports;
 var datetimeoffset = { exports: {} };
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -54485,11 +54504,11 @@ var datetimeoffset = { exports: {} };
   };
   var _default2 = DateTimeOffset;
   exports$1.default = _default2;
-  module.exports = DateTimeOffset;
+  module2.exports = DateTimeOffset;
 })(datetimeoffset, datetimeoffset.exports);
 var datetimeoffsetExports = datetimeoffset.exports;
 var udt$1 = { exports: {} };
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -54516,11 +54535,11 @@ var udt$1 = { exports: {} };
   };
   var _default2 = UDT2;
   exports$1.default = _default2;
-  module.exports = UDT2;
+  module2.exports = UDT2;
 })(udt$1, udt$1.exports);
 var udtExports = udt$1.exports;
 var tvp = { exports: {} };
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -54620,11 +54639,11 @@ var tvp = { exports: {} };
   };
   var _default2 = TVP;
   exports$1.default = _default2;
-  module.exports = TVP;
+  module2.exports = TVP;
 })(tvp, tvp.exports);
 var tvpExports = tvp.exports;
 var sqlVariant = { exports: {} };
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -54651,7 +54670,7 @@ var sqlVariant = { exports: {} };
   };
   var _default2 = Variant;
   exports$1.default = _default2;
-  module.exports = Variant;
+  module2.exports = Variant;
 })(sqlVariant, sqlVariant.exports);
 var sqlVariantExports = sqlVariant.exports;
 Object.defineProperty(dataType, "__esModule", {
@@ -54778,7 +54797,7 @@ const TYPES$1 = {
 dataType.TYPES = TYPES$1;
 const typeByName = TYPES$1;
 dataType.typeByName = typeByName;
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -55033,11 +55052,11 @@ dataType.typeByName = typeByName;
   }
   var _default2 = metadataParse;
   exports$1.default = _default2;
-  module.exports = metadataParse;
-  module.exports.readCollation = readCollation;
+  module2.exports = metadataParse;
+  module2.exports.readCollation = readCollation;
 })(metadataParser, metadataParser.exports);
 var metadataParserExports = metadataParser.exports;
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -55132,7 +55151,7 @@ var metadataParserExports = metadataParser.exports;
   }
   var _default2 = colMetadataParser;
   exports$1.default = _default2;
-  module.exports = colMetadataParser;
+  module2.exports = colMetadataParser;
 })(colmetadataTokenParser, colmetadataTokenParser.exports);
 var colmetadataTokenParserExports = colmetadataTokenParser.exports;
 var doneTokenParser = {};
@@ -55194,7 +55213,7 @@ function doneProcParser(parser, options, callback) {
   });
 }
 var envChangeTokenParser = { exports: {} };
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -55344,7 +55363,7 @@ var envChangeTokenParser = { exports: {} };
   }
   var _default2 = envChangeParser;
   exports$1.default = _default2;
-  module.exports = envChangeParser;
+  module2.exports = envChangeParser;
 })(envChangeTokenParser, envChangeTokenParser.exports);
 var envChangeTokenParserExports = envChangeTokenParser.exports;
 var infoerrorTokenParser = {};
@@ -55392,7 +55411,7 @@ function errorParser(parser, options, callback) {
   });
 }
 var fedauthInfoParser = { exports: {} };
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -55431,11 +55450,11 @@ var fedauthInfoParser = { exports: {} };
   }
   var _default2 = fedAuthInfoParser;
   exports$1.default = _default2;
-  module.exports = fedAuthInfoParser;
+  module2.exports = fedAuthInfoParser;
 })(fedauthInfoParser, fedauthInfoParser.exports);
 var fedauthInfoParserExports = fedauthInfoParser.exports;
 var featureExtAckParser = { exports: {} };
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -55473,11 +55492,11 @@ var featureExtAckParser = { exports: {} };
   }
   var _default2 = featureExtAckParser2;
   exports$1.default = _default2;
-  module.exports = featureExtAckParser2;
+  module2.exports = featureExtAckParser2;
 })(featureExtAckParser, featureExtAckParser.exports);
 var featureExtAckParserExports = featureExtAckParser.exports;
 var loginackTokenParser = { exports: {} };
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -55521,11 +55540,11 @@ var loginackTokenParser = { exports: {} };
   }
   var _default2 = loginAckParser;
   exports$1.default = _default2;
-  module.exports = loginAckParser;
+  module2.exports = loginAckParser;
 })(loginackTokenParser, loginackTokenParser.exports);
 var loginackTokenParserExports = loginackTokenParser.exports;
 var orderTokenParser = { exports: {} };
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -55553,11 +55572,11 @@ var orderTokenParser = { exports: {} };
   }
   var _default2 = orderParser;
   exports$1.default = _default2;
-  module.exports = orderParser;
+  module2.exports = orderParser;
 })(orderTokenParser, orderTokenParser.exports);
 var orderTokenParserExports = orderTokenParser.exports;
 var returnstatusTokenParser = { exports: {} };
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -55570,12 +55589,12 @@ var returnstatusTokenParser = { exports: {} };
   }
   var _default2 = returnStatusParser;
   exports$1.default = _default2;
-  module.exports = returnStatusParser;
+  module2.exports = returnStatusParser;
 })(returnstatusTokenParser, returnstatusTokenParser.exports);
 var returnstatusTokenParserExports = returnstatusTokenParser.exports;
 var returnvalueTokenParser = { exports: {} };
 var valueParser = { exports: {} };
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -56168,10 +56187,10 @@ var valueParser = { exports: {} };
   }
   var _default2 = valueParse;
   exports$1.default = _default2;
-  module.exports = valueParse;
+  module2.exports = valueParse;
 })(valueParser, valueParser.exports);
 var valueParserExports = valueParser.exports;
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -56205,11 +56224,11 @@ var valueParserExports = valueParser.exports;
   }
   var _default2 = returnParser;
   exports$1.default = _default2;
-  module.exports = returnParser;
+  module2.exports = returnParser;
 })(returnvalueTokenParser, returnvalueTokenParser.exports);
 var returnvalueTokenParserExports = returnvalueTokenParser.exports;
 var rowTokenParser = { exports: {} };
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -56255,11 +56274,11 @@ var rowTokenParser = { exports: {} };
   }
   var _default2 = rowParser;
   exports$1.default = _default2;
-  module.exports = rowParser;
+  module2.exports = rowParser;
 })(rowTokenParser, rowTokenParser.exports);
 var rowTokenParserExports = rowTokenParser.exports;
 var nbcrowTokenParser = { exports: {} };
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -56325,11 +56344,11 @@ var nbcrowTokenParser = { exports: {} };
   }
   var _default2 = nbcRowParser;
   exports$1.default = _default2;
-  module.exports = nbcRowParser;
+  module2.exports = nbcRowParser;
 })(nbcrowTokenParser, nbcrowTokenParser.exports);
 var nbcrowTokenParserExports = nbcrowTokenParser.exports;
 var sspiTokenParser = { exports: {} };
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -56360,10 +56379,10 @@ var sspiTokenParser = { exports: {} };
   }
   var _default2 = sspiParser;
   exports$1.default = _default2;
-  module.exports = sspiParser;
+  module2.exports = sspiParser;
 })(sspiTokenParser, sspiTokenParser.exports);
 var sspiTokenParserExports = sspiTokenParser.exports;
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -56734,7 +56753,7 @@ var sspiTokenParserExports = sspiTokenParser.exports;
   }
   var _default2 = Parser2;
   exports$1.default = _default2;
-  module.exports = Parser2;
+  module2.exports = Parser2;
 })(streamParser, streamParser.exports);
 var streamParserExports = streamParser.exports;
 Object.defineProperty(tokenStreamParser, "__esModule", {
@@ -57987,14 +58006,21 @@ var isCallable = reflectApply ? function isCallable2(value) {
   }
   return tryFunctionObject(value);
 };
-var IsCallable$3 = isCallable;
+var IsCallable$3;
+var hasRequiredIsCallable;
+function requireIsCallable() {
+  if (hasRequiredIsCallable) return IsCallable$3;
+  hasRequiredIsCallable = 1;
+  IsCallable$3 = isCallable;
+  return IsCallable$3;
+}
 var ToBoolean$4 = function ToBoolean(value) {
   return !!value;
 };
 var hasOwn$4 = hasown;
 var $TypeError$n = type;
 var isObject$d = isObject$e;
-var IsCallable$2 = IsCallable$3;
+var IsCallable$2 = requireIsCallable();
 var ToBoolean$3 = ToBoolean$4;
 var ToPropertyDescriptor$3 = function ToPropertyDescriptor(Obj) {
   if (!isObject$d(Obj)) {
@@ -59336,12 +59362,12 @@ var hasRequiredCallBind;
 function requireCallBind() {
   if (hasRequiredCallBind) return callBind$1.exports;
   hasRequiredCallBind = 1;
-  (function(module) {
+  (function(module2) {
     var setFunctionLength2 = requireSetFunctionLength();
     var $defineProperty2 = esDefineProperty;
     var callBindBasic2 = callBindApplyHelpers;
     var applyBind2 = requireApplyBind();
-    module.exports = function callBind2(originalFunction) {
+    module2.exports = function callBind2(originalFunction) {
       var func = callBindBasic2(arguments);
       var adjustedLength = originalFunction.length - (arguments.length - 1);
       return setFunctionLength2(
@@ -59351,9 +59377,9 @@ function requireCallBind() {
       );
     };
     if ($defineProperty2) {
-      $defineProperty2(module.exports, "apply", { value: applyBind2 });
+      $defineProperty2(module2.exports, "apply", { value: applyBind2 });
     } else {
-      module.exports.apply = applyBind2;
+      module2.exports.apply = applyBind2;
     }
   })(callBind$1);
   return callBind$1.exports;
@@ -59464,7 +59490,7 @@ function requireGetMethod() {
   hasRequiredGetMethod = 1;
   var $TypeError2 = type;
   var GetV2 = requireGetV();
-  var IsCallable2 = IsCallable$3;
+  var IsCallable2 = requireIsCallable();
   var isPropertyKey3 = isPropertyKey$7;
   var inspect2 = requireObjectInspect();
   GetMethod$1 = function GetMethod2(O, P) {
@@ -60041,7 +60067,7 @@ function requireGetIteratorFromMethod() {
   var isObject3 = isObject$e;
   var Call2 = requireCall();
   var Get3 = Get$2;
-  var IsCallable2 = IsCallable$3;
+  var IsCallable2 = requireIsCallable();
   GetIteratorFromMethod$1 = function GetIteratorFromMethod2(obj2, method) {
     if (!IsCallable2(method)) {
       throw new $TypeError2("method must be a function");
@@ -61083,7 +61109,7 @@ class AttentionTokenHandler extends TokenHandler {
   }
 }
 handler.AttentionTokenHandler = AttentionTokenHandler;
-(function(module, exports$1) {
+(function(module2, exports$1) {
   Object.defineProperty(exports$1, "__esModule", {
     value: true
   });
@@ -62932,7 +62958,7 @@ handler.AttentionTokenHandler = AttentionTokenHandler;
   }
   var _default2 = Connection;
   exports$1.default = _default2;
-  module.exports = Connection;
+  module2.exports = Connection;
   Connection.prototype.STATE = {
     INITIALIZED: {
       name: "Initialized",
@@ -64807,18 +64833,18 @@ class Request2 extends BaseRequest {
   }
 }
 var request = Request2;
-(function(module) {
+(function(module2) {
   const base2 = baseExports;
   const ConnectionPool3 = connectionPool;
   const Transaction4 = transaction;
   const Request3 = request;
-  module.exports = Object.assign({
+  module2.exports = Object.assign({
     ConnectionPool: ConnectionPool3,
     Transaction: Transaction4,
     Request: Request3,
     PreparedStatement: base2.PreparedStatement
   }, base2.exports);
-  Object.defineProperty(module.exports, "Promise", {
+  Object.defineProperty(module2.exports, "Promise", {
     enumerable: true,
     get: () => {
       return base2.Promise;
@@ -64827,7 +64853,7 @@ var request = Request2;
       base2.Promise = value;
     }
   });
-  Object.defineProperty(module.exports, "valueHandler", {
+  Object.defineProperty(module2.exports, "valueHandler", {
     enumerable: true,
     value: base2.valueHandler,
     writable: false,
@@ -64847,7 +64873,7 @@ const connectionConfig = {
   server: "SERVER-TRIAL\\NAPINDOSQL",
   database: "NAPINDO",
   options: {
-    encrypt: true,
+    encrypt: false,
     trustServerCertificate: true
   }
 };
@@ -64881,7 +64907,7 @@ async function closePool() {
   await pool.close();
   pool = null;
 }
-const __dirname$1 = path$2.dirname(fileURLToPath(import.meta.url));
+const __dirname$1 = path$2.dirname(node_url.fileURLToPath(typeof document === "undefined" ? require("url").pathToFileURL(__filename).href : _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("main.cjs", document.baseURI).href));
 process.env.APP_ROOT = path$2.join(__dirname$1, "..");
 const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
 const MAIN_DIST = path$2.join(process.env.APP_ROOT, "dist-electron");
@@ -64889,7 +64915,7 @@ const RENDERER_DIST = path$2.join(process.env.APP_ROOT, "dist");
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path$2.join(process.env.APP_ROOT, "public") : RENDERER_DIST;
 let win;
 function createWindow() {
-  win = new BrowserWindow({
+  win = new electron.BrowserWindow({
     icon: path$2.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
     webPreferences: {
       preload: path$2.join(__dirname$1, "preload.mjs")
@@ -64905,7 +64931,7 @@ function createWindow() {
   }
 }
 function registerDatabaseHandlers() {
-  ipcMain.handle("db:testConnection", async () => {
+  electron.ipcMain.handle("db:testConnection", async () => {
     try {
       const result = await testConnection();
       return { ...result };
@@ -64913,7 +64939,7 @@ function registerDatabaseHandlers() {
       return { success: false, message: error2 instanceof Error ? error2.message : String(error2) };
     }
   });
-  ipcMain.handle("db:fetchTableData", async (_event, tableName) => {
+  electron.ipcMain.handle("db:fetchTableData", async (_event, tableName) => {
     try {
       const rows = await fetchTopRows(tableName);
       return { success: true, rows };
@@ -64922,26 +64948,25 @@ function registerDatabaseHandlers() {
     }
   });
 }
-app.on("window-all-closed", () => {
+electron.app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
-    app.quit();
+    electron.app.quit();
     win = null;
   }
 });
-app.on("activate", () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
+electron.app.on("activate", () => {
+  if (electron.BrowserWindow.getAllWindows().length === 0) {
     createWindow();
   }
 });
-app.whenReady().then(() => {
+electron.app.whenReady().then(() => {
   registerDatabaseHandlers();
   createWindow();
 });
-app.on("before-quit", async () => {
+electron.app.on("before-quit", async () => {
   await closePool();
 });
-export {
-  MAIN_DIST,
-  RENDERER_DIST,
-  VITE_DEV_SERVER_URL
-};
+exports.MAIN_DIST = MAIN_DIST;
+exports.RENDERER_DIST = RENDERER_DIST;
+exports.VITE_DEV_SERVER_URL = VITE_DEV_SERVER_URL;
+;

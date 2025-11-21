@@ -1,7 +1,7 @@
 import { app, BrowserWindow, ipcMain } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
-import { closePool, fetchTopRows, testConnection } from './db.js'
+import { closePool, fetchTopRows, loginUser, testConnection } from './db.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -60,6 +60,20 @@ function registerDatabaseHandlers() {
     try {
       const rows = await fetchTopRows(tableName)
       return { success: true, rows }
+    } catch (error) {
+      return { success: false, message: error instanceof Error ? error.message : String(error) }
+    }
+  })
+
+  ipcMain.handle('db:login', async (_event, payload) => {
+    try {
+      const user = await loginUser(payload)
+
+      if (!user) {
+        return { success: false, message: 'Username, password, atau divisi tidak cocok.' }
+      }
+
+      return { success: true, user }
     } catch (error) {
       return { success: false, message: error instanceof Error ? error.message : String(error) }
     }

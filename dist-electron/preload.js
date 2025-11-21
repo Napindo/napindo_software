@@ -22,5 +22,6 @@ electron.contextBridge.exposeInMainWorld("ipcRenderer", {
 });
 electron.contextBridge.exposeInMainWorld("database", {
   testConnection: () => electron.ipcRenderer.invoke("db:testConnection"),
-  fetchTableData: (tableName) => electron.ipcRenderer.invoke("db:fetchTableData", tableName)
+  fetchTableData: (tableName) => electron.ipcRenderer.invoke("db:fetchTableData", tableName),
+  login: (payload) => electron.ipcRenderer.invoke("db:login", payload)
 });

@@ -24118,7 +24118,7 @@ const baseOpen = async (options) => {
   subprocess.unref();
   return subprocess;
 };
-const open$1 = (target, options) => {
+const open = (target, options) => {
   if (typeof target !== "string") {
     throw new TypeError("Expected a `target`");
   }
@@ -24187,12 +24187,12 @@ defineLazyProperty(apps, "edge", () => detectPlatformBinary({
 }, {
   wsl: "/mnt/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"
 }));
-open$1.apps = apps;
-open$1.openApp = openApp;
-var open_1 = open$1;
-const open = /* @__PURE__ */ getDefaultExportFromCjs(open_1);
+open.apps = apps;
+open.openApp = openApp;
+var open_1 = open;
+const open$1 = /* @__PURE__ */ getDefaultExportFromCjs(open_1);
 const https = https$2;
-var stoppable$1 = (server, grace) => {
+var stoppable = (server, grace) => {
   grace = typeof grace === "undefined" ? Infinity : grace;
   const reqsPerSocket = /* @__PURE__ */ new Map();
   let stopped = false;
@@ -24245,9 +24245,9 @@ var stoppable$1 = (server, grace) => {
     });
   }
 };
-const stoppable = /* @__PURE__ */ getDefaultExportFromCjs(stoppable$1);
+const stoppable$1 = /* @__PURE__ */ getDefaultExportFromCjs(stoppable);
 const interactiveBrowserMockable = {
-  open
+  open: open$1
 };
 class MsalOpenBrowser extends MsalNode {
   constructor(options) {
@@ -24321,7 +24321,7 @@ class MsalOpenBrowser extends MsalNode {
         });
       };
       const app = http$1.createServer(requestListener);
-      const server = stoppable(app);
+      const server = stoppable$1(app);
       const listen = app.listen(this.port, this.hostname, () => this.logger.info(`InteractiveBrowserCredential listening on port ${this.port}!`));
       function cleanup() {
         if (listen) {
@@ -64902,6 +64902,38 @@ async function fetchTopRows(tableName, top = 10) {
   const result = await currentPool.request().query(query);
   return result.recordset ?? [];
 }
+async function loginUser(payload) {
+  var _a2, _b2;
+  const username = payload.username.trim();
+  const password = payload.password;
+  const division = (_a2 = payload.division) == null ? void 0 : _a2.trim();
+  if (!username || !password) {
+    throw new Error("Username dan password wajib diisi");
+  }
+  const currentPool = await ensurePool();
+  const request2 = currentPool.request();
+  request2.input("username", sql.VarChar(128), username);
+  request2.input("password", sql.VarChar(256), password);
+  let whereClause = "WHERE USERNAME = @username AND PASSWORD = @password";
+  if (division) {
+    request2.input("division", sql.VarChar(128), division);
+    whereClause += " AND DIVISI = @division";
+  }
+  const query = `SELECT TOP (1) * FROM dbo.PENGGUNA ${whereClause}`;
+  const result = await request2.query(query);
+  const user = (_b2 = result.recordset) == null ? void 0 : _b2[0];
+  if (!user) {
+    return null;
+  }
+  const resolvedUsername = user.USERNAME ?? user.username ?? username;
+  const resolvedDivision = user.DIVISI ?? user.divisi ?? (division ?? null);
+  const resolvedName = user.NAMA ?? user.nama ?? null;
+  return {
+    username: resolvedUsername,
+    division: resolvedDivision ?? null,
+    name: resolvedName
+  };
+}
 async function closePool() {
   if (!pool) return;
   await pool.close();
@@ -64947,6 +64979,17 @@ function registerDatabaseHandlers() {
       return { success: false, message: error2 instanceof Error ? error2.message : String(error2) };
     }
   });
+  electron.ipcMain.handle("db:login", async (_event, payload) => {
+    try {
+      const user = await loginUser(payload);
+      if (!user) {
+        return { success: false, message: "Username, password, atau divisi tidak cocok." };
+      }
+      return { success: true, user };
+    } catch (error2) {
+      return { success: false, message: error2 instanceof Error ? error2.message : String(error2) };
+    }
+  });
 }
 electron.app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
@@ -64969,4 +65012,3 @@ electron.app.on("before-quit", async () => {
 exports.MAIN_DIST = MAIN_DIST;
 exports.RENDERER_DIST = RENDERER_DIST;
 exports.VITE_DEV_SERVER_URL = VITE_DEV_SERVER_URL;
-;

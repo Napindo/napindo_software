@@ -1,5 +1,6 @@
 import type { ChangeEvent, FormEvent } from 'react'
 import { useEffect, useMemo, useState } from 'react'
+import ComboField from './ComboField'
 
 type LoginStatus = 'idle' | 'loading' | 'success' | 'error'
 
@@ -10,9 +11,12 @@ type LoginForm = {
 }
 
 const REMEMBER_KEY = 'napindo-login'
+const capitalizeFirst = (value: string) => value.replace(/^(\s*)([a-zA-Z])/, (_, spaces: string, char: string) => `${spaces}${char.toUpperCase()}`)
 
-const NapindoMark = () => (
-  <svg className="napindo-icon" viewBox="0 0 160 150" role="presentation" aria-hidden="true">
+type MarkProps = { className?: string }
+
+const NapindoMark = ({ className }: MarkProps) => (
+  <svg className={`napindo-icon ${className ?? ''}`} viewBox="0 0 160 150" role="presentation" aria-hidden="true">
     <defs>
       <linearGradient id="napindoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
         <stop offset="0%" stopColor="#e63946" />
@@ -34,6 +38,26 @@ const NapindoMark = () => (
   </svg>
 )
 
+async function invokeLogin(payload: { username: string; password: string; division?: string | null }) {
+  if (window.database?.login) {
+    return window.database.login(payload)
+  }
+  if (window.ipcRenderer?.invoke) {
+    return window.ipcRenderer.invoke('db:login', payload)
+  }
+  throw new Error('Fungsi login tidak tersedia, restart aplikasi atau rebuild preload.')
+}
+
+async function invokeUserHints() {
+  if (window.database?.userHints) {
+    return window.database.userHints()
+  }
+  if (window.ipcRenderer?.invoke) {
+    return window.ipcRenderer.invoke('db:userHints')
+  }
+  throw new Error('Fungsi userHints tidak tersedia, restart aplikasi atau rebuild preload.')
+}
+
 function LoginPage() {
   const [form, setForm] = useState<LoginForm>({ username: '', password: '', division: '' })
   const [remember, setRemember] = useState(true)
@@ -41,6 +65,8 @@ function LoginPage() {
   const [message, setMessage] = useState('')
   const [welcomeName, setWelcomeName] = useState('')
   const [showShell, setShowShell] = useState(false)
+  const [hints, setHints] = useState<{ usernames: string[]; divisions: string[] }>({ usernames: [], divisions: [] })
+  const [hintsError, setHintsError] = useState<string | null>(null)
 
   useEffect(() => {
     const stored = localStorage.getItem(REMEMBER_KEY)
@@ -62,6 +88,31 @@ function LoginPage() {
   }, [])
 
   useEffect(() => {
+    const loadHints = async () => {
+      setHintsError(null)
+      try {
+        const response = await invokeUserHints()
+        if (!response) {
+          setHintsError('API userHints tidak tersedia.')
+          return
+        }
+
+        if (response.success && response.hints) {
+          setHints({
+            usernames: response.hints.usernames?.filter(Boolean) ?? [],
+            divisions: response.hints.divisions?.filter(Boolean) ?? [],
+          })
+        } else {
+          setHintsError(response.message ?? 'Gagal memuat saran username/division')
+        }
+      } catch (error) {
+        setHintsError(error instanceof Error ? error.message : 'Gagal memuat saran username/division')
+      }
+    }
+    loadHints()
+  }, [])
+
+  useEffect(() => {
     if (remember) {
       localStorage.setItem(
         REMEMBER_KEY,
@@ -75,7 +126,8 @@ function LoginPage() {
   const isReady = useMemo(() => form.username.trim() !== '' && form.password.trim() !== '', [form])
 
   const handleChange = (field: keyof LoginForm) => (event: ChangeEvent<HTMLInputElement>) => {
-    setForm((prev) => ({ ...prev, [field]: event.target.value }))
+    const value = capitalizeFirst(event.target.value)
+    setForm((prev) => ({ ...prev, [field]: value }))
   }
 
   const handleSubmit = async (event: FormEvent) => {
@@ -90,7 +142,7 @@ function LoginPage() {
     setMessage('Mengecek kredensial...')
 
     try {
-      const response = await window.database.login({
+      const response = await invokeLogin({
         username: form.username.trim(),
         password: form.password,
         division: form.division.trim() || null,
@@ -114,77 +166,101 @@ function LoginPage() {
   }
 
   return (
-    <div className={`page ${showShell ? 'visible' : ''}`}>
-      <div className="login-card">
-        <div className="brand-side">
-          <div className="brand-mark">
-            <NapindoMark />
-            <div className="brand-text">
-              <span className="tagline">Showing The Way !</span>
-              <h1>Napindo</h1>
+    <div className={`min-h-screen flex items-center justify-center px-4 py-10 transition duration-500 ${showShell ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'}`}>
+      <div className="w-full max-w-5xl bg-white/90 backdrop-blur-md shadow-card rounded-3xl border border-white overflow-hidden grid md:grid-cols-2">
+        <div className="bg-gradient-to-br from-white via-rose-50 to-slate-50 flex items-center justify-center p-8 md:p-10">
+          <div className="flex items-center gap-6 float-soft">
+            <NapindoMark className="w-28 h-28 md:w-32 md:h-32 shrink-0" />
+            <div className="relative">
+              <span className="block text-rose-600 text-lg font-semibold italic tagline-underline">Showing The Way !</span>
+              <h1 className="text-5xl font-bold text-slate-900 mt-2">Napindo</h1>
             </div>
           </div>
         </div>
 
-        <div className="form-side">
-          <header className="form-header">
-            <h2>Masuk ke Sistem</h2>
-            <p>Ketikkan kredensial SQL Server Anda untuk melanjutkan.</p>
+        <div className="p-6 sm:p-8 md:p-10">
+          <header className="mb-8">
+            <h2 className="text-3xl font-bold text-slate-900 mb-2">Masuk ke Sistem</h2>
+            <p className="text-slate-600">Ketikkan kredensial SQL Server Anda untuk melanjutkan.</p>
           </header>
 
-          <form className="login-form" onSubmit={handleSubmit}>
-            <label className="field">
-              <span>Username</span>
-              <input
-                type="text"
-                placeholder="Username"
-                value={form.username}
-                onChange={handleChange('username')}
-                autoComplete="username"
-              />
-            </label>
-            <label className="field">
-              <span>Password</span>
+          <form className="space-y-4 max-w-md" onSubmit={handleSubmit}>
+            <ComboField
+              label="Username"
+              name="username"
+              value={form.username}
+              placeholder="Username"
+              options={hints.usernames}
+              onChange={handleChange}
+            />
+
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-slate-800">Password</label>
               <input
                 type="password"
                 placeholder="Password"
                 value={form.password}
                 onChange={handleChange('password')}
                 autoComplete="current-password"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 placeholder-slate-400 focus:border-rose-400 focus:ring-4 focus:ring-rose-100 transition"
               />
-            </label>
-            <label className="field">
-              <span>Division</span>
-              <input
-                type="text"
-                placeholder="Division"
-                value={form.division}
-                onChange={handleChange('division')}
-              />
-            </label>
+            </div>
 
-            <div className="form-footer">
-              <label className={`switch ${remember ? 'checked' : ''}`}>
-                <input
-                  type="checkbox"
-                  checked={remember}
-                  onChange={(event) => setRemember(event.target.checked)}
-                />
-                <span className="slider" aria-hidden />
-                <span className="switch-label">Remember me</span>
+            <ComboField
+              label="Division"
+              name="division"
+              value={form.division}
+              placeholder="Division"
+              options={hints.divisions}
+              onChange={handleChange}
+            />
+
+            <div className="flex items-center justify-between pt-2">
+              <label className="inline-flex items-center gap-3 text-slate-700 font-semibold cursor-pointer select-none">
+                <span className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${remember ? 'bg-rose-500' : 'bg-slate-300'}`}>
+                  <span
+                    className={`inline-block h-5 w-5 rounded-full bg-white shadow transform transition ${remember ? 'translate-x-5' : 'translate-x-1'}`}
+                  />
+                  <input
+                    type="checkbox"
+                    className="peer absolute inset-0 opacity-0 cursor-pointer"
+                    checked={remember}
+                    onChange={(event) => setRemember(event.target.checked)}
+                  />
+                </span>
+                Remember me
               </label>
-
-              <div className={`status-dot ${status}`} aria-hidden />
+              <span
+                className={`inline-block h-3 w-3 rounded-full ${status === 'loading' ? 'bg-amber-400' : status === 'success' ? 'bg-emerald-500' : status === 'error' ? 'bg-rose-500' : 'bg-slate-300'}`}
+                aria-hidden
+              />
             </div>
 
             {status !== 'idle' && (
-              <p className={`feedback ${status}`}>
+              <p
+                className={`text-sm font-semibold rounded-xl border px-4 py-3 ${
+                  status === 'success'
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : status === 'error'
+                      ? 'bg-rose-50 text-rose-700 border-rose-200'
+                      : 'bg-amber-50 text-amber-700 border-amber-200'
+                }`}
+              >
                 {status === 'success' ? `Welcome, ${welcomeName}! ` : null}
                 {message}
               </p>
             )}
+            {hintsError && (
+              <p className="text-sm font-semibold rounded-xl border px-4 py-3 bg-rose-50 text-rose-700 border-rose-200">
+                {hintsError}
+              </p>
+            )}
 
-            <button type="submit" className="submit" disabled={status === 'loading' || !isReady}>
+            <button
+              type="submit"
+              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-rose-500 to-rose-700 text-white font-bold tracking-wide uppercase shadow-lg hover:shadow-xl transition disabled:opacity-60 disabled:cursor-not-allowed"
+              disabled={status === 'loading' || !isReady}
+            >
               {status === 'loading' ? 'Memproses...' : 'Login'}
             </button>
           </form>

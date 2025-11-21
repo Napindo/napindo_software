@@ -23,7 +23,7 @@ declare namespace NodeJS {
 
 // Used in Renderer process, expose in `preload.ts`
 type DatabaseResponse<T = unknown> =
-  | { success: true; rows?: T[]; serverTime?: unknown }
+  | { success: true; rows?: T[]; serverTime?: unknown; user?: T }
   | { success: false; message: string }
 
 interface Window {
@@ -31,5 +31,8 @@ interface Window {
   database: {
     testConnection: () => Promise<DatabaseResponse>
     fetchTableData: <T = unknown>(tableName: string) => Promise<DatabaseResponse<T>>
+    login: (
+      payload: { username: string; password: string; division?: string | null },
+    ) => Promise<DatabaseResponse<{ username: string; division?: string | null; name?: string | null }>>
   }
 }

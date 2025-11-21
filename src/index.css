@@ -1,16 +1,18 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+
 :root {
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Poppins', 'Segoe UI', 'Helvetica Neue', sans-serif;
   line-height: 1.6;
   font-weight: 400;
-  color: #e2e8f0;
-  background-color: #0f172a;
+  color: #0f172a;
+  background-color: #f6f7fb;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 a {
-  color: #38bdf8;
+  color: #e63946;
   text-decoration: none;
 }
 
@@ -21,7 +23,7 @@ a:hover {
 body {
   margin: 0;
   min-height: 100vh;
-  background-color: #0f172a;
+  background-color: #f6f7fb;
 }
 
 button {

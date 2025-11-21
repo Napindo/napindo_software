@@ -11,6 +11,22 @@ export default defineConfig({
       main: {
         // Shortcut of `build.lib.entry`.
         entry: 'electron/main.ts',
+        // Force CJS output so Electron can use __dirname/require safely.
+        vite: {
+          build: {
+            lib: {
+              entry: 'electron/main.ts',
+              formats: ['cjs'],
+              fileName: 'main',
+            },
+            rollupOptions: {
+              output: {
+                entryFileNames: 'main.cjs',
+                format: 'cjs',
+              },
+            },
+          },
+        },
       },
       preload: {
         // Shortcut of `build.rollupOptions.input`.

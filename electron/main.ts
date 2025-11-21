@@ -1,9 +1,8 @@
-import { app, BrowserWindow } from 'electron'
-import { createRequire } from 'node:module'
+import { app, BrowserWindow, ipcMain } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import { closePool, fetchTopRows, testConnection } from './db.js'
 
-const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // The built directory structure
@@ -47,6 +46,26 @@ function createWindow() {
   }
 }
 
+function registerDatabaseHandlers() {
+  ipcMain.handle('db:testConnection', async () => {
+    try {
+      const result = await testConnection()
+      return { ...result }
+    } catch (error) {
+      return { success: false, message: error instanceof Error ? error.message : String(error) }
+    }
+  })
+
+  ipcMain.handle('db:fetchTableData', async (_event, tableName: string) => {
+    try {
+      const rows = await fetchTopRows(tableName)
+      return { success: true, rows }
+    } catch (error) {
+      return { success: false, message: error instanceof Error ? error.message : String(error) }
+    }
+  })
+}
+
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits
 // explicitly with Cmd + Q.
@@ -65,4 +84,11 @@ app.on('activate', () => {
   }
 })
 
-app.whenReady().then(createWindow)
+app.whenReady().then(() => {
+  registerDatabaseHandlers()
+  createWindow()
+})
+
+app.on('before-quit', async () => {
+  await closePool()
+})

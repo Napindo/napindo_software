@@ -52,14 +52,15 @@ function App() {
     try {
       const response = await window.database.fetchTableData<TableRow>(tableName)
 
-      if (response.success && response.rows) {
-        setTableRows((current) => ({
-          ...current,
-          [tableName]: response.rows,
-        }))
-      } else {
+      if (!response.success) {
         setErrorMessage(response.message ?? 'Gagal mengambil data tabel')
+        return
       }
+
+      setTableRows((current) => ({
+        ...current,
+        [tableName]: response.rows ?? [],
+      }))
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Gagal mengambil data tabel')
     } finally {

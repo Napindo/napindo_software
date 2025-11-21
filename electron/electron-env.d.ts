@@ -23,7 +23,7 @@ declare namespace NodeJS {
 
 // Used in Renderer process, expose in `preload.ts`
 type DatabaseResponse<T = unknown> =
-  | { success: true; rows?: T[]; serverTime?: unknown; user?: T }
+  | { success: true; rows?: T[]; serverTime?: unknown; user?: T; hints?: T }
   | { success: false; message: string }
 
 interface Window {
@@ -34,5 +34,6 @@ interface Window {
     login: (
       payload: { username: string; password: string; division?: string | null },
     ) => Promise<DatabaseResponse<{ username: string; division?: string | null; name?: string | null }>>
+    userHints: () => Promise<DatabaseResponse<{ usernames: string[]; divisions: string[] }>>
   }
 }

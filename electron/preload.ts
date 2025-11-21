@@ -28,4 +28,5 @@ contextBridge.exposeInMainWorld('database', {
   fetchTableData: (tableName: string) => ipcRenderer.invoke('db:fetchTableData', tableName),
   login: (payload: { username: string; password: string; division?: string | null }) =>
     ipcRenderer.invoke('db:login', payload),
+  userHints: () => ipcRenderer.invoke('db:userHints'),
 })

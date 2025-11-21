@@ -22,3 +22,8 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
   // You can expose other APTs you need here.
   // ...
 })
+
+contextBridge.exposeInMainWorld('database', {
+  testConnection: () => ipcRenderer.invoke('db:testConnection'),
+  fetchTableData: (tableName: string) => ipcRenderer.invoke('db:fetchTableData', tableName),
+})

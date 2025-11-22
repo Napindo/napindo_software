@@ -56932,7 +56932,7 @@ let Transaction$1 = class Transaction2 {
 transaction$1.Transaction = Transaction$1;
 var connector = {};
 var ERROR_MESSAGE = "Function.prototype.bind called on incompatible ";
-var toStr$3 = Object.prototype.toString;
+var toStr$2 = Object.prototype.toString;
 var max$2 = Math.max;
 var funcType = "[object Function]";
 var concatty = function concatty2(a, b) {
@@ -56964,7 +56964,7 @@ var joiny = function(arr, joiner) {
 };
 var implementation$8 = function bind(that) {
   var target = this;
-  if (typeof target !== "function" || toStr$3.apply(target) !== funcType) {
+  if (typeof target !== "function" || toStr$2.apply(target) !== funcType) {
     throw new TypeError(ERROR_MESSAGE + target);
   }
   var args = slicy(arguments, 1);
@@ -57002,12 +57002,12 @@ var implementation$8 = function bind(that) {
 };
 var implementation$7 = implementation$8;
 var functionBind = Function.prototype.bind || implementation$7;
-var toStr$2 = Object.prototype.toString;
+var toStr$1 = Object.prototype.toString;
 var isArguments = function isArguments2(value) {
-  var str = toStr$2.call(value);
+  var str = toStr$1.call(value);
   var isArgs2 = str === "[object Arguments]";
   if (!isArgs2) {
-    isArgs2 = str !== "[object Array]" && value !== null && typeof value === "object" && typeof value.length === "number" && value.length >= 0 && toStr$2.call(value.callee) === "[object Function]";
+    isArgs2 = str !== "[object Array]" && value !== null && typeof value === "object" && typeof value.length === "number" && value.length >= 0 && toStr$1.call(value.callee) === "[object Function]";
   }
   return isArgs2;
 };
@@ -57238,11 +57238,11 @@ hasPropertyDescriptors$2.hasArrayLengthDefineBug = function hasArrayLengthDefine
 var hasPropertyDescriptors_1 = hasPropertyDescriptors$2;
 var keys2 = objectKeys;
 var hasSymbols$3 = typeof Symbol === "function" && typeof Symbol("foo") === "symbol";
-var toStr$1 = Object.prototype.toString;
+var toStr = Object.prototype.toString;
 var concat = Array.prototype.concat;
 var defineDataProperty$1 = defineDataProperty$2;
 var isFunction = function(fn) {
-  return typeof fn === "function" && toStr$1.call(fn) === "[object Function]";
+  return typeof fn === "function" && toStr.call(fn) === "[object Function]";
 };
 var supportsDescriptors = hasPropertyDescriptors_1();
 var defineProperty = function(object, name2, value, predicate) {
@@ -57501,11 +57501,11 @@ function requireFunctionApply() {
   functionApply = Function.prototype.apply;
   return functionApply;
 }
-var reflectApply$1 = typeof Reflect !== "undefined" && Reflect && Reflect.apply;
+var reflectApply = typeof Reflect !== "undefined" && Reflect && Reflect.apply;
 var bind$3 = functionBind;
 var $apply$1 = requireFunctionApply();
 var $call$2 = requireFunctionCall();
-var $reflectApply = reflectApply$1;
+var $reflectApply = reflectApply;
 var actualApply = $reflectApply || bind$3.call($call$2, $apply$1);
 var bind$2 = functionBind;
 var $TypeError$p = type;
@@ -57896,122 +57896,129 @@ var IsExtensible$1 = $preventExtensions ? function IsExtensible(obj2) {
 } : function IsExtensible2(obj2) {
   return !isPrimitive(obj2);
 };
-var fnToStr = Function.prototype.toString;
-var reflectApply = typeof Reflect === "object" && Reflect !== null && Reflect.apply;
-var badArrayLike;
-var isCallableMarker;
-if (typeof reflectApply === "function" && typeof Object.defineProperty === "function") {
-  try {
-    badArrayLike = Object.defineProperty({}, "length", {
-      get: function() {
-        throw isCallableMarker;
+var isCallable;
+var hasRequiredIsCallable$1;
+function requireIsCallable$1() {
+  if (hasRequiredIsCallable$1) return isCallable;
+  hasRequiredIsCallable$1 = 1;
+  var fnToStr = Function.prototype.toString;
+  var reflectApply2 = typeof Reflect === "object" && Reflect !== null && Reflect.apply;
+  var badArrayLike;
+  var isCallableMarker;
+  if (typeof reflectApply2 === "function" && typeof Object.defineProperty === "function") {
+    try {
+      badArrayLike = Object.defineProperty({}, "length", {
+        get: function() {
+          throw isCallableMarker;
+        }
+      });
+      isCallableMarker = {};
+      reflectApply2(function() {
+        throw 42;
+      }, null, badArrayLike);
+    } catch (_2) {
+      if (_2 !== isCallableMarker) {
+        reflectApply2 = null;
       }
-    });
-    isCallableMarker = {};
-    reflectApply(function() {
-      throw 42;
-    }, null, badArrayLike);
-  } catch (_2) {
-    if (_2 !== isCallableMarker) {
-      reflectApply = null;
+    }
+  } else {
+    reflectApply2 = null;
+  }
+  var constructorRegex = /^\s*class\b/;
+  var isES6ClassFn = function isES6ClassFunction(value) {
+    try {
+      var fnStr = fnToStr.call(value);
+      return constructorRegex.test(fnStr);
+    } catch (e) {
+      return false;
+    }
+  };
+  var tryFunctionObject = function tryFunctionToStr(value) {
+    try {
+      if (isES6ClassFn(value)) {
+        return false;
+      }
+      fnToStr.call(value);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  };
+  var toStr2 = Object.prototype.toString;
+  var objectClass = "[object Object]";
+  var fnClass = "[object Function]";
+  var genClass = "[object GeneratorFunction]";
+  var ddaClass = "[object HTMLAllCollection]";
+  var ddaClass2 = "[object HTML document.all class]";
+  var ddaClass3 = "[object HTMLCollection]";
+  var hasToStringTag = typeof Symbol === "function" && !!Symbol.toStringTag;
+  var isIE68 = !(0 in [,]);
+  var isDDA = function isDocumentDotAll() {
+    return false;
+  };
+  if (typeof document === "object") {
+    var all = document.all;
+    if (toStr2.call(all) === toStr2.call(document.all)) {
+      isDDA = function isDocumentDotAll(value) {
+        if ((isIE68 || !value) && (typeof value === "undefined" || typeof value === "object")) {
+          try {
+            var str = toStr2.call(value);
+            return (str === ddaClass || str === ddaClass2 || str === ddaClass3 || str === objectClass) && value("") == null;
+          } catch (e) {
+          }
+        }
+        return false;
+      };
     }
   }
-} else {
-  reflectApply = null;
-}
-var constructorRegex = /^\s*class\b/;
-var isES6ClassFn = function isES6ClassFunction(value) {
-  try {
-    var fnStr = fnToStr.call(value);
-    return constructorRegex.test(fnStr);
-  } catch (e) {
-    return false;
-  }
-};
-var tryFunctionObject = function tryFunctionToStr(value) {
-  try {
+  isCallable = reflectApply2 ? function isCallable2(value) {
+    if (isDDA(value)) {
+      return true;
+    }
+    if (!value) {
+      return false;
+    }
+    if (typeof value !== "function" && typeof value !== "object") {
+      return false;
+    }
+    try {
+      reflectApply2(value, null, badArrayLike);
+    } catch (e) {
+      if (e !== isCallableMarker) {
+        return false;
+      }
+    }
+    return !isES6ClassFn(value) && tryFunctionObject(value);
+  } : function isCallable2(value) {
+    if (isDDA(value)) {
+      return true;
+    }
+    if (!value) {
+      return false;
+    }
+    if (typeof value !== "function" && typeof value !== "object") {
+      return false;
+    }
+    if (hasToStringTag) {
+      return tryFunctionObject(value);
+    }
     if (isES6ClassFn(value)) {
       return false;
     }
-    fnToStr.call(value);
-    return true;
-  } catch (e) {
-    return false;
-  }
-};
-var toStr = Object.prototype.toString;
-var objectClass = "[object Object]";
-var fnClass = "[object Function]";
-var genClass = "[object GeneratorFunction]";
-var ddaClass = "[object HTMLAllCollection]";
-var ddaClass2 = "[object HTML document.all class]";
-var ddaClass3 = "[object HTMLCollection]";
-var hasToStringTag = typeof Symbol === "function" && !!Symbol.toStringTag;
-var isIE68 = !(0 in [,]);
-var isDDA = function isDocumentDotAll() {
-  return false;
-};
-if (typeof document === "object") {
-  var all = document.all;
-  if (toStr.call(all) === toStr.call(document.all)) {
-    isDDA = function isDocumentDotAll2(value) {
-      if ((isIE68 || !value) && (typeof value === "undefined" || typeof value === "object")) {
-        try {
-          var str = toStr.call(value);
-          return (str === ddaClass || str === ddaClass2 || str === ddaClass3 || str === objectClass) && value("") == null;
-        } catch (e) {
-        }
-      }
-      return false;
-    };
-  }
-}
-var isCallable = reflectApply ? function isCallable2(value) {
-  if (isDDA(value)) {
-    return true;
-  }
-  if (!value) {
-    return false;
-  }
-  if (typeof value !== "function" && typeof value !== "object") {
-    return false;
-  }
-  try {
-    reflectApply(value, null, badArrayLike);
-  } catch (e) {
-    if (e !== isCallableMarker) {
+    var strClass = toStr2.call(value);
+    if (strClass !== fnClass && strClass !== genClass && !/^\[object HTML/.test(strClass)) {
       return false;
     }
-  }
-  return !isES6ClassFn(value) && tryFunctionObject(value);
-} : function isCallable3(value) {
-  if (isDDA(value)) {
-    return true;
-  }
-  if (!value) {
-    return false;
-  }
-  if (typeof value !== "function" && typeof value !== "object") {
-    return false;
-  }
-  if (hasToStringTag) {
     return tryFunctionObject(value);
-  }
-  if (isES6ClassFn(value)) {
-    return false;
-  }
-  var strClass = toStr.call(value);
-  if (strClass !== fnClass && strClass !== genClass && !/^\[object HTML/.test(strClass)) {
-    return false;
-  }
-  return tryFunctionObject(value);
-};
+  };
+  return isCallable;
+}
 var IsCallable$3;
 var hasRequiredIsCallable;
 function requireIsCallable() {
   if (hasRequiredIsCallable) return IsCallable$3;
   hasRequiredIsCallable = 1;
-  IsCallable$3 = isCallable;
+  IsCallable$3 = requireIsCallable$1();
   return IsCallable$3;
 }
 var ToBoolean$4 = function ToBoolean(value) {
@@ -58448,7 +58455,7 @@ var SameValue$1 = function SameValue2(x, y) {
   }
   return $isNaN(x) && $isNaN(y);
 };
-var IsCallable$1 = isCallable;
+var IsCallable$1 = requireIsCallable$1();
 var ToBoolean$2 = function ToBoolean2(value) {
   return !!value;
 };
@@ -60114,7 +60121,7 @@ function requireIsString() {
   };
   var $toString = callBound2("Object.prototype.toString");
   var strClass = "[object String]";
-  var hasToStringTag2 = requireShams()();
+  var hasToStringTag = requireShams()();
   isString = function isString2(value) {
     if (typeof value === "string") {
       return true;
@@ -60122,7 +60129,7 @@ function requireIsString() {
     if (!value || typeof value !== "object") {
       return false;
     }
-    return hasToStringTag2 ? tryStringObject(value) : $toString(value) === strClass;
+    return hasToStringTag ? tryStringObject(value) : $toString(value) === strClass;
   };
   return isString;
 }

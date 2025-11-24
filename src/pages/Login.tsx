@@ -10,7 +10,19 @@ type LoginForm = {
   division: string
 }
 
+type HintsCache = {
+  usernames: string[]
+  divisions: string[]
+}
+
+export type AuthenticatedUser = {
+  username: string
+  name?: string
+  division?: string | null
+}
+
 const REMEMBER_KEY = 'napindo-login'
+const HINTS_CACHE_KEY = 'napindo-hints'
 const capitalizeFirst = (value: string) => value.replace(/^(\s*)([a-zA-Z])/, (_, spaces: string, char: string) => `${spaces}${char.toUpperCase()}`)
 
 type MarkProps = { className?: string }
@@ -58,14 +70,18 @@ async function invokeUserHints() {
   throw new Error('Fungsi userHints tidak tersedia, restart aplikasi atau rebuild preload.')
 }
 
-function LoginPage() {
+type LoginPageProps = {
+  onSuccess?: (user: AuthenticatedUser) => void
+}
+
+function LoginPage({ onSuccess }: LoginPageProps) {
   const [form, setForm] = useState<LoginForm>({ username: '', password: '', division: '' })
   const [remember, setRemember] = useState(true)
   const [status, setStatus] = useState<LoginStatus>('idle')
   const [message, setMessage] = useState('')
   const [welcomeName, setWelcomeName] = useState('')
   const [showShell, setShowShell] = useState(false)
-  const [hints, setHints] = useState<{ usernames: string[]; divisions: string[] }>({ usernames: [], divisions: [] })
+  const [hints, setHints] = useState<HintsCache>({ usernames: [], divisions: [] })
   const [hintsError, setHintsError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -88,6 +104,19 @@ function LoginPage() {
   }, [])
 
   useEffect(() => {
+    const cachedHints = localStorage.getItem(HINTS_CACHE_KEY)
+    if (cachedHints) {
+      try {
+        const parsed = JSON.parse(cachedHints) as Partial<HintsCache>
+        setHints({
+          usernames: parsed.usernames?.filter(Boolean) ?? [],
+          divisions: parsed.divisions?.filter(Boolean) ?? [],
+        })
+      } catch {
+        //
+      }
+    }
+
     const loadHints = async () => {
       setHintsError(null)
       try {
@@ -98,10 +127,12 @@ function LoginPage() {
         }
 
         if (response.success && response.hints) {
-          setHints({
+          const nextHints: HintsCache = {
             usernames: response.hints.usernames?.filter(Boolean) ?? [],
             divisions: response.hints.divisions?.filter(Boolean) ?? [],
-          })
+          }
+          setHints(nextHints)
+          localStorage.setItem(HINTS_CACHE_KEY, JSON.stringify(nextHints))
         } else {
           setHintsError(response.message ?? 'Gagal memuat saran username/division')
         }
@@ -151,6 +182,11 @@ function LoginPage() {
       if (response.success && response.user) {
         setStatus('success')
         setWelcomeName(response.user.name ?? response.user.username)
+        onSuccess?.({
+          username: response.user.username,
+          name: response.user.name ?? response.user.username,
+          division: response.user.division ?? (form.division.trim() || null),
+        })
         setMessage('Login berhasil, sedang mengarahkan Anda...')
       } else {
         setStatus('error')
@@ -180,8 +216,8 @@ function LoginPage() {
 
         <div className="p-6 sm:p-8 md:p-10">
           <header className="mb-8">
-            <h2 className="text-3xl font-bold text-slate-900 mb-2">Masuk ke Sistem</h2>
-            <p className="text-slate-600">Ketikkan kredensial SQL Server Anda untuk melanjutkan.</p>
+            <h2 className="text-3xl font-bold text-slate-900 mb-2">Login System</h2>
+            <p className="text-slate-600">Type your credential SQL Server to continue.</p>
           </header>
 
           <form className="space-y-4 max-w-md" onSubmit={handleSubmit}>

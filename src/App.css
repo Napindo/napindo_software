@@ -29,6 +29,92 @@
   animation: float 5s ease-in-out infinite;
 }
 
+.dashboard-shell {
+  animation: fadeSlide 480ms ease-out;
+}
+
+.gradient-blob {
+  position: absolute;
+  filter: blur(40px);
+  opacity: 0.14;
+  pointer-events: none;
+  animation: drift 14s ease-in-out infinite;
+}
+
+.gradient-blob--one {
+  width: 460px;
+  height: 460px;
+  background: radial-gradient(circle at 30% 30%, #e63946, transparent 55%);
+  top: -120px;
+  left: -120px;
+}
+
+.gradient-blob--two {
+  width: 520px;
+  height: 520px;
+  background: radial-gradient(circle at 60% 60%, #9f0f0f, transparent 55%);
+  bottom: -140px;
+  right: -140px;
+  animation-delay: 1.6s;
+}
+
+.card-sheen {
+  position: relative;
+  overflow: hidden;
+  animation: fadeSlide 420ms ease-out;
+}
+
+.card-sheen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, 0.9) 40%, transparent 60%);
+  transform: translateX(-120%);
+  animation: sheen 2.6s ease-in-out infinite;
+}
+
+.active-nav::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.24), transparent);
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+@keyframes sheen {
+  0% {
+    transform: translateX(-120%);
+  }
+  60% {
+    transform: translateX(120%);
+  }
+  100% {
+    transform: translateX(120%);
+  }
+}
+
+@keyframes fadeSlide {
+  0% {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes drift {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(16px, -18px) scale(1.04);
+  }
+}
+
 @media (max-width: 600px) {
   .brand-mark {
     flex-direction: column;

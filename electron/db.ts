@@ -1,15 +1,60 @@
 import sql from 'mssql'
+import path from 'node:path'
+import fs from 'node:fs'
 
-const connectionConfig: sql.config = {
-  user: 'TRIAL',
-  password: 'napindo',
-  server: 'SERVER-TRIAL\\NAPINDOSQL',
-  database: 'NAPINDO',
-  options: {
-    encrypt: false,
-    trustServerCertificate: true,
-  },
+function loadEnvFile(filePath: string) {
+  if (!fs.existsSync(filePath)) return
+  const content = fs.readFileSync(filePath, 'utf-8')
+  for (const line of content.split('\n')) {
+    const trimmed = line.trim()
+    if (!trimmed || trimmed.startsWith('#')) continue
+    const [key, ...rest] = trimmed.split('=')
+    if (!key) continue
+    if (typeof process.env[key] === 'undefined') {
+      process.env[key] = rest.join('=').trim()
+    }
+  }
 }
+
+loadEnvFile(path.resolve(process.cwd(), '.env'))
+
+function parseBool(value: string | undefined, fallback: boolean) {
+  if (typeof value === 'undefined') return fallback
+  return ['1', 'true', 'yes', 'on'].includes(value.toLowerCase())
+}
+
+function buildConnectionConfig(): sql.config {
+  const user = process.env.DB_USER || 'TRIAL'
+  const password = process.env.DB_PASSWORD || 'napindo'
+  const server = process.env.DB_SERVER || 'SERVER-TRIAL\\NAPINDOSQL'
+  const database = process.env.DB_DATABASE || 'NAPINDO'
+  const port = process.env.DB_PORT ? Number(process.env.DB_PORT) : undefined
+  const encrypt = parseBool(process.env.DB_ENCRYPT, false)
+  const trustServerCertificate = parseBool(process.env.DB_TRUST_CERT, true)
+
+  if (!server || !database) {
+    throw new Error('Konfigurasi DB tidak lengkap. Pastikan DB_SERVER dan DB_DATABASE terisi.')
+  }
+
+  const config: sql.config = {
+    user,
+    password,
+    server,
+    database,
+    options: {
+      encrypt,
+      trustServerCertificate,
+    },
+  }
+
+  if (port && Number.isFinite(port)) {
+    config.port = port
+  }
+
+  return config
+}
+
+const connectionConfig: sql.config = buildConnectionConfig()
 
 let pool: sql.ConnectionPool | null = null
 
@@ -28,6 +73,11 @@ export async function testConnection() {
     success: true,
     serverTime: result.recordset?.[0]?.currentTime,
   }
+}
+
+export function getConnectionInfo() {
+  const { password: _password, ...rest } = connectionConfig
+  return rest
 }
 
 export async function fetchTopRows(tableName: string, top = 10) {

@@ -24119,7 +24119,7 @@ const baseOpen = async (options) => {
   subprocess.unref();
   return subprocess;
 };
-const open$1 = (target, options) => {
+const open = (target, options) => {
   if (typeof target !== "string") {
     throw new TypeError("Expected a `target`");
   }
@@ -24188,12 +24188,12 @@ defineLazyProperty(apps, "edge", () => detectPlatformBinary({
 }, {
   wsl: "/mnt/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"
 }));
-open$1.apps = apps;
-open$1.openApp = openApp;
-var open_1 = open$1;
-const open = /* @__PURE__ */ getDefaultExportFromCjs(open_1);
+open.apps = apps;
+open.openApp = openApp;
+var open_1 = open;
+const open$1 = /* @__PURE__ */ getDefaultExportFromCjs(open_1);
 const https = https$2;
-var stoppable$1 = (server, grace) => {
+var stoppable = (server, grace) => {
   grace = typeof grace === "undefined" ? Infinity : grace;
   const reqsPerSocket = /* @__PURE__ */ new Map();
   let stopped = false;
@@ -24246,9 +24246,9 @@ var stoppable$1 = (server, grace) => {
     });
   }
 };
-const stoppable = /* @__PURE__ */ getDefaultExportFromCjs(stoppable$1);
+const stoppable$1 = /* @__PURE__ */ getDefaultExportFromCjs(stoppable);
 const interactiveBrowserMockable = {
-  open
+  open: open$1
 };
 class MsalOpenBrowser extends MsalNode {
   constructor(options) {
@@ -24322,7 +24322,7 @@ class MsalOpenBrowser extends MsalNode {
         });
       };
       const app = http$1.createServer(requestListener);
-      const server = stoppable(app);
+      const server = stoppable$1(app);
       const listen = app.listen(this.port, this.hostname, () => this.logger.info(`InteractiveBrowserCredential listening on port ${this.port}!`));
       function cleanup() {
         if (listen) {

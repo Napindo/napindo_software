@@ -36,6 +36,7 @@ const child_process = require("child_process");
 const require$$0$7 = require("dgram");
 const require$$2$2 = require("punycode");
 const require$$1$4 = require("string_decoder");
+const fs$4 = require("node:fs");
 var _documentCurrentScript = typeof document !== "undefined" ? document.currentScript : null;
 function _interopNamespaceDefault(e) {
   const n = Object.create(null, { [Symbol.toStringTag]: { value: "Module" } });
@@ -24118,7 +24119,7 @@ const baseOpen = async (options) => {
   subprocess.unref();
   return subprocess;
 };
-const open = (target, options) => {
+const open$1 = (target, options) => {
   if (typeof target !== "string") {
     throw new TypeError("Expected a `target`");
   }
@@ -24187,12 +24188,12 @@ defineLazyProperty(apps, "edge", () => detectPlatformBinary({
 }, {
   wsl: "/mnt/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"
 }));
-open.apps = apps;
-open.openApp = openApp;
-var open_1 = open;
-const open$1 = /* @__PURE__ */ getDefaultExportFromCjs(open_1);
+open$1.apps = apps;
+open$1.openApp = openApp;
+var open_1 = open$1;
+const open = /* @__PURE__ */ getDefaultExportFromCjs(open_1);
 const https = https$2;
-var stoppable = (server, grace) => {
+var stoppable$1 = (server, grace) => {
   grace = typeof grace === "undefined" ? Infinity : grace;
   const reqsPerSocket = /* @__PURE__ */ new Map();
   let stopped = false;
@@ -24245,9 +24246,9 @@ var stoppable = (server, grace) => {
     });
   }
 };
-const stoppable$1 = /* @__PURE__ */ getDefaultExportFromCjs(stoppable);
+const stoppable = /* @__PURE__ */ getDefaultExportFromCjs(stoppable$1);
 const interactiveBrowserMockable = {
-  open: open$1
+  open
 };
 class MsalOpenBrowser extends MsalNode {
   constructor(options) {
@@ -24321,7 +24322,7 @@ class MsalOpenBrowser extends MsalNode {
         });
       };
       const app = http$1.createServer(requestListener);
-      const server = stoppable$1(app);
+      const server = stoppable(app);
       const listen = app.listen(this.port, this.hostname, () => this.logger.info(`InteractiveBrowserCredential listening on port ${this.port}!`));
       function cleanup() {
         if (listen) {
@@ -56932,7 +56933,7 @@ let Transaction$1 = class Transaction2 {
 transaction$1.Transaction = Transaction$1;
 var connector = {};
 var ERROR_MESSAGE = "Function.prototype.bind called on incompatible ";
-var toStr$2 = Object.prototype.toString;
+var toStr$3 = Object.prototype.toString;
 var max$2 = Math.max;
 var funcType = "[object Function]";
 var concatty = function concatty2(a, b) {
@@ -56964,7 +56965,7 @@ var joiny = function(arr, joiner) {
 };
 var implementation$8 = function bind(that) {
   var target = this;
-  if (typeof target !== "function" || toStr$2.apply(target) !== funcType) {
+  if (typeof target !== "function" || toStr$3.apply(target) !== funcType) {
     throw new TypeError(ERROR_MESSAGE + target);
   }
   var args = slicy(arguments, 1);
@@ -57002,12 +57003,12 @@ var implementation$8 = function bind(that) {
 };
 var implementation$7 = implementation$8;
 var functionBind = Function.prototype.bind || implementation$7;
-var toStr$1 = Object.prototype.toString;
+var toStr$2 = Object.prototype.toString;
 var isArguments = function isArguments2(value) {
-  var str = toStr$1.call(value);
+  var str = toStr$2.call(value);
   var isArgs2 = str === "[object Arguments]";
   if (!isArgs2) {
-    isArgs2 = str !== "[object Array]" && value !== null && typeof value === "object" && typeof value.length === "number" && value.length >= 0 && toStr$1.call(value.callee) === "[object Function]";
+    isArgs2 = str !== "[object Array]" && value !== null && typeof value === "object" && typeof value.length === "number" && value.length >= 0 && toStr$2.call(value.callee) === "[object Function]";
   }
   return isArgs2;
 };
@@ -57238,11 +57239,11 @@ hasPropertyDescriptors$2.hasArrayLengthDefineBug = function hasArrayLengthDefine
 var hasPropertyDescriptors_1 = hasPropertyDescriptors$2;
 var keys2 = objectKeys;
 var hasSymbols$3 = typeof Symbol === "function" && typeof Symbol("foo") === "symbol";
-var toStr = Object.prototype.toString;
+var toStr$1 = Object.prototype.toString;
 var concat = Array.prototype.concat;
 var defineDataProperty$1 = defineDataProperty$2;
 var isFunction = function(fn) {
-  return typeof fn === "function" && toStr.call(fn) === "[object Function]";
+  return typeof fn === "function" && toStr$1.call(fn) === "[object Function]";
 };
 var supportsDescriptors = hasPropertyDescriptors_1();
 var defineProperty = function(object, name2, value, predicate) {
@@ -57501,11 +57502,11 @@ function requireFunctionApply() {
   functionApply = Function.prototype.apply;
   return functionApply;
 }
-var reflectApply = typeof Reflect !== "undefined" && Reflect && Reflect.apply;
+var reflectApply$1 = typeof Reflect !== "undefined" && Reflect && Reflect.apply;
 var bind$3 = functionBind;
 var $apply$1 = requireFunctionApply();
 var $call$2 = requireFunctionCall();
-var $reflectApply = reflectApply;
+var $reflectApply = reflectApply$1;
 var actualApply = $reflectApply || bind$3.call($call$2, $apply$1);
 var bind$2 = functionBind;
 var $TypeError$p = type;
@@ -57896,129 +57897,122 @@ var IsExtensible$1 = $preventExtensions ? function IsExtensible(obj2) {
 } : function IsExtensible2(obj2) {
   return !isPrimitive(obj2);
 };
-var isCallable;
-var hasRequiredIsCallable$1;
-function requireIsCallable$1() {
-  if (hasRequiredIsCallable$1) return isCallable;
-  hasRequiredIsCallable$1 = 1;
-  var fnToStr = Function.prototype.toString;
-  var reflectApply2 = typeof Reflect === "object" && Reflect !== null && Reflect.apply;
-  var badArrayLike;
-  var isCallableMarker;
-  if (typeof reflectApply2 === "function" && typeof Object.defineProperty === "function") {
-    try {
-      badArrayLike = Object.defineProperty({}, "length", {
-        get: function() {
-          throw isCallableMarker;
-        }
-      });
-      isCallableMarker = {};
-      reflectApply2(function() {
-        throw 42;
-      }, null, badArrayLike);
-    } catch (_2) {
-      if (_2 !== isCallableMarker) {
-        reflectApply2 = null;
+var fnToStr = Function.prototype.toString;
+var reflectApply = typeof Reflect === "object" && Reflect !== null && Reflect.apply;
+var badArrayLike;
+var isCallableMarker;
+if (typeof reflectApply === "function" && typeof Object.defineProperty === "function") {
+  try {
+    badArrayLike = Object.defineProperty({}, "length", {
+      get: function() {
+        throw isCallableMarker;
       }
+    });
+    isCallableMarker = {};
+    reflectApply(function() {
+      throw 42;
+    }, null, badArrayLike);
+  } catch (_2) {
+    if (_2 !== isCallableMarker) {
+      reflectApply = null;
     }
-  } else {
-    reflectApply2 = null;
   }
-  var constructorRegex = /^\s*class\b/;
-  var isES6ClassFn = function isES6ClassFunction(value) {
-    try {
-      var fnStr = fnToStr.call(value);
-      return constructorRegex.test(fnStr);
-    } catch (e) {
-      return false;
-    }
-  };
-  var tryFunctionObject = function tryFunctionToStr(value) {
-    try {
-      if (isES6ClassFn(value)) {
-        return false;
-      }
-      fnToStr.call(value);
-      return true;
-    } catch (e) {
-      return false;
-    }
-  };
-  var toStr2 = Object.prototype.toString;
-  var objectClass = "[object Object]";
-  var fnClass = "[object Function]";
-  var genClass = "[object GeneratorFunction]";
-  var ddaClass = "[object HTMLAllCollection]";
-  var ddaClass2 = "[object HTML document.all class]";
-  var ddaClass3 = "[object HTMLCollection]";
-  var hasToStringTag = typeof Symbol === "function" && !!Symbol.toStringTag;
-  var isIE68 = !(0 in [,]);
-  var isDDA = function isDocumentDotAll() {
+} else {
+  reflectApply = null;
+}
+var constructorRegex = /^\s*class\b/;
+var isES6ClassFn = function isES6ClassFunction(value) {
+  try {
+    var fnStr = fnToStr.call(value);
+    return constructorRegex.test(fnStr);
+  } catch (e) {
     return false;
-  };
-  if (typeof document === "object") {
-    var all = document.all;
-    if (toStr2.call(all) === toStr2.call(document.all)) {
-      isDDA = function isDocumentDotAll(value) {
-        if ((isIE68 || !value) && (typeof value === "undefined" || typeof value === "object")) {
-          try {
-            var str = toStr2.call(value);
-            return (str === ddaClass || str === ddaClass2 || str === ddaClass3 || str === objectClass) && value("") == null;
-          } catch (e) {
-          }
-        }
-        return false;
-      };
-    }
   }
-  isCallable = reflectApply2 ? function isCallable2(value) {
-    if (isDDA(value)) {
-      return true;
-    }
-    if (!value) {
-      return false;
-    }
-    if (typeof value !== "function" && typeof value !== "object") {
-      return false;
-    }
-    try {
-      reflectApply2(value, null, badArrayLike);
-    } catch (e) {
-      if (e !== isCallableMarker) {
-        return false;
-      }
-    }
-    return !isES6ClassFn(value) && tryFunctionObject(value);
-  } : function isCallable2(value) {
-    if (isDDA(value)) {
-      return true;
-    }
-    if (!value) {
-      return false;
-    }
-    if (typeof value !== "function" && typeof value !== "object") {
-      return false;
-    }
-    if (hasToStringTag) {
-      return tryFunctionObject(value);
-    }
+};
+var tryFunctionObject = function tryFunctionToStr(value) {
+  try {
     if (isES6ClassFn(value)) {
       return false;
     }
-    var strClass = toStr2.call(value);
-    if (strClass !== fnClass && strClass !== genClass && !/^\[object HTML/.test(strClass)) {
+    fnToStr.call(value);
+    return true;
+  } catch (e) {
+    return false;
+  }
+};
+var toStr = Object.prototype.toString;
+var objectClass = "[object Object]";
+var fnClass = "[object Function]";
+var genClass = "[object GeneratorFunction]";
+var ddaClass = "[object HTMLAllCollection]";
+var ddaClass2 = "[object HTML document.all class]";
+var ddaClass3 = "[object HTMLCollection]";
+var hasToStringTag = typeof Symbol === "function" && !!Symbol.toStringTag;
+var isIE68 = !(0 in [,]);
+var isDDA = function isDocumentDotAll() {
+  return false;
+};
+if (typeof document === "object") {
+  var all = document.all;
+  if (toStr.call(all) === toStr.call(document.all)) {
+    isDDA = function isDocumentDotAll2(value) {
+      if ((isIE68 || !value) && (typeof value === "undefined" || typeof value === "object")) {
+        try {
+          var str = toStr.call(value);
+          return (str === ddaClass || str === ddaClass2 || str === ddaClass3 || str === objectClass) && value("") == null;
+        } catch (e) {
+        }
+      }
+      return false;
+    };
+  }
+}
+var isCallable = reflectApply ? function isCallable2(value) {
+  if (isDDA(value)) {
+    return true;
+  }
+  if (!value) {
+    return false;
+  }
+  if (typeof value !== "function" && typeof value !== "object") {
+    return false;
+  }
+  try {
+    reflectApply(value, null, badArrayLike);
+  } catch (e) {
+    if (e !== isCallableMarker) {
       return false;
     }
+  }
+  return !isES6ClassFn(value) && tryFunctionObject(value);
+} : function isCallable3(value) {
+  if (isDDA(value)) {
+    return true;
+  }
+  if (!value) {
+    return false;
+  }
+  if (typeof value !== "function" && typeof value !== "object") {
+    return false;
+  }
+  if (hasToStringTag) {
     return tryFunctionObject(value);
-  };
-  return isCallable;
-}
+  }
+  if (isES6ClassFn(value)) {
+    return false;
+  }
+  var strClass = toStr.call(value);
+  if (strClass !== fnClass && strClass !== genClass && !/^\[object HTML/.test(strClass)) {
+    return false;
+  }
+  return tryFunctionObject(value);
+};
 var IsCallable$3;
 var hasRequiredIsCallable;
 function requireIsCallable() {
   if (hasRequiredIsCallable) return IsCallable$3;
   hasRequiredIsCallable = 1;
-  IsCallable$3 = requireIsCallable$1();
+  IsCallable$3 = isCallable;
   return IsCallable$3;
 }
 var ToBoolean$4 = function ToBoolean(value) {
@@ -58455,7 +58449,7 @@ var SameValue$1 = function SameValue2(x, y) {
   }
   return $isNaN(x) && $isNaN(y);
 };
-var IsCallable$1 = requireIsCallable$1();
+var IsCallable$1 = isCallable;
 var ToBoolean$2 = function ToBoolean2(value) {
   return !!value;
 };
@@ -60121,7 +60115,7 @@ function requireIsString() {
   };
   var $toString = callBound2("Object.prototype.toString");
   var strClass = "[object String]";
-  var hasToStringTag = requireShams()();
+  var hasToStringTag2 = requireShams()();
   isString = function isString2(value) {
     if (typeof value === "string") {
       return true;
@@ -60129,7 +60123,7 @@ function requireIsString() {
     if (!value || typeof value !== "object") {
       return false;
     }
-    return hasToStringTag ? tryStringObject(value) : $toString(value) === strClass;
+    return hasToStringTag2 ? tryStringObject(value) : $toString(value) === strClass;
   };
   return isString;
 }
@@ -64874,16 +64868,48 @@ var request = Request2;
 var tediousExports = tedious$1.exports;
 var mssql = tediousExports;
 const sql = /* @__PURE__ */ getDefaultExportFromCjs(mssql);
-const connectionConfig = {
-  user: "TRIAL",
-  password: "napindo",
-  server: "SERVER-TRIAL\\NAPINDOSQL",
-  database: "NAPINDO",
-  options: {
-    encrypt: false,
-    trustServerCertificate: true
+function loadEnvFile(filePath) {
+  if (!fs$4.existsSync(filePath)) return;
+  const content = fs$4.readFileSync(filePath, "utf-8");
+  for (const line of content.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const [key2, ...rest] = trimmed.split("=");
+    if (!key2) continue;
+    if (typeof process.env[key2] === "undefined") {
+      process.env[key2] = rest.join("=").trim();
+    }
   }
-};
+}
+loadEnvFile(path$2.resolve(process.cwd(), ".env"));
+function parseBool(value, fallback) {
+  if (typeof value === "undefined") return fallback;
+  return ["1", "true", "yes", "on"].includes(value.toLowerCase());
+}
+function buildConnectionConfig() {
+  const user = process.env.DB_USER || "TRIAL";
+  const password = process.env.DB_PASSWORD || "napindo";
+  const server = process.env.DB_SERVER || "SERVER-TRIAL\\NAPINDOSQL";
+  const database = process.env.DB_DATABASE || "NAPINDO";
+  const port = process.env.DB_PORT ? Number(process.env.DB_PORT) : void 0;
+  const encrypt = parseBool(process.env.DB_ENCRYPT, false);
+  const trustServerCertificate = parseBool(process.env.DB_TRUST_CERT, true);
+  const config = {
+    user,
+    password,
+    server,
+    database,
+    options: {
+      encrypt,
+      trustServerCertificate
+    }
+  };
+  if (port && Number.isFinite(port)) {
+    config.port = port;
+  }
+  return config;
+}
+const connectionConfig = buildConnectionConfig();
 let pool = null;
 async function ensurePool() {
   if (pool) return pool;

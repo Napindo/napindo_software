@@ -1,6 +1,22 @@
-import sql from 'mssql'
-import path from 'node:path'
 import fs from 'node:fs'
+import path from 'node:path'
+
+type ExhibitorSegment = 'defence' | 'aerospace' | 'marine'
+
+type ApiResponse<T = unknown> =
+  | { success: true; data?: T; message?: string }
+  | { success: false; message: string }
+
+type ApiResult<T = unknown> = {
+  status: number
+  body: ApiResponse<T>
+}
+
+type LoginPayload = {
+  username: string
+  password: string
+  division?: string | null
+}
 
 function loadEnvFile(filePath: string) {
   if (!fs.existsSync(filePath)) return
@@ -18,86 +34,69 @@ function loadEnvFile(filePath: string) {
 
 loadEnvFile(path.resolve(process.cwd(), '.env'))
 
-function parseBool(value: string | undefined, fallback: boolean) {
-  if (typeof value === 'undefined') return fallback
-  return ['1', 'true', 'yes', 'on'].includes(value.toLowerCase())
-}
+const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:3001'
+const API_PREFIX = process.env.API_PREFIX || '/api'
 
-function buildConnectionConfig(): sql.config {
-  const user = process.env.DB_USER || 'TRIAL'
-  const password = process.env.DB_PASSWORD || 'napindo'
-  const server = process.env.DB_SERVER || 'SERVER-TRIAL\\NAPINDOSQL'
-  const database = process.env.DB_DATABASE || 'NAPINDO'
-  const port = process.env.DB_PORT ? Number(process.env.DB_PORT) : undefined
-  const encrypt = parseBool(process.env.DB_ENCRYPT, false)
-  const trustServerCertificate = parseBool(process.env.DB_TRUST_CERT, true)
+async function apiFetch<T = unknown>(pathName: string, init: RequestInit = {}): Promise<ApiResult<T>> {
+  const url = `${API_BASE_URL.replace(/\/$/, '')}${API_PREFIX}${pathName}`
+  try {
+    const response = await fetch(url, {
+      ...init,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(init.headers || {}),
+      },
+    })
 
-  if (!server || !database) {
-    throw new Error('Konfigurasi DB tidak lengkap. Pastikan DB_SERVER dan DB_DATABASE terisi.')
+    const body = (await response.json()) as ApiResponse<T>
+    return { status: response.status, body }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Tidak dapat terhubung ke API'
+    return { status: 500, body: { success: false, message } }
   }
-
-  const config: sql.config = {
-    user,
-    password,
-    server,
-    database,
-    options: {
-      encrypt,
-      trustServerCertificate,
-    },
-  }
-
-  if (port && Number.isFinite(port)) {
-    config.port = port
-  }
-
-  return config
-}
-
-const connectionConfig: sql.config = buildConnectionConfig()
-
-let pool: sql.ConnectionPool | null = null
-
-async function ensurePool() {
-  if (pool) return pool
-
-  pool = await sql.connect(connectionConfig)
-  return pool
 }
 
 export async function testConnection() {
-  const currentPool = await ensurePool()
-  const result = await currentPool.request().query('SELECT GETDATE() AS currentTime')
+  const { body, status } = await apiFetch<{ serverTime?: string }>('/health')
+
+  if (!body.success) {
+    return { success: false as const, message: body.message || `Healthcheck gagal dengan status ${status}` }
+  }
 
   return {
-    success: true,
-    serverTime: result.recordset?.[0]?.currentTime,
+    success: true as const,
+    serverTime: body.data?.serverTime ?? body.data,
   }
 }
 
 export function getConnectionInfo() {
-  const { password: _password, ...rest } = connectionConfig
-  return rest
+  return {
+    apiUrl: `${API_BASE_URL}${API_PREFIX}`,
+  }
 }
 
 export async function fetchTopRows(tableName: string, top = 10) {
-  const safeTableName = tableName.replace(/[^\w.]/g, '')
-
-  if (!safeTableName) {
+  const safeName = tableName.replace(/[^\w.]/g, '')
+  if (!safeName) {
     throw new Error('Nama tabel tidak valid')
   }
+  const { body } = await apiFetch<Record<string, unknown>[]>(`/gabung/table/${encodeURIComponent(safeName)}?limit=${top}`)
 
-  const currentPool = await ensurePool()
-  const query = `SELECT TOP (${top}) * FROM ${safeTableName}`
-  const result = await currentPool.request().query(query)
+  if (!body.success) {
+    throw new Error(body.message || 'Gagal mengambil data tabel')
+  }
 
-  return result.recordset ?? []
+  return body.data ?? []
 }
 
-type LoginPayload = {
-  username: string
-  password: string
-  division?: string | null
+export async function fetchExhibitorsBySegment(segment: ExhibitorSegment, limit = 200) {
+  const { body } = await apiFetch<Record<string, unknown>[]>(`/gabung/${segment}?limit=${limit}`)
+
+  if (!body.success) {
+    throw new Error(body.message || 'Gagal memuat data exhibitor')
+  }
+
+  return body.data ?? []
 }
 
 export async function loginUser(payload: LoginPayload) {
@@ -109,66 +108,35 @@ export async function loginUser(payload: LoginPayload) {
     throw new Error('Username dan password wajib diisi')
   }
 
-  const currentPool = await ensurePool()
-  const request = currentPool.request()
+  const { body, status } = await apiFetch<{ username: string; division?: string | null; name?: string | null }>(
+    '/pengguna/login',
+    {
+      method: 'POST',
+      body: JSON.stringify({ username, password, division }),
+    },
+  )
 
-  request.input('username', sql.VarChar(128), username)
-  request.input('password', sql.VarChar(256), password)
+  if (!body.success) {
+    if (status === 401) {
+      return null
+    }
 
-  let whereClause = 'WHERE USERNAME = @username AND PASSWORD = @password'
-
-  if (division) {
-    request.input('division', sql.VarChar(128), division)
-    whereClause += ' AND DIVISION = @division'
+    throw new Error(body.message || 'Gagal memproses login')
   }
 
-  const query = `SELECT TOP (1) * FROM dbo.PENGGUNA ${whereClause}`
-
-  const result = await request.query(query)
-  const user = result.recordset?.[0]
-
-  if (!user) {
-    return null
-  }
-
-  const resolvedUsername = (user.USERNAME as string | undefined) ?? (user.username as string | undefined) ?? username
-  const resolvedDivision =
-    (user.DIVISION as string | undefined) ?? (user.division as string | undefined) ?? (division ?? null)
-  const resolvedName = (user.NAMA as string | undefined) ?? (user.nama as string | undefined) ?? null
-
-  return {
-    username: resolvedUsername,
-    division: resolvedDivision ?? null,
-    name: resolvedName,
-  }
+  return body.data ?? null
 }
 
 export async function closePool() {
-  if (!pool) return
-
-  await pool.close()
-  pool = null
+  // Tidak ada pool yang perlu ditutup pada koneksi HTTP ke API
 }
 
 export async function fetchUserHints() {
-  const currentPool = await ensurePool()
-  const result = await currentPool
-    .request()
-    .query('SELECT DISTINCT USERNAME, DIVISION FROM dbo.PENGGUNA ORDER BY USERNAME ASC')
+  const { body } = await apiFetch<{ usernames: string[]; divisions: string[] }>('/pengguna/hints')
 
-  const usernames = new Set<string>()
-  const divisions = new Set<string>()
-
-  for (const row of result.recordset ?? []) {
-    const username = (row.USERNAME as string | undefined) ?? (row.username as string | undefined)
-    const division = (row.DIVISION as string | undefined) ?? (row.division as string | undefined)
-
-    if (username) usernames.add(String(username))
-    if (division) divisions.add(String(division))
+  if (!body.success) {
+    throw new Error(body.message || 'Gagal memuat data pengguna')
   }
 
-  return {
-    usernames: Array.from(usernames),
-    divisions: Array.from(divisions),
-  }
+  return body.data ?? { usernames: [], divisions: [] }
 }

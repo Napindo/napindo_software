@@ -1,7 +1,7 @@
 import { app, BrowserWindow, ipcMain } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
-import { closePool, fetchTopRows, fetchUserHints, loginUser, testConnection } from './db.js'
+import { closePool, fetchExhibitorsBySegment, fetchTopRows, fetchUserHints, loginUser, testConnection } from './db.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -59,6 +59,15 @@ function registerDatabaseHandlers() {
   ipcMain.handle('db:fetchTableData', async (_event, tableName: string) => {
     try {
       const rows = await fetchTopRows(tableName)
+      return { success: true, rows }
+    } catch (error) {
+      return { success: false, message: error instanceof Error ? error.message : String(error) }
+    }
+  })
+
+  ipcMain.handle('db:fetchExhibitors', async (_event, segment: 'defence' | 'aerospace' | 'marine', limit = 200) => {
+    try {
+      const rows = await fetchExhibitorsBySegment(segment, limit)
       return { success: true, rows }
     } catch (error) {
       return { success: false, message: error instanceof Error ? error.message : String(error) }

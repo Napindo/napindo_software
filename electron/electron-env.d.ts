@@ -31,7 +31,26 @@ interface Window {
   database: {
     testConnection: () => Promise<DatabaseResponse>
     fetchTableData: <T = unknown>(tableName: string) => Promise<DatabaseResponse<T>>
-    fetchExhibitors: <T = unknown>(segment: 'defence' | 'aerospace' | 'marine', limit?: number) => Promise<DatabaseResponse<T>>
+    fetchExhibitors: <T = unknown>(
+      segment:
+        | 'defence'
+        | 'aerospace'
+        | 'marine'
+        | 'water'
+        | 'waste'
+        | 'iismex'
+        | 'renergy'
+        | 'security'
+        | 'firex'
+        | 'livestock'
+        | 'agrotech'
+        | 'vet'
+        | 'fisheries'
+        | 'feed'
+        | 'dairy'
+        | 'horticulture',
+      limit?: number,
+    ) => Promise<DatabaseResponse<T>>
     login: (
       payload: { username: string; password: string; division?: string | null },
     ) => Promise<DatabaseResponse<{ username: string; division?: string | null; name?: string | null }>>

@@ -5,13 +5,17 @@ import {
   createPengguna,
   updatePengguna,
   deletePengguna,
+  loginPengguna,
+  userHints,
 } from "../controllers/pengguna.controller"
 
 const r = Router()
 
+r.get("/hints", userHints)
+r.post("/login", loginPengguna)
 r.get("/", listPengguna)
-r.get("/:username", getPengguna)
 r.post("/", createPengguna)
+r.get("/:username", getPengguna)
 r.put("/:username", updatePengguna)
 r.delete("/:username", deletePengguna)
 

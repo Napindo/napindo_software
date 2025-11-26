@@ -1,6 +1,12 @@
 import prisma from "../prisma"
 import { ok, fail } from "../utils/apiResponse"
 
+const segmentFilters: Record<"defence" | "aerospace" | "marine", any> = {
+  defence: { exhdefence: { not: null } },
+  aerospace: { exhaero: { not: null } },
+  marine: { exhmarine: { not: null } },
+}
+
 export async function listGabung(req, res) {
   try {
     const page = Number(req.query.page || 1)
@@ -71,6 +77,47 @@ export async function deleteGabung(req, res) {
     const id = Number(req.params.id)
     await prisma.gabung.delete({ where: { nourut: id } })
     return ok(res, true)
+  } catch (err) {
+    return fail(res, err.message)
+  }
+}
+
+export async function listGabungBySegment(req, res) {
+  try {
+    const segment = req.params.segment as "defence" | "aerospace" | "marine"
+    const limit = Number(req.query.limit || 200)
+    const where = segmentFilters[segment] || {}
+
+    const items = await prisma.gabung.findMany({
+      where,
+      take: limit,
+    })
+
+    return ok(res, items, { segment, limit })
+  } catch (err) {
+    return fail(res, err.message)
+  }
+}
+
+export async function getTablePreview(req, res) {
+  try {
+    const tableName = String(req.params.name || "").toLowerCase()
+    const limit = Number(req.query.limit || 10)
+
+    if (tableName === "gabung") {
+      const rows = await prisma.gabung.findMany({ take: limit })
+      return ok(res, rows, { table: tableName, limit })
+    }
+
+    if (tableName === "pengguna") {
+      const rows = await prisma.pengguna.findMany({
+        take: limit,
+        select: { username: true, division: true, status: true },
+      })
+      return ok(res, rows, { table: tableName, limit })
+    }
+
+    return fail(res, "Tabel tidak dikenal atau belum didukung", 400)
   } catch (err) {
     return fail(res, err.message)
   }

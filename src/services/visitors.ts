@@ -1,4 +1,4 @@
-export type ExhibitorSegment =
+export type VisitorSegment =
   | 'defence'
   | 'aerospace'
   | 'marine'
@@ -20,7 +20,7 @@ type DatabaseResponse<T = unknown> =
   | { success: true; rows?: T[]; message?: string }
   | { success: false; message: string }
 
-export type ExhibitorRow = {
+export type VisitorRow = {
   id: string | number
   company: string
   pic: string
@@ -58,7 +58,7 @@ const pickValue = (row: Record<string, unknown>, candidates: string[], fallback 
   return fallback
 }
 
-const normalizeRows = (rows: Record<string, unknown>[]): ExhibitorRow[] =>
+const normalizeRows = (rows: Record<string, unknown>[]): VisitorRow[] =>
   rows.map((row, index) => {
     const lowerKeys = Object.keys(row).reduce<Record<string, unknown>>((acc, key) => {
       acc[key.toLowerCase()] = row[key]
@@ -75,18 +75,35 @@ const normalizeRows = (rows: Record<string, unknown>[]): ExhibitorRow[] =>
 
     return {
       id,
-      company: pickValue(row, ['company', 'company_name', 'perusahaan', 'nama_perusahaan', 'nama']), // fallback names
+      company: pickValue(row, ['company', 'company_name', 'perusahaan', 'nama_perusahaan', 'nama']),
       pic: pickValue(row, ['pic', 'contact', 'cp', 'person_in_charge']),
       position: pickValue(row, ['position', 'jabatan', 'title']),
       type:
         (() => {
           const parts: string[] = []
-          const exhibitorFlag = isFlagSet(lowerKeys, 'exhdefence')
+          const visitorFlag =
+            isFlagSet(lowerKeys, 'vis') ||
+            isFlagSet(lowerKeys, 'visdefence') ||
+            isFlagSet(lowerKeys, 'viswater') ||
+            isFlagSet(lowerKeys, 'vislives') ||
+            isFlagSet(lowerKeys, 'visagritech') ||
+            isFlagSet(lowerKeys, 'visindovet') ||
+            isFlagSet(lowerKeys, 'visfish') ||
+            isFlagSet(lowerKeys, 'vissecure') ||
+            isFlagSet(lowerKeys, 'visfire') ||
+            isFlagSet(lowerKeys, 'visdairy') ||
+            isFlagSet(lowerKeys, 'visfeed') ||
+            isFlagSet(lowerKeys, 'vismarine') ||
+            isFlagSet(lowerKeys, 'visaero') ||
+            isFlagSet(lowerKeys, 'viswaste') ||
+            isFlagSet(lowerKeys, 'visenergy') ||
+            isFlagSet(lowerKeys, 'vissmart') ||
+            isFlagSet(lowerKeys, 'vishorti')
           const goverFlag = isFlagSet(lowerKeys, 'gover')
-          const vipFlag = exhibitorFlag && isFlagSet(lowerKeys, 'vid')
-          if (exhibitorFlag) parts.push('Exhibitor')
+          const vipFlag = visitorFlag && isFlagSet(lowerKeys, 'vid')
+          if (visitorFlag) parts.push('Visitor')
           if (goverFlag) parts.push('Gover')
-          if (vipFlag) parts.push('VIP Exhibitor')
+          if (vipFlag) parts.push('VIP Visitor')
           return parts.join(', ')
         })() || pickValue(row, ['type', 'kategori', 'category']),
       email: pickValue(row, ['email', 'e-mail']),
@@ -100,8 +117,9 @@ const normalizeRows = (rows: Record<string, unknown>[]): ExhibitorRow[] =>
     }
   })
 
-const invokeFetch = async (segment: ExhibitorSegment, limit: number) => {
+const invokeFetch = async (segment: VisitorSegment, limit: number) => {
   if (window.database?.fetchExhibitors) {
+    // Reuse existing endpoint; filter by VIS flags on client
     return window.database.fetchExhibitors<Record<string, unknown>>(segment, limit)
   }
 
@@ -112,16 +130,15 @@ const invokeFetch = async (segment: ExhibitorSegment, limit: number) => {
   throw new Error('API database tidak tersedia di renderer.')
 }
 
-export async function getExhibitorsBySegment(segment: ExhibitorSegment, limit = 200): Promise<ExhibitorRow[]> {
+export async function getVisitorsBySegment(segment: VisitorSegment, limit = 200): Promise<VisitorRow[]> {
   let response: DatabaseResponse<Record<string, unknown>>
   try {
     response = await invokeFetch(segment, limit)
   } catch (primaryError) {
-    // Fallback ke segmen default (defence) bila endpoint khusus tidak tersedia
     try {
       response = await invokeFetch('defence', limit)
     } catch (fallbackError) {
-      throw primaryError instanceof Error ? primaryError : fallbackError instanceof Error ? fallbackError : new Error('Gagal memuat data exhibitor')
+      throw primaryError instanceof Error ? primaryError : fallbackError instanceof Error ? fallbackError : new Error('Gagal memuat data visitor')
     }
   }
 
@@ -129,11 +146,11 @@ export async function getExhibitorsBySegment(segment: ExhibitorSegment, limit = 
     if (segment !== 'defence') {
       const fallback = await invokeFetch('defence', limit)
       if (!fallback.success) {
-        throw new Error(response.message || fallback.message || 'Gagal memuat data exhibitor')
+        throw new Error(response.message || fallback.message || 'Gagal memuat data visitor')
       }
       response = fallback
     } else {
-      throw new Error(response.message || 'Gagal memuat data exhibitor')
+      throw new Error(response.message || 'Gagal memuat data visitor')
     }
   }
 

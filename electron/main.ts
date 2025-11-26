@@ -65,7 +65,7 @@ function registerDatabaseHandlers() {
     }
   })
 
-  ipcMain.handle('db:fetchExhibitors', async (_event, segment: 'defence' | 'aerospace' | 'marine', limit = 200) => {
+  ipcMain.handle('db:fetchExhibitors', async (_event, segment, limit = 200) => {
     try {
       const rows = await fetchExhibitorsBySegment(segment, limit)
       return { success: true, rows }

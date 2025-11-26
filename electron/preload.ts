@@ -26,8 +26,26 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
 contextBridge.exposeInMainWorld('database', {
   testConnection: () => ipcRenderer.invoke('db:testConnection'),
   fetchTableData: (tableName: string) => ipcRenderer.invoke('db:fetchTableData', tableName),
-  fetchExhibitors: (segment: 'defence' | 'aerospace' | 'marine', limit = 200) =>
-    ipcRenderer.invoke('db:fetchExhibitors', segment, limit),
+  fetchExhibitors: (
+    segment:
+      | 'defence'
+      | 'aerospace'
+      | 'marine'
+      | 'water'
+      | 'waste'
+      | 'iismex'
+      | 'renergy'
+      | 'security'
+      | 'firex'
+      | 'livestock'
+      | 'agrotech'
+      | 'vet'
+      | 'fisheries'
+      | 'feed'
+      | 'dairy'
+      | 'horticulture',
+    limit = 200,
+  ) => ipcRenderer.invoke('db:fetchExhibitors', segment, limit),
   login: (payload: { username: string; password: string; division?: string | null }) =>
     ipcRenderer.invoke('db:login', payload),
   userHints: () => ipcRenderer.invoke('db:userHints'),

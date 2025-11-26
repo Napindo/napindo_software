@@ -1,19 +1,38 @@
+import "dotenv/config"
 import express from "express"
 import cors from "cors"
 import gabungRoutes from "./routes/gabung.routes"
 import penggunaRoutes from "./routes/pengguna.routes"
+import prisma from "./prisma"
 
 const app = express()
+const API_PREFIX = process.env.API_PREFIX || "/api"
+const PORT = Number(process.env.PORT || 3001)
 
 app.use(cors())
 app.use(express.json())
 
-app.get("/", (req, res) => res.json({ ok: true, message: "API NAPINDO OK" }))
+const router = express.Router()
 
-app.use("/gabung", gabungRoutes)
-app.use("/pengguna", penggunaRoutes)
+router.get("/", (_req, res) => res.json({ success: true, ok: true, message: "API NAPINDO OK" }))
 
-const PORT = 8080
+router.get("/health", async (_req, res) => {
+  try {
+    const rows = await prisma.$queryRaw<{ now: Date }[]>`SELECT NOW() as now`
+    const now = Array.isArray(rows) && rows[0]?.now ? rows[0].now : new Date()
+
+    return res.json({ success: true, ok: true, data: { serverTime: now } })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Healthcheck gagal"
+    return res.status(500).json({ success: false, ok: false, message })
+  }
+})
+
+router.use("/gabung", gabungRoutes)
+router.use("/pengguna", penggunaRoutes)
+
+app.use(API_PREFIX, router)
+
 app.listen(PORT, () => {
-  console.log("API berjalan di port", PORT)
+  console.log(`API berjalan di port ${PORT} dengan prefix ${API_PREFIX}`)
 })

@@ -1,7 +1,23 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
-type ExhibitorSegment = 'defence' | 'aerospace' | 'marine'
+type ExhibitorSegment =
+  | 'defence'
+  | 'aerospace'
+  | 'marine'
+  | 'water'
+  | 'waste'
+  | 'iismex'
+  | 'renergy'
+  | 'security'
+  | 'firex'
+  | 'livestock'
+  | 'agrotech'
+  | 'vet'
+  | 'fisheries'
+  | 'feed'
+  | 'dairy'
+  | 'horticulture'
 
 type ApiResponse<T = unknown> =
   | { success: true; data?: T; message?: string }

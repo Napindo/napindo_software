@@ -35,7 +35,7 @@ const eventCards = [
   },
   {
     id: 'water',
-    title: 'Indo Water, Waste, IISME, Renergy, Firex, Security',
+    title: 'Indo Water, Waste, IISMEX, Renergy, Firex, Security',
     logo: createLogoDataUrl('Indo Water & Waste 2026', ['IISMEX - Renergy - Firex - Security'], '#b91c1c', '#6b7280'),
   },
   {
@@ -45,26 +45,105 @@ const eventCards = [
   },
 ]
 
+const defenceGroup: ExhibitorSegment[] = ['defence', 'aerospace', 'marine']
+const waterGroup: ExhibitorSegment[] = ['water', 'waste', 'iismex', 'renergy', 'security', 'firex']
+const livestockGroup: ExhibitorSegment[] = ['livestock', 'agrotech', 'vet', 'fisheries', 'feed', 'dairy', 'horticulture']
+
+const segmentTabs: Record<ExhibitorSegment, ExhibitorSegment[]> = {
+  defence: defenceGroup,
+  aerospace: defenceGroup,
+  marine: defenceGroup,
+  water: waterGroup,
+  waste: waterGroup,
+  iismex: waterGroup,
+  renergy: waterGroup,
+  security: waterGroup,
+  firex: waterGroup,
+  livestock: livestockGroup,
+  agrotech: livestockGroup,
+  vet: livestockGroup,
+  fisheries: livestockGroup,
+  feed: livestockGroup,
+  dairy: livestockGroup,
+  horticulture: livestockGroup,
+}
+
+const segmentLabels: Record<ExhibitorSegment, string> = {
+  defence: 'Defence',
+  aerospace: 'Aerospace',
+  marine: 'Marine',
+  water: 'Water',
+  waste: 'Waste',
+  iismex: 'IISMEX',
+  renergy: 'Renergy',
+  security: 'Security',
+  firex: 'Firex',
+  livestock: 'Livestock',
+  agrotech: 'Agrotech',
+  vet: 'Vet',
+  fisheries: 'Fisheries',
+  feed: 'Feed',
+  dairy: 'Dairy',
+  horticulture: 'Horticulture',
+}
+
+const segmentFlagKey: Record<ExhibitorSegment, string> = {
+  defence: 'exhdefence',
+  aerospace: 'exhaero',
+  marine: 'exhmarine',
+  water: 'exhwater',
+  waste: 'exhwaste',
+  iismex: 'exhsmart',
+  renergy: 'exhenergy',
+  security: 'exhsecure',
+  firex: 'exhfire',
+  livestock: 'exhlives',
+  agrotech: 'exhagritech',
+  vet: 'exhindovet',
+  fisheries: 'exhfish',
+  feed: 'exhfeed',
+  dairy: 'exhdairy',
+  horticulture: 'exhhorti',
+}
+
+const isFlagSet = (raw: Record<string, unknown>, key: string) => {
+  const value = raw[key.toLowerCase()]
+  if (value === undefined || value === null) return false
+  const normalized = String(value).trim().toLowerCase()
+  return normalized === 'x' || normalized === '1' || normalized === 'true' || normalized === 'yes'
+}
+
+const rowMatchesSegment = (raw: Record<string, unknown>, segment: ExhibitorSegment) => {
+  const lower = Object.keys(raw).reduce<Record<string, unknown>>((acc, key) => {
+    acc[key.toLowerCase()] = raw[key]
+    return acc
+  }, {})
+
+  const flagKey = segmentFlagKey[segment]
+  if (!flagKey) return true
+  return isFlagSet(lower, flagKey)
+}
+
 export const InputDeck = ({ variant, onInput }: { variant: 'exhibitor' | 'visitor'; onInput?: (segment: ExhibitorSegment) => void }) => {
   const heading = variant === 'exhibitor' ? 'EXHIBITOR' : 'VISITOR'
   const segmentByCard: Record<string, ExhibitorSegment> = {
     defence: 'defence',
-    water: 'aerospace',
-    livestock: 'marine',
+    water: 'water',
+    livestock: 'livestock',
   }
 
   return (
-    <div className="space-y-8">
+    <div className="w-full space-y-10 lg:space-y-12 pt-4 pb-8">
       <div className="flex flex-col gap-1">
         <p className="text-lg font-semibold text-slate-500">Input Data</p>
         <h1 className="text-3xl lg:text-4xl font-extrabold text-slate-900">{heading}</h1>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 items-stretch">
         {eventCards.map((card) => (
           <article
             key={card.id}
-            className="rounded-[28px] overflow-hidden bg-gradient-to-br from-rose-500 via-rose-500 to-slate-700 text-white shadow-[0_16px_36px_rgba(0,0,0,0.16)] ring-1 ring-rose-100/40 flex flex-col"
+            className="rounded-[28px] overflow-hidden bg-gradient-to-br from-rose-500 via-rose-500 to-slate-700 text-white shadow-[0_16px_36px_rgba(0,0,0,0.16)] ring-1 ring-rose-100/40 flex flex-col min-h-[420px]"
           >
             <div className="bg-white px-6 pt-6 pb-4">
               <div className="bg-gradient-to-br from-slate-50 to-slate-200 border border-slate-200/70 rounded-2xl p-4 min-h-[160px] flex items-center justify-center shadow-inner">
@@ -73,7 +152,7 @@ export const InputDeck = ({ variant, onInput }: { variant: 'exhibitor' | 'visito
             </div>
 
             <div className="flex-1 flex flex-col px-8 pb-8">
-              <p className="text-center text-lg font-semibold leading-7 mt-4">{card.title}</p>
+              <p className="text-center text-lg font-semibold leading-7 mt-9">{card.title}</p>
               <button
                 type="button"
                 onClick={() => onInput?.(segmentByCard[card.id] ?? 'defence')}
@@ -112,20 +191,23 @@ const ExhibitorTable = ({ segment, rows, loading, error, onReload, onSegmentChan
 
   const filteredRows = useMemo(() => {
     const lower = search.trim().toLowerCase()
-    if (!lower) return rows
+    const bySegment = rows.filter((row) => rowMatchesSegment(row.raw, segment))
 
-    return rows.filter((row) =>
+    if (!lower) return bySegment
+
+    return bySegment.filter((row) =>
       [row.company, row.pic, row.position, row.type, row.email, row.phone, row.city]
         .filter(Boolean)
         .some((value) => value.toLowerCase().includes(lower)),
     )
-  }, [rows, search])
+  }, [rows, search, segment])
 
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / rowsPerPage))
   const currentPage = Math.min(page, totalPages)
   const startIndex = (currentPage - 1) * rowsPerPage
   const paginatedRows = filteredRows.slice(startIndex, startIndex + rowsPerPage)
   const allSelected = paginatedRows.length > 0 && paginatedRows.every((row) => selectedIds.includes(row.id))
+  const tabOptions = segmentTabs[segment] ?? [segment]
 
   const toggleRow = (id: string | number) => {
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]))
@@ -146,21 +228,23 @@ const ExhibitorTable = ({ segment, rows, loading, error, onReload, onSegmentChan
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={onBack}
-          className="inline-flex items-center justify-center w-10 h-10 rounded-full hover:bg-slate-100 text-slate-600"
-          aria-label="Back"
-        >
-          <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="m15 18-6-6 6-6" />
-          </svg>
-        </button>
-        <div>
-          <p className="text-lg font-semibold text-slate-500">Input Data - Exhibitor</p>
-          <div className="flex items-baseline gap-4 mt-2">
-            {(['defence', 'aerospace', 'marine'] as ExhibitorSegment[]).map((item) => (
+      <div className="flex flex-wrap items-start gap-4">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={onBack}
+              className="inline-flex items-center justify-center w-10 h-10 rounded-full hover:bg-slate-100 text-slate-600"
+              aria-label="Back"
+            >
+              <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="m15 18-6-6 6-6" />
+              </svg>
+            </button>
+            <h1 className="text-2xl font-bold text-slate-800 leading-tight">Input Data - Exhibitor</h1>
+          </div>
+          <div className="flex items-center gap-4 mt-2">
+            {tabOptions.map((item) => (
               <button
                 key={item}
                 type="button"
@@ -169,7 +253,7 @@ const ExhibitorTable = ({ segment, rows, loading, error, onReload, onSegmentChan
                   item === segment ? 'border-rose-600 text-rose-600' : 'border-transparent text-slate-600 hover:text-rose-600'
                 }`}
               >
-                {item === 'defence' ? 'Defence' : item === 'aerospace' ? 'Aerospace' : 'Marine'}
+                {segmentLabels[item]}
               </button>
             ))}
           </div>

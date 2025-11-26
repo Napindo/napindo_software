@@ -64,8 +64,8 @@ const DashboardPage = ({ user, onLogout }: DashboardProps) => {
 
       <Sidebar activePage={activePage} onNavigate={setActivePage} onLogout={onLogout} />
 
-      <main className="flex-1 relative z-10 p-8 lg:p-10">
-        <div className="bg-white/90 backdrop-blur-xl border border-white shadow-card rounded-3xl p-8 lg:p-10 dashboard-shell">
+      <main className="flex-1 relative z-10 px-6 lg:px-8 py-6 lg:py-8">
+        <div className="bg-white/90 backdrop-blur-xl border border-white shadow-card rounded-3xl p-6 lg:p-10 dashboard-shell min-h-[calc(100vh-140px)]">
           {renderContent()}
         </div>
       </main>

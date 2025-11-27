@@ -31,7 +31,14 @@ async function apiFetch(pathName, init = {}) {
         ...init.headers || {}
       }
     });
-    const body = await response.json();
+    const contentType = response.headers.get("content-type") || "";
+    let body;
+    if (contentType.includes("application/json")) {
+      body = await response.json();
+    } else {
+      const text = await response.text();
+      body = { success: false, message: text || `Unexpected response from API (${response.status})` };
+    }
     return { status: response.status, body };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Tidak dapat terhubung ke API";
@@ -99,6 +106,16 @@ async function fetchUserHints() {
   }
   return body.data ?? { usernames: [], divisions: [] };
 }
+async function saveAddData(payload) {
+  const { body } = await apiFetch("/gabung", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+  if (!body.success) {
+    throw new Error(body.message || "Gagal menyimpan data");
+  }
+  return body.data ?? { success: true };
+}
 const __dirname$1 = path.dirname(node_url.fileURLToPath(typeof document === "undefined" ? require("url").pathToFileURL(__filename).href : _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("main.cjs", document.baseURI).href));
 process.env.APP_ROOT = path.join(__dirname$1, "..");
 const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
@@ -162,6 +179,14 @@ function registerDatabaseHandlers() {
     try {
       const hints = await fetchUserHints();
       return { success: true, hints };
+    } catch (error) {
+      return { success: false, message: error instanceof Error ? error.message : String(error) };
+    }
+  });
+  electron.ipcMain.handle("db:saveAddData", async (_event, payload) => {
+    try {
+      const result = await saveAddData(payload);
+      return { success: true, data: result };
     } catch (error) {
       return { success: false, message: error instanceof Error ? error.message : String(error) };
     }

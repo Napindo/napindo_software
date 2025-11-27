@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import AddDataPage from './AddData'
 import type { ExhibitorRow, ExhibitorSegment } from '../services/exhibitors'
 import { getExhibitorsBySegment } from '../services/exhibitors'
 
@@ -31,17 +32,17 @@ const eventCards = [
   {
     id: 'defence',
     title: 'Indo Defence, Aerospace, Marine',
-    logo: createLogoDataUrl('Indo Defence 2026 Expo & Forum', ['Aerospace - Marine'], '#e63946', '#374151'),
+    logo: '/assets/LOGO IDD 2026.png',
   },
   {
     id: 'water',
     title: 'Indo Water, Waste, IISMEX, Renergy, Firex, Security',
-    logo: createLogoDataUrl('Indo Water & Waste 2026', ['IISMEX - Renergy - Firex - Security'], '#b91c1c', '#6b7280'),
+    logo: '/assets/Logo Water 2026 series.png',
   },
   {
     id: 'livestock',
     title: 'Indo Livestock, Agrotech, Vet, Fisheries, Feed, Dairy, Horticulture',
-    logo: createLogoDataUrl('Indo Livestock 2026', ['Agrotech - Fisheries - Feed - Dairy - Horticulture'], '#d52547', '#7c3aed'),
+    logo: '/assets/Logo IDL Lengkap.png',
   },
 ]
 
@@ -176,9 +177,10 @@ type ExhibitorTableProps = {
   onReload: () => void
   onSegmentChange: (next: ExhibitorSegment) => void
   onBack: () => void
+  onAdd: () => void
 }
 
-const ExhibitorTable = ({ segment, rows, loading, error, onReload, onSegmentChange, onBack }: ExhibitorTableProps) => {
+const ExhibitorTable = ({ segment, rows, loading, error, onReload, onSegmentChange, onBack, onAdd }: ExhibitorTableProps) => {
   const [search, setSearch] = useState('')
   const [rowsPerPage, setRowsPerPage] = useState(25)
   const [page, setPage] = useState(1)
@@ -273,6 +275,7 @@ const ExhibitorTable = ({ segment, rows, loading, error, onReload, onSegmentChan
           </button>
           <button
             type="button"
+            onClick={onAdd}
             className="inline-flex items-center gap-2 bg-rose-500 hover:bg-rose-600 text-white px-4 py-2.5 rounded-lg text-sm font-semibold shadow-sm"
           >
             <span className="text-lg leading-none">+</span>
@@ -453,7 +456,7 @@ const ExhibitorTable = ({ segment, rows, loading, error, onReload, onSegmentChan
 }
 
 const ExhibitorPage = () => {
-  const [mode, setMode] = useState<'cards' | 'table'>('cards')
+  const [mode, setMode] = useState<'cards' | 'table' | 'add'>('cards')
   const [segment, setSegment] = useState<ExhibitorSegment>('defence')
   const [rows, setRows] = useState<ExhibitorRow[]>([])
   const [loading, setLoading] = useState(false)
@@ -491,6 +494,10 @@ const ExhibitorPage = () => {
     )
   }
 
+  if (mode === 'add') {
+    return <AddDataPage variant="exhibitor" onBack={() => setMode('table')} />
+  }
+
   return (
     <ExhibitorTable
       segment={segment}
@@ -502,6 +509,7 @@ const ExhibitorPage = () => {
         setSegment(next)
       }}
       onBack={() => setMode('cards')}
+      onAdd={() => setMode('add')}
     />
   )
 }

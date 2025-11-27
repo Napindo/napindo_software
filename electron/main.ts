@@ -7,6 +7,7 @@ import {
   fetchTopRows,
   fetchUserHints,
   loginUser,
+  findCompanyByName,
   saveAddData,
   testConnection,
 } from './db.js'
@@ -100,6 +101,15 @@ function registerDatabaseHandlers() {
     try {
       const hints = await fetchUserHints()
       return { success: true, hints }
+    } catch (error) {
+      return { success: false, message: error instanceof Error ? error.message : String(error) }
+    }
+  })
+
+  ipcMain.handle('db:findCompany', async (_event, company: string) => {
+    try {
+      const rows = await findCompanyByName(company)
+      return { success: true, rows }
     } catch (error) {
       return { success: false, message: error instanceof Error ? error.message : String(error) }
     }

@@ -8,9 +8,12 @@ interface Window {
   database: {
     testConnection: () => Promise<RendererDatabaseResponse>
     fetchTableData: <T = unknown>(tableName: string) => Promise<RendererDatabaseResponse<T>>
+    fetchExhibitors: <T = unknown>(segment: string, limit?: number) => Promise<RendererDatabaseResponse<T>>
     login: (
       payload: { username: string; password: string; division?: string | null },
     ) => Promise<RendererDatabaseResponse<{ username: string; division?: string | null; name?: string | null }>>
     userHints: () => Promise<RendererDatabaseResponse<{ usernames: string[]; divisions: string[] }>>
+    saveAddData: (payload: Record<string, unknown>) => Promise<RendererDatabaseResponse>
+    findCompany: <T = Record<string, unknown>>(company: string) => Promise<RendererDatabaseResponse<T>>
   }
 }

@@ -1,4 +1,4 @@
-import { useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from 'react'
 import { comboFields, comboOptions, type ComboFieldName, code2Options, code3Options } from '../constants/addDataOptions'
 import { provinceCityMap, provinceOptions } from '../constants/provinces'
 import { countryDial } from '../constants/countryDial'
@@ -12,7 +12,7 @@ import {
   posterFlagMap,
   tidakKirimFlagMap,
 } from '../constants/flagMaps'
-import { saveAddData, type AddDataPayload } from '../services/addData'
+import { saveAddData, findCompanyRecords, type AddDataPayload } from '../services/addData'
 
 type AddDataVariant = 'exhibitor' | 'visitor'
 
@@ -239,6 +239,17 @@ const AddDataPage = ({ variant, onBack }: AddDataProps) => {
   const [provinceQuery, setProvinceQuery] = useState('')
   const [cityQuery, setCityQuery] = useState('')
   const [saving, setSaving] = useState(false)
+  const [companyLookup, setCompanyLookup] = useState<{
+    open: boolean
+    loading: boolean
+    rows: Record<string, unknown>[]
+    query: string
+  }>({
+    open: false,
+    loading: false,
+    rows: [],
+    query: '',
+  })
   const [comboSearch, setComboSearch] = useState<Record<ComboFieldName, string>>({
     mainActive: '',
     business: '',
@@ -278,6 +289,17 @@ const AddDataPage = ({ variant, onBack }: AddDataProps) => {
     'RegAero',
     'RegMarine',
   ]
+
+  useEffect(() => {
+    if (!companyLookup.open) return
+    const onKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setCompanyLookup((prev) => ({ ...prev, open: false }))
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [companyLookup.open])
 
   const normalizeSpaces = (value: string) => value.replace(/\s{2,}/g, ' ')
 
@@ -410,6 +432,24 @@ const AddDataPage = ({ variant, onBack }: AddDataProps) => {
     return updateByOptions.filter((opt) => opt.toLowerCase().includes(term))
   }, [form.updateBy, updateByOptions])
 
+  const companyColumns = useMemo(() => {
+    const preferred = ['nourut', 'company', 'name', 'position', 'city', 'code', 'phone', 'email', 'zip', 'lastupdate', 'tgljamedit']
+    const seen = new Set<string>()
+    const columns: string[] = []
+    const push = (key: string) => {
+      const normalized = key.toLowerCase()
+      if (seen.has(normalized)) return
+      seen.add(normalized)
+      columns.push(key)
+    }
+
+    preferred.forEach(push)
+    companyLookup.rows.forEach((row) => {
+      Object.keys(row || {}).forEach(push)
+    })
+    return columns
+  }, [companyLookup.rows])
+
   const handleCitySelect = (name: string) => {
     const sanitized = sanitizeText(name, 'city')
     const dial = countryDial[sanitized] ?? ''
@@ -419,6 +459,39 @@ const AddDataPage = ({ variant, onBack }: AddDataProps) => {
       codePhone: dial || prev.codePhone,
     }))
     setCityQuery(sanitized)
+  }
+
+  const formatCellValue = (value: unknown) => {
+    if (value === null || value === undefined) return '-'
+    if (Array.isArray(value)) return value.join(', ')
+    if (value instanceof Date) return value.toISOString()
+    if (typeof value === 'object') return JSON.stringify(value)
+    const text = String(value)
+    return text.trim() === '' ? '-' : text
+  }
+
+  const handleCompanyKeyDown = async (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== 'Enter') return
+    event.preventDefault()
+    const query = form.company.trim()
+    if (!query) {
+      setFeedback({ type: 'error', message: 'Company wajib diisi sebelum pencarian.' })
+      return
+    }
+    setFeedback(null)
+    setCompanyLookup(() => ({ open: false, loading: true, rows: [], query }))
+    try {
+      const rows = await findCompanyRecords(query)
+      if (!rows || rows.length === 0) {
+        setCompanyLookup({ open: false, loading: false, rows: [], query })
+        setFeedback({ type: 'error', message: 'Company belum ada di database' })
+        return
+      }
+      setCompanyLookup({ open: true, loading: false, rows, query })
+    } catch (error) {
+      setCompanyLookup((prev) => ({ ...prev, loading: false }))
+      setFeedback({ type: 'error', message: error instanceof Error ? error.message : 'Gagal mencari company' })
+    }
   }
 
   const applyFlags = (map: Record<string, string>, selected: string[], target: AddDataPayload) => {
@@ -677,6 +750,9 @@ const AddDataPage = ({ variant, onBack }: AddDataProps) => {
           {labelMap[name]}
           {requiredFields.has(name) ? <span className="text-rose-600">*</span> : null}
         </label>
+        {name === 'company' ? (
+          <p className="text-xs text-slate-500">Tekan Enter untuk cek apakah nama Company sudah ada di database.</p>
+        ) : null}
         {isCombo ? (
           <div className="relative">
             <button
@@ -776,17 +852,21 @@ const AddDataPage = ({ variant, onBack }: AddDataProps) => {
               type={isDate ? 'date' : name === 'email' ? 'email' : 'text'}
               name={name}
               id={name}
-            value={form[name] as string}
-            onChange={handleChange(name)}
-            onBlur={() => trimField(name)}
-            required={requiredFields.has(name)}
-            maxLength={minLength}
-            autoComplete="off"
-              className={`w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-rose-400 focus:ring-4 focus:ring-rose-100 transition ${
-                isDate ? 'pr-10' : ''
-              }`}
+              value={form[name] as string}
+              onChange={handleChange(name)}
+              onBlur={() => trimField(name)}
+              onKeyDown={name === 'company' ? handleCompanyKeyDown : undefined}
+              required={requiredFields.has(name)}
+              maxLength={minLength}
+              autoComplete="off"
+              className={`w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-rose-400 focus:ring-4 focus:ring-rose-100 transition ${isDate ? 'pr-10' : ''}`}
               placeholder={requiredFields.has(name) ? 'Wajib diisi' : 'Isi data'}
             />
+            {name === 'company' && companyLookup.loading ? (
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-rose-600 animate-pulse">
+                Checking...
+              </span>
+            ) : null}
           </div>
         )}
         <p className="text-xs text-slate-500">
@@ -801,10 +881,10 @@ const AddDataPage = ({ variant, onBack }: AddDataProps) => {
 
   return (
     <div className="space-y-6 lg:space-y-8">
-          <div className="flex items-start gap-4">
-            <button
-              type="button"
-              onClick={onBack}
+      <div className="flex items-start gap-4">
+        <button
+          type="button"
+          onClick={onBack}
           className="inline-flex items-center justify-center w-10 h-10 rounded-full hover:bg-slate-100 text-slate-600 border border-slate-200"
           aria-label="Back to list"
         >
@@ -834,9 +914,7 @@ const AddDataPage = ({ variant, onBack }: AddDataProps) => {
       <form className="bg-white border border-slate-200 shadow-sm rounded-2xl p-6 space-y-6" onSubmit={handleSubmit('add')}>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="space-y-4">{leftFields.map((field) => renderField(field))}</div>
-          <div className="space-y-4">
-            {rightFields.map((field) => renderField(field))}
-          </div>
+          <div className="space-y-4">{rightFields.map((field) => renderField(field))}</div>
         </div>
 
         <div className="flex flex-wrap items-center gap-3 pt-2">
@@ -862,6 +940,56 @@ const AddDataPage = ({ variant, onBack }: AddDataProps) => {
           </button>
         </div>
       </form>
+
+      {companyLookup.open ? (
+        <div className="fixed inset-0 z-30 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[80vh] overflow-hidden border border-slate-200">
+            <div className="flex items-start justify-between gap-3 px-6 py-4 border-b border-slate-200">
+              <div>
+                <p className="text-xs font-semibold text-rose-600 uppercase tracking-wide">Company ditemukan</p>
+                <h3 className="text-lg font-bold text-slate-900">
+                  {companyLookup.rows.length} data untuk "{companyLookup.query}"
+                </h3>
+                <p className="text-xs text-slate-500">Tekan Escape atau Close untuk menutup popup.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCompanyLookup((prev) => ({ ...prev, open: false }))}
+                className="inline-flex items-center justify-center px-3 py-2 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-100 border border-slate-200"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="px-6 py-4 overflow-auto max-h-[64vh]">
+              <div className="min-w-[720px] overflow-auto">
+                <table className="min-w-full text-sm border border-slate-200 rounded-lg overflow-hidden">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      {companyColumns.map((column) => (
+                        <th key={column} className="px-3 py-2 text-left font-semibold text-slate-700 border-b border-slate-200">
+                          {column}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {companyLookup.rows.map((row, index) => (
+                      <tr key={String((row as Record<string, unknown>)['nourut'] ?? index)}>
+                        {companyColumns.map((column) => (
+                          <td key={column} className="px-3 py-2 align-top text-slate-800">
+                            {formatCellValue((row as Record<string, unknown>)[column])}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

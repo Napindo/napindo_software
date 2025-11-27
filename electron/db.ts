@@ -64,7 +64,14 @@ async function apiFetch<T = unknown>(pathName: string, init: RequestInit = {}): 
       },
     })
 
-    const body = (await response.json()) as ApiResponse<T>
+    const contentType = response.headers.get('content-type') || ''
+    let body: ApiResponse<T>
+    if (contentType.includes('application/json')) {
+      body = (await response.json()) as ApiResponse<T>
+    } else {
+      const text = await response.text()
+      body = { success: false, message: text || `Unexpected response from API (${response.status})` }
+    }
     return { status: response.status, body }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Tidak dapat terhubung ke API'
@@ -155,4 +162,17 @@ export async function fetchUserHints() {
   }
 
   return body.data ?? { usernames: [], divisions: [] }
+}
+
+export async function saveAddData(payload: Record<string, unknown>) {
+  const { body } = await apiFetch('/gabung', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+
+  if (!body.success) {
+    throw new Error(body.message || 'Gagal menyimpan data')
+  }
+
+  return body.data ?? { success: true }
 }

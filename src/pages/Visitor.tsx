@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import AddDataPage from './AddData'
 import { InputDeck } from './Exhibitor'
 import type { VisitorRow, VisitorSegment } from '../services/visitors'
 import { getVisitorsBySegment } from '../services/visitors'
@@ -90,9 +91,10 @@ type VisitorTableProps = {
   onReload: () => void
   onSegmentChange: (next: VisitorSegment) => void
   onBack: () => void
+  onAdd: () => void
 }
 
-const VisitorTable = ({ segment, rows, loading, error, onReload, onSegmentChange, onBack }: VisitorTableProps) => {
+const VisitorTable = ({ segment, rows, loading, error, onReload, onSegmentChange, onBack, onAdd }: VisitorTableProps) => {
   const [search, setSearch] = useState('')
   const [rowsPerPage, setRowsPerPage] = useState(25)
   const [page, setPage] = useState(1)
@@ -184,6 +186,14 @@ const VisitorTable = ({ segment, rows, loading, error, onReload, onSegmentChange
               <path d="M20 9A9 9 0 0 0 5 5.3L4 10M4 15a9 9 0 0 0 15 3.7L20 14" />
             </svg>
             Reload
+          </button>
+          <button
+            type="button"
+            onClick={onAdd}
+            className="inline-flex items-center gap-2 bg-rose-500 hover:bg-rose-600 text-white px-4 py-2.5 rounded-lg text-sm font-semibold shadow-sm"
+          >
+            <span className="text-lg leading-none">+</span>
+            Add Visitor
           </button>
         </div>
       </div>
@@ -337,7 +347,7 @@ const VisitorTable = ({ segment, rows, loading, error, onReload, onSegmentChange
 }
 
 const VisitorPage = () => {
-  const [mode, setMode] = useState<'cards' | 'table'>('cards')
+  const [mode, setMode] = useState<'cards' | 'table' | 'add'>('cards')
   const [segment, setSegment] = useState<VisitorSegment>('defence')
   const [rows, setRows] = useState<VisitorRow[]>([])
   const [loading, setLoading] = useState(false)
@@ -375,6 +385,10 @@ const VisitorPage = () => {
     )
   }
 
+  if (mode === 'add') {
+    return <AddDataPage variant="visitor" onBack={() => setMode('table')} />
+  }
+
   return (
     <VisitorTable
       segment={segment}
@@ -386,6 +400,7 @@ const VisitorPage = () => {
         setSegment(next)
       }}
       onBack={() => setMode('cards')}
+      onAdd={() => setMode('add')}
     />
   )
 }

@@ -1,0 +1,869 @@
+import { useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
+import { comboFields, comboOptions, type ComboFieldName, code2Options, code3Options } from '../constants/addDataOptions'
+import { provinceCityMap, provinceOptions } from '../constants/provinces'
+import { countryDial } from '../constants/countryDial'
+import {
+  exhibitorFlagMap,
+  visitorFlagMap,
+  typeOfVisitorFlagMap,
+  invitationFlagMap,
+  openingCeremonyFlagMap,
+  kartuUcapanFlagMap,
+  posterFlagMap,
+  tidakKirimFlagMap,
+} from '../constants/flagMaps'
+import { saveAddData, type AddDataPayload } from '../services/addData'
+
+type AddDataVariant = 'exhibitor' | 'visitor'
+
+type AddDataForm = {
+  typeOfBusiness: string
+  company: string
+  address1: string
+  address2: string
+  province: string
+  city: string
+  zip: string
+  codePhone: string
+  phoneNumber: string
+  facsimile: string
+  handphone: string
+  sex: string
+  name: string
+  position: string
+  email: string
+  website: string
+  mainActive: string[]
+  business: string[]
+  source: string
+  updateBy: string
+  forum: string
+  exhibitorTahun: string
+  code1: string
+  code2: string
+  code3: string
+  exhibitor: string[]
+  visitor: string[]
+  typeOfVisitor: string[]
+  specialInvitationIndoDefence: string[]
+  openingCeremony: string[]
+  kartuUcapan: string[]
+  poster: string[]
+  tidakDikirim: string[]
+  lastUpdate: string
+  verify: boolean
+}
+
+type AddDataProps = {
+  variant: AddDataVariant
+  onBack?: () => void
+}
+
+type FieldName = keyof AddDataForm
+
+const minLengths: Record<Exclude<FieldName, 'verify' | 'lastUpdate'>, number> = {
+  typeOfBusiness: 2,
+  company: 40,
+  address1: 40,
+  address2: 50,
+  province: 30,
+  city: 30,
+  zip: 10,
+  codePhone: 5,
+  phoneNumber: 20,
+  facsimile: 20,
+  handphone: 20,
+  sex: 4,
+  name: 35,
+  position: 40,
+  email: 40,
+  website: 50,
+  mainActive: 2,
+  business: 2,
+  source: 30,
+  updateBy: 10,
+  forum: 5,
+  exhibitorTahun: 10,
+  code1: 10,
+  code2: 2,
+  code3: 2,
+  exhibitor: 2,
+  visitor: 2,
+  typeOfVisitor: 2,
+  specialInvitationIndoDefence: 2,
+  openingCeremony: 2,
+  kartuUcapan: 2,
+  poster: 2,
+  tidakDikirim: 2,
+}
+const labelMap: Record<FieldName, string> = {
+  typeOfBusiness: 'Type of Business (PT / CV / UD / Etc)',
+  company: 'Company',
+  address1: 'Address 1',
+  address2: 'Address 2',
+  province: 'Province (Choose)',
+  city: 'City (Choose)',
+  zip: 'ZIP',
+  codePhone: 'Code Phone',
+  phoneNumber: 'Phone Number',
+  facsimile: 'Facsimile',
+  handphone: 'Handphone',
+  sex: 'Sex (Mr. / Mrs / Ms. / Etc)',
+  name: 'Name',
+  position: 'Position',
+  email: 'Email',
+  website: 'Website',
+  mainActive: 'Main Active (Choose)',
+  business: 'Business',
+  source: 'Source',
+  updateBy: 'Update By',
+  forum: 'Forum',
+  exhibitorTahun: 'Exhibitor Tahun',
+  code1: 'Code 1',
+  code2: 'Code 2',
+  code3: 'Code 3',
+  exhibitor: 'Exhibitor',
+  visitor: 'Visitor',
+  typeOfVisitor: 'Type of Visitor',
+  specialInvitationIndoDefence: 'Special Invitation Indo Defence',
+  openingCeremony: 'Opening Ceremony',
+  kartuUcapan: 'Kartu Ucapan',
+  poster: 'Poster',
+  tidakDikirim: 'Tidak Dikirim',
+  lastUpdate: 'Last Update',
+  verify: 'Verify',
+}
+
+const isComboField = (name: FieldName): name is ComboFieldName => comboFields.includes(name as ComboFieldName)
+
+
+const requiredFields = new Set<FieldName>([
+  'address1',
+  'province',
+  'city',
+  'name',
+  'mainActive',
+  'business',
+  'source',
+  'lastUpdate',
+])
+
+const leftFields: FieldName[] = [
+  'typeOfBusiness',
+  'company',
+  'address1',
+  'address2',
+  'province',
+  'city',
+  'zip',
+  'codePhone',
+  'phoneNumber',
+  'facsimile',
+  'handphone',
+  'sex',
+  'name',
+  'position',
+  'email',
+  'website',
+  'mainActive',
+  'business',
+]
+
+const rightFields: FieldName[] = [
+  'source',
+  'updateBy',
+  'lastUpdate',
+  'forum',
+  'exhibitorTahun',
+  'code1',
+  'code2',
+  'code3',
+  'exhibitor',
+  'visitor',
+  'typeOfVisitor',
+  'specialInvitationIndoDefence',
+  'openingCeremony',
+  'kartuUcapan',
+  'poster',
+  'tidakDikirim',
+]
+
+const defaultForm = (): AddDataForm => ({
+  typeOfBusiness: '',
+  company: '',
+  address1: '',
+  address2: '',
+  province: '',
+  city: '',
+  zip: '',
+  codePhone: '',
+  phoneNumber: '',
+  facsimile: '',
+  handphone: '',
+  sex: '',
+  name: '',
+  position: '',
+  email: '',
+  website: '',
+  mainActive: [],
+  business: [],
+  source: '',
+  updateBy: '',
+  forum: '',
+  exhibitorTahun: '',
+  code1: '',
+  code2: '',
+  code3: '',
+  exhibitor: [],
+  visitor: [],
+  typeOfVisitor: [],
+  specialInvitationIndoDefence: [],
+  openingCeremony: [],
+  kartuUcapan: [],
+  poster: [],
+  tidakDikirim: [],
+  lastUpdate: new Date().toISOString().split('T')[0],
+  verify: false,
+})
+
+const helperText = (name: FieldName) => {
+  if (name === 'verify') return ''
+  if (name === 'lastUpdate') return 'Pilih tanggal terakhir diperbarui.'
+  return ''
+}
+
+const AddDataPage = ({ variant, onBack }: AddDataProps) => {
+  const [form, setForm] = useState<AddDataForm>(defaultForm)
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [openCombo, setOpenCombo] = useState<FieldName | null>(null)
+  const [provinceQuery, setProvinceQuery] = useState('')
+  const [cityQuery, setCityQuery] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [comboSearch, setComboSearch] = useState<Record<ComboFieldName, string>>({
+    mainActive: '',
+    business: '',
+    exhibitor: '',
+    visitor: '',
+    typeOfVisitor: '',
+    specialInvitationIndoDefence: '',
+    openingCeremony: '',
+    kartuUcapan: '',
+    poster: '',
+    tidakDikirim: '',
+  })
+  const numericFields = new Set<FieldName>(['zip', 'codePhone', 'phoneNumber', 'facsimile', 'handphone'])
+  const uppercaseFields = new Set<FieldName>(['typeOfBusiness', 'company'])
+  const staticUpdateBy = ['Catalog', 'Email', 'Fax', 'Form13', 'NameCard', 'Others', 'Tlp', 'Web', 'YPages']
+  const updateByPrefixes = [
+    'VisWtr',
+    'VisRen',
+    'VisISF',
+    'VisISC',
+    'VisLives',
+    'VisFish',
+    'VisAgro',
+    'VisVet',
+    'VisDef',
+    'VisAero',
+    'VisMarine',
+    'RegWtr',
+    'RegRen',
+    'RegISF',
+    'RegISC',
+    'RegLives',
+    'RegFish',
+    'RegAgro',
+    'RegVet',
+    'RegDef',
+    'RegAero',
+    'RegMarine',
+  ]
+
+  const normalizeSpaces = (value: string) => value.replace(/\s{2,}/g, ' ')
+
+  const toTitleCase = (value: string) => {
+    const text = normalizeSpaces(value)
+    if (!text) return ''
+    const titled = text
+      .toLowerCase()
+      .split(' ')
+      .map((word) => (word ? word.charAt(0).toUpperCase() + word.slice(1) : ''))
+      .join(' ')
+    return titled
+  }
+
+  const sanitizeText = (value: string, field?: FieldName) => {
+    if (field === 'email' || field === 'website') {
+      return normalizeSpaces(value)
+    }
+
+    if (uppercaseFields.has(field as FieldName)) {
+      const text = normalizeSpaces(value)
+      return text.toUpperCase()
+    }
+
+    if (field === 'province' || field === 'city') {
+      const text = normalizeSpaces(value)
+      if (!text) return ''
+      const isAllCaps = text === text.toUpperCase()
+      const result = isAllCaps ? text : toTitleCase(text)
+      return result
+    }
+
+    const text = normalizeSpaces(value)
+    if (!text) return ''
+    const titled = text
+      .toLowerCase()
+      .split(' ')
+      .map((word) => (word ? word.charAt(0).toUpperCase() + word.slice(1) : ''))
+      .join(' ')
+    return titled
+  }
+
+  const sanitizeNumeric = (value: string) => value.replace(/\D+/g, '')
+
+  const trimField = (field: FieldName) => {
+    setForm((prev) => {
+      const value = String(prev[field] ?? '')
+      const trimmed = normalizeSpaces(value)
+      return { ...prev, [field]: trimmed }
+    })
+  }
+
+  const handleChange =
+    (field: FieldName) =>
+    (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+      const rawValue = event.target.type === 'checkbox' ? (event.target as HTMLInputElement).checked : event.target.value
+      if (field === 'verify') {
+        const checked = Boolean(rawValue)
+        setForm((prev) => ({
+          ...prev,
+          verify: checked,
+          code2: checked ? 'OK' : prev.code2,
+        }))
+        return
+      }
+      if (field === 'lastUpdate') {
+        setForm((prev) => ({ ...prev, lastUpdate: String(rawValue) }))
+        return
+      }
+
+      if (numericFields.has(field)) {
+        setForm((prev) => ({ ...prev, [field]: sanitizeNumeric(String(rawValue)) }))
+        return
+      }
+
+      const nextValue = sanitizeText(String(rawValue), field)
+      setForm((prev) => ({ ...prev, [field]: nextValue }))
+    }
+
+  const toggleComboOption = (field: FieldName, option: string) => {
+    if (!isComboField(field)) return
+    setForm((prev) => {
+      const current = Array.isArray(prev[field]) ? (prev[field] as string[]) : []
+      const exists = current.includes(option)
+      const next = exists ? current.filter((item) => item !== option) : [...current, option]
+      return { ...prev, [field]: next }
+    })
+  }
+
+  const handleProvinceChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const value = sanitizeText(event.target.value, 'province')
+    setProvinceQuery(value)
+    setForm((prev) => ({ ...prev, province: value, city: '' }))
+  }
+
+  const handleCityChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const value = sanitizeText(event.target.value, 'city')
+    setCityQuery(value)
+    const dial = countryDial[value] ?? ''
+    setForm((prev) => ({
+      ...prev,
+      city: value,
+      codePhone: dial || prev.codePhone,
+    }))
+  }
+
+  const filteredProvinceOptions = useMemo(() => {
+    const term = provinceQuery.trim().toLowerCase()
+    if (!term) return provinceOptions
+    return provinceOptions.filter((option) => option.toLowerCase().includes(term))
+  }, [provinceQuery])
+
+  const cityOptions = useMemo(() => provinceCityMap[form.province] ?? [], [form.province])
+
+  const filteredCityOptions = useMemo(() => {
+    const term = cityQuery.trim().toLowerCase()
+    if (!term) return cityOptions
+    return cityOptions.filter((option) => option.toLowerCase().includes(term))
+  }, [cityOptions, cityQuery])
+
+  const updateByOptions = useMemo(() => {
+    const yy = String(new Date().getFullYear() % 100).padStart(2, '0')
+    const prefixed = updateByPrefixes.map((pre) => `${pre}${yy}`)
+    return Array.from(new Set([...staticUpdateBy, ...prefixed]))
+  }, [])
+
+  const filteredUpdateByOptions = useMemo(() => {
+    const term = form.updateBy.trim().toLowerCase()
+    if (!term) return updateByOptions
+    return updateByOptions.filter((opt) => opt.toLowerCase().includes(term))
+  }, [form.updateBy, updateByOptions])
+
+  const handleCitySelect = (name: string) => {
+    const sanitized = sanitizeText(name, 'city')
+    const dial = countryDial[sanitized] ?? ''
+    setForm((prev) => ({
+      ...prev,
+      city: sanitized,
+      codePhone: dial || prev.codePhone,
+    }))
+    setCityQuery(sanitized)
+  }
+
+  const applyFlags = (map: Record<string, string>, selected: string[], target: AddDataPayload) => {
+    Object.values(map).forEach((code) => {
+      target[code.toLowerCase()] = null
+    })
+    selected.forEach((label) => {
+      const code = map[label]
+      if (code) target[code.toLowerCase()] = 'X'
+    })
+  }
+
+  const buildPayload = (): AddDataPayload => {
+    const userName = (window.process as unknown as { env?: Record<string, string> })?.env?.USERNAME ?? 'app-user'
+    const now = new Date()
+    const tglJamEdit = now.toISOString().replace('T', ' ').slice(0, 19)
+
+    const payload: AddDataPayload = {
+      ptCv: form.typeOfBusiness.trim(),
+      company: form.company.trim(),
+      address1: form.address1.trim(),
+      address2: form.address2.trim(),
+      city: form.city.trim(),
+      zip: form.zip,
+      propince: form.province.trim(),
+      code: form.codePhone,
+      phone: form.phoneNumber,
+      facsimile: form.facsimile,
+      handphone: form.handphone,
+      sex: form.sex,
+      name: form.name.trim(),
+      position: form.position.trim(),
+      email: form.email.trim(),
+      mainActiv: form.mainActive.join(', '),
+      business: form.business.join(', '),
+      code4: form.source.trim(),
+      source: form.updateBy.trim(),
+      forum: form.forum.trim(),
+      exhthn: form.exhibitorTahun.trim(),
+      code1: form.code1.trim(),
+      code2: form.code2.trim(),
+      code3: form.code3.trim(),
+      lastupdate: new Date(form.lastUpdate).toISOString(),
+      website: form.website.trim(),
+      namauser: userName,
+      tglJamEdit: tglJamEdit,
+    }
+
+    applyFlags(exhibitorFlagMap, form.exhibitor, payload)
+    applyFlags(visitorFlagMap, form.visitor, payload)
+    applyFlags(typeOfVisitorFlagMap, form.typeOfVisitor, payload)
+    applyFlags(invitationFlagMap, form.specialInvitationIndoDefence, payload)
+    applyFlags(openingCeremonyFlagMap, form.openingCeremony, payload)
+    applyFlags(kartuUcapanFlagMap, form.kartuUcapan, payload)
+    applyFlags(posterFlagMap, form.poster, payload)
+    applyFlags(tidakKirimFlagMap, form.tidakDikirim, payload)
+
+    return payload
+  }
+
+  const filteredComboOptions = (name: ComboFieldName) => {
+    const term = comboSearch[name]?.trim().toLowerCase() || ''
+    const options = comboOptions[name] ?? []
+    if (!term) return options
+    return options.filter((opt) => opt.toLowerCase().includes(term))
+  }
+
+  const validate = () => {
+    const errors: string[] = []
+    const requiredFieldsList: FieldName[] = ['address1', 'province', 'city', 'name', 'mainActive', 'business', 'source', 'lastUpdate']
+    requiredFieldsList.forEach((key) => {
+      const rawValue = form[key]
+      const hasValue = Array.isArray(rawValue) ? rawValue.length > 0 : String(rawValue).trim() !== ''
+      if (!hasValue) errors.push(`${labelMap[key]} wajib diisi.`)
+    })
+
+    return errors
+  }
+
+  const handleSubmit =
+    (action: 'add' | 'update') =>
+    async (event: FormEvent) => {
+      event.preventDefault()
+      const errors = validate()
+      if (errors.length > 0) {
+        setFeedback({ type: 'error', message: errors[0] })
+        return
+      }
+
+      const actionLabel = action === 'add' ? 'Add/Save (F5)' : 'Update/Edit (F2)'
+      setSaving(true)
+      try {
+        const payload = buildPayload()
+        const response = await saveAddData(payload)
+        const success = response?.success !== false
+        if (success) {
+          setFeedback({ type: 'success', message: `${actionLabel} berhasil disimpan.` })
+        } else {
+          setFeedback({ type: 'error', message: response?.message ?? `${actionLabel} gagal.` })
+        }
+      } catch (error) {
+        setFeedback({ type: 'error', message: error instanceof Error ? error.message : `${actionLabel} gagal.` })
+      } finally {
+        setSaving(false)
+      }
+    }
+
+  const renderField = (name: FieldName) => {
+    if (name === 'verify') {
+      return null
+    }
+
+    const isDate = name === 'lastUpdate'
+    const isCombo = isComboField(name)
+    const minLength = minLengths[name as Exclude<FieldName, 'verify' | 'lastUpdate'>]
+    const selected = (form[name] as string[]) ?? []
+
+    if (name === 'province') {
+      return (
+        <div className="space-y-2" key={name}>
+          <label className="text-sm font-semibold text-slate-800 flex items-center gap-1">
+            {labelMap[name]}
+            <span className="text-rose-600">*</span>
+          </label>
+          <div className="relative">
+            <input
+              type="text"
+              value={form.province}
+              onChange={handleProvinceChange}
+              onBlur={() => setForm((prev) => ({ ...prev, province: sanitizeText(prev.province, 'province') }))}
+              list="province-options"
+              maxLength={minLength}
+              required
+              autoComplete="off"
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-rose-400 focus:ring-4 focus:ring-rose-100 transition"
+              placeholder="Pilih province"
+            />
+            <datalist id="province-options">
+              {filteredProvinceOptions.map((option) => (
+                <option key={option} value={option} />
+              ))}
+            </datalist>
+          </div>
+          <p className="text-xs text-slate-500">Pilih kode/region provinsi lalu City akan menyesuaikan.</p>
+        </div>
+      )
+    }
+
+    if (name === 'city') {
+      return (
+        <div className="space-y-2" key={name}>
+          <label className="text-sm font-semibold text-slate-800 flex items-center gap-1">
+            {labelMap[name]}
+            <span className="text-rose-600">*</span>
+          </label>
+          <div className="relative">
+            <input
+              type="text"
+              value={form.city}
+              onChange={handleCityChange}
+              onBlur={() => handleCitySelect(form.city)}
+              list="city-options"
+              maxLength={minLength}
+              required
+              autoComplete="off"
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-rose-400 focus:ring-4 focus:ring-rose-100 transition"
+              placeholder="Pilih city"
+            />
+            <datalist id="city-options">
+              {filteredCityOptions.map((option) => (
+                <option key={option} value={option} />
+              ))}
+            </datalist>
+          </div>
+          <p className="text-xs text-slate-500">
+            Daftar City mengikuti province terpilih. Kosongkan atau ubah province bila tidak sesuai.
+          </p>
+        </div>
+      )
+    }
+
+    if (name === 'code2' || name === 'code3') {
+      const options = name === 'code2' ? code2Options : code3Options
+      return (
+        <div className="space-y-2" key={name}>
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-semibold text-slate-800 flex items-center gap-1">
+              {labelMap[name]}
+              {requiredFields.has(name) ? <span className="text-rose-600">*</span> : null}
+            </label>
+            {name === 'code2' ? (
+              <label className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={form.verify}
+                  onChange={handleChange('verify')}
+                  className="w-4 h-4 accent-rose-600"
+                />
+                {labelMap.verify}
+              </label>
+            ) : null}
+          </div>
+          <select
+            value={form[name] as string}
+            onChange={handleChange(name)}
+            required={requiredFields.has(name)}
+            className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 focus:border-rose-400 focus:ring-4 focus:ring-rose-100 transition"
+          >
+            <option value="" disabled>
+              Pilih opsi
+            </option>
+            {options.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-slate-500">{helperText(name)}</p>
+        </div>
+      )
+    }
+
+    if (name === 'updateBy') {
+      return (
+        <div className="space-y-2" key={name}>
+          <label className="text-sm font-semibold text-slate-800 flex items-center gap-1">
+            {labelMap[name]}
+            {requiredFields.has(name) ? <span className="text-rose-600">*</span> : null}
+          </label>
+          <div className="relative">
+            <input
+              type="text"
+              value={form.updateBy}
+              onChange={handleChange('updateBy')}
+              list="updateby-options"
+              maxLength={minLength}
+              required={requiredFields.has(name)}
+              autoComplete="off"
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-rose-400 focus:ring-4 focus:ring-rose-100 transition"
+              placeholder="Pilih atau ketik"
+            />
+            <datalist id="updateby-options">
+              {filteredUpdateByOptions.map((option) => (
+                <option key={option} value={option} />
+              ))}
+            </datalist>
+          </div>
+          <p className="text-xs text-slate-500">Saran mengikuti tahun berjalan.</p>
+        </div>
+      )
+    }
+
+    return (
+      <div className="space-y-2" key={name}>
+        <label className="text-sm font-semibold text-slate-800 flex items-center gap-1">
+          {labelMap[name]}
+          {requiredFields.has(name) ? <span className="text-rose-600">*</span> : null}
+        </label>
+        {isCombo ? (
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setOpenCombo((prev) => (prev === name ? null : name))}
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 text-left focus:border-rose-400 focus:ring-4 focus:ring-rose-100 transition flex items-center justify-between"
+            >
+              <span className="flex flex-wrap gap-2">
+                {selected.length === 0 ? (
+                  <span className="text-slate-400">Pilih opsi (bisa lebih dari satu)</span>
+                ) : (
+                  selected.map((item) => (
+                    <span
+                      key={item}
+                      className="inline-flex items-center gap-1 rounded-full bg-rose-50 text-rose-700 px-3 py-1 text-xs font-semibold border border-rose-100"
+                    >
+                      {item}
+                      <span
+                        role="button"
+                        tabIndex={-1}
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          toggleComboOption(name, item)
+                        }}
+                        className="cursor-pointer text-rose-500 hover:text-rose-700"
+                      >
+                        x
+                      </span>
+                    </span>
+                  ))
+                )}
+              </span>
+              <svg
+                viewBox="0 0 24 24"
+                className={`w-4 h-4 text-slate-500 transition-transform ${openCombo === name ? 'rotate-180' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </button>
+            {openCombo === name ? (
+              <div className="absolute z-20 mt-2 w-full rounded-xl border border-slate-200 bg-white shadow-lg p-2 max-h-60 overflow-auto">
+                <div className="px-2 pb-2">
+                  <input
+                    type="search"
+                    value={comboSearch[name as ComboFieldName]}
+                    onChange={(event) =>
+                      setComboSearch((prev) => ({
+                        ...prev,
+                        [name as ComboFieldName]: event.target.value,
+                      }))
+                    }
+                    placeholder="Ketik untuk filter"
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
+                  />
+                </div>
+                {filteredComboOptions(name as ComboFieldName).map((option) => {
+                  const checked = selected.includes(option)
+                  return (
+                    <label
+                      key={option}
+                      className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-rose-50 cursor-pointer text-sm text-slate-800"
+                      onMouseDown={(event) => event.preventDefault()}
+                    >
+                      <input
+                        type="checkbox"
+                        className="w-4 h-4 accent-rose-600"
+                        checked={checked}
+                        onChange={() => toggleComboOption(name, option)}
+                      />
+                      <span className="flex-1">{option}</span>
+                    </label>
+                  )
+                })}
+                {selected.length > 0 ? (
+                  <button
+                    type="button"
+                    className="mt-2 ml-2 text-xs font-semibold text-rose-600 hover:text-rose-700"
+                    onClick={() =>
+                      setForm((prev) => ({
+                        ...prev,
+                        [name]: [],
+                      }))
+                    }
+                  >
+                    Clear selection
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        ) : (
+          <div className="relative">
+            <input
+              type={isDate ? 'date' : name === 'email' ? 'email' : 'text'}
+              name={name}
+              id={name}
+            value={form[name] as string}
+            onChange={handleChange(name)}
+            onBlur={() => trimField(name)}
+            required={requiredFields.has(name)}
+            maxLength={minLength}
+            autoComplete="off"
+              className={`w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-rose-400 focus:ring-4 focus:ring-rose-100 transition ${
+                isDate ? 'pr-10' : ''
+              }`}
+              placeholder={requiredFields.has(name) ? 'Wajib diisi' : 'Isi data'}
+            />
+          </div>
+        )}
+        <p className="text-xs text-slate-500">
+          {helperText(name)}
+          {isCombo ? ' Pilih lebih dari satu bila diperlukan.' : ''}
+        </p>
+      </div>
+    )
+  }
+
+  const headerTitle = useMemo(() => (variant === 'exhibitor' ? 'Add Data - Exhibitor' : 'Add Data - Visitor'), [variant])
+
+  return (
+    <div className="space-y-6 lg:space-y-8">
+          <div className="flex items-start gap-4">
+            <button
+              type="button"
+              onClick={onBack}
+          className="inline-flex items-center justify-center w-10 h-10 rounded-full hover:bg-slate-100 text-slate-600 border border-slate-200"
+          aria-label="Back to list"
+        >
+          <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="m14 18-6-6 6-6" />
+          </svg>
+        </button>
+        <div className="space-y-1">
+          <p className="text-sm font-semibold text-rose-600">Form Input</p>
+          <h1 className="text-3xl font-extrabold text-slate-900 leading-tight">{headerTitle}</h1>
+          <p className="text-sm text-slate-600">Lengkapi seluruh field sesuai kebutuhan minimal karakter.</p>
+        </div>
+      </div>
+
+      {feedback ? (
+        <div
+          className={`rounded-xl border px-4 py-3 text-sm font-semibold ${
+            feedback.type === 'success'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+              : 'bg-rose-50 border-rose-200 text-rose-700'
+          }`}
+        >
+          {feedback.message}
+        </div>
+      ) : null}
+
+      <form className="bg-white border border-slate-200 shadow-sm rounded-2xl p-6 space-y-6" onSubmit={handleSubmit('add')}>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="space-y-4">{leftFields.map((field) => renderField(field))}</div>
+          <div className="space-y-4">
+            {rightFields.map((field) => renderField(field))}
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3 pt-2">
+          <button
+            type="submit"
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-gradient-to-r from-rose-500 to-rose-600 text-white font-semibold shadow-md hover:shadow-lg"
+          >
+            {saving ? 'Saving...' : 'Add/Save (F5)'}
+          </button>
+          <button
+            type="button"
+            onClick={handleSubmit('update')}
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-slate-800 text-white font-semibold shadow-sm hover:bg-slate-900"
+          >
+            {saving ? 'Saving...' : 'Update/Edit (F2)'}
+          </button>
+          <button
+            type="button"
+            onClick={onBack}
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-slate-200 text-slate-700 font-semibold hover:bg-slate-300"
+          >
+            Cancel (ESC)
+          </button>
+        </div>
+      </form>
+    </div>
+  )
+}
+
+export default AddDataPage

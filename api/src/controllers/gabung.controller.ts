@@ -50,6 +50,22 @@ export async function getGabung(req: Request, res: Response) {
   }
 }
 
+export async function findGabungByCompany(req: Request, res: Response) {
+  try {
+    const company = String((req.query.company || req.query.q || "") ?? "").trim()
+    if (!company) return fail(res, "Nama company wajib diisi", 400)
+
+    const items = await prisma.gabung.findMany({
+      where: { company: { equals: company, mode: "insensitive" } },
+      orderBy: { nourut: "asc" },
+    })
+
+    return ok(res, items)
+  } catch (err) {
+    return fail(res, err instanceof Error ? err.message : String(err))
+  }
+}
+
 export async function createGabung(req: Request, res: Response) {
   const data = { ...req.body }
   delete (data as any).nourut

@@ -26,5 +26,6 @@ electron.contextBridge.exposeInMainWorld("database", {
   fetchExhibitors: (segment, limit = 200) => electron.ipcRenderer.invoke("db:fetchExhibitors", segment, limit),
   login: (payload) => electron.ipcRenderer.invoke("db:login", payload),
   userHints: () => electron.ipcRenderer.invoke("db:userHints"),
+  findCompany: (company) => electron.ipcRenderer.invoke("db:findCompany", company),
   saveAddData: (payload) => electron.ipcRenderer.invoke("db:saveAddData", payload)
 });

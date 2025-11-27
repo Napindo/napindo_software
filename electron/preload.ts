@@ -49,4 +49,5 @@ contextBridge.exposeInMainWorld('database', {
   login: (payload: { username: string; password: string; division?: string | null }) =>
     ipcRenderer.invoke('db:login', payload),
   userHints: () => ipcRenderer.invoke('db:userHints'),
+  saveAddData: (payload: Record<string, unknown>) => ipcRenderer.invoke('db:saveAddData', payload),
 })

@@ -1,7 +1,15 @@
 import { app, BrowserWindow, ipcMain } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
-import { closePool, fetchExhibitorsBySegment, fetchTopRows, fetchUserHints, loginUser, testConnection } from './db.js'
+import {
+  closePool,
+  fetchExhibitorsBySegment,
+  fetchTopRows,
+  fetchUserHints,
+  loginUser,
+  saveAddData,
+  testConnection,
+} from './db.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -92,6 +100,15 @@ function registerDatabaseHandlers() {
     try {
       const hints = await fetchUserHints()
       return { success: true, hints }
+    } catch (error) {
+      return { success: false, message: error instanceof Error ? error.message : String(error) }
+    }
+  })
+
+  ipcMain.handle('db:saveAddData', async (_event, payload) => {
+    try {
+      const result = await saveAddData(payload)
+      return { success: true, data: result }
     } catch (error) {
       return { success: false, message: error instanceof Error ? error.message : String(error) }
     }

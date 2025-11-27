@@ -164,6 +164,22 @@ export async function fetchUserHints() {
   return body.data ?? { usernames: [], divisions: [] }
 }
 
+export async function findCompanyByName(company: string) {
+  const name = company.trim()
+  if (!name) {
+    throw new Error('Nama company wajib diisi')
+  }
+
+  const search = new URLSearchParams({ company: name })
+  const { body } = await apiFetch<Record<string, unknown>[]>(`/gabung/company?${search.toString()}`)
+
+  if (!body.success) {
+    throw new Error(body.message || 'Gagal mencari data company')
+  }
+
+  return body.data ?? []
+}
+
 export async function saveAddData(payload: Record<string, unknown>) {
   const { body } = await apiFetch('/gabung', {
     method: 'POST',

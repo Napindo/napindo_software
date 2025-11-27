@@ -106,6 +106,18 @@ async function fetchUserHints() {
   }
   return body.data ?? { usernames: [], divisions: [] };
 }
+async function findCompanyByName(company) {
+  const name = company.trim();
+  if (!name) {
+    throw new Error("Nama company wajib diisi");
+  }
+  const search = new URLSearchParams({ company: name });
+  const { body } = await apiFetch(`/gabung/company?${search.toString()}`);
+  if (!body.success) {
+    throw new Error(body.message || "Gagal mencari data company");
+  }
+  return body.data ?? [];
+}
 async function saveAddData(payload) {
   const { body } = await apiFetch("/gabung", {
     method: "POST",
@@ -179,6 +191,14 @@ function registerDatabaseHandlers() {
     try {
       const hints = await fetchUserHints();
       return { success: true, hints };
+    } catch (error) {
+      return { success: false, message: error instanceof Error ? error.message : String(error) };
+    }
+  });
+  electron.ipcMain.handle("db:findCompany", async (_event, company) => {
+    try {
+      const rows = await findCompanyByName(company);
+      return { success: true, rows };
     } catch (error) {
       return { success: false, message: error instanceof Error ? error.message : String(error) };
     }

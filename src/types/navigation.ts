@@ -1,13 +1,13 @@
 export type PageKey =
-  | 'dashboard'
-  | 'exhibitor'
-  | 'visitor'
-  | 'importData'
-  | 'printPerusahaan'
-  | 'printGovernment'
-  | 'reportPerusahaan'
-  | 'reportGovernment'
-  | 'reportJumlahPerusahaan'
-  | 'reportJumlahGovernment'
-  | 'addUser'
-  | 'changePassword'
+  | "dashboard"
+  | "exhibitor"
+  | "visitor"
+  | "importData"
+  | "printPerusahaan"
+  | "printGovernment"
+  | "reportPerusahaan"
+  | "reportGovernment"
+  | "reportJumlahPerusahaan"
+  | "reportJumlahGovernment"
+  | "addUser"
+  | "changePassword";

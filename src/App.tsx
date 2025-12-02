@@ -3,24 +3,21 @@ import { useState } from 'react'
 import DashboardPage from './pages/Dashboard'
 import LoginPage, { type AuthenticatedUser } from './pages/Login'
 
-function App() {
+export default function App() {
   const [user, setUser] = useState<AuthenticatedUser | null>(null)
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
 
   const handleLoginSuccess = (profile: AuthenticatedUser) => {
     setUser(profile)
-    setIsLoggedIn(true)
   }
 
   const handleLogout = () => {
-    setIsLoggedIn(false)
+    localStorage.removeItem('napindo-login')
+    setUser(null)
   }
 
-  if (isLoggedIn) {
-    return <DashboardPage user={user} onLogout={handleLogout} />
+  if (!user) {
+    return <LoginPage onSuccess={handleLoginSuccess} />
   }
 
-  return <LoginPage onSuccess={handleLoginSuccess} />
+  return <DashboardPage user={user} onLogout={handleLogout} />
 }
-
-export default App

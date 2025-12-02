@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import AddDataPage from './AddData'
 import type { ExhibitorRow, ExhibitorSegment } from '../services/exhibitors'
 import { getExhibitorsBySegment } from '../services/exhibitors'
+import { deleteAddData } from '../services/addData'
 
 const createLogoDataUrl = (title: string, subtitles: string[], accent: string, secondary: string) => {
   const startY = 140 - subtitles.length * 18
@@ -177,14 +178,16 @@ type ExhibitorTableProps = {
   onReload: () => void
   onSegmentChange: (next: ExhibitorSegment) => void
   onBack: () => void
-  onAdd: () => void
+  onForm: (row: Record<string, unknown> | null, id: string | number | null) => void
+  onConfirmDelete: (ids: (string | number)[]) => void
 }
 
-const ExhibitorTable = ({ segment, rows, loading, error, onReload, onSegmentChange, onBack, onAdd }: ExhibitorTableProps) => {
+const ExhibitorTable = ({ segment, rows, loading, error, onReload, onSegmentChange, onBack, onForm, onConfirmDelete }: ExhibitorTableProps) => {
   const [search, setSearch] = useState('')
   const [rowsPerPage, setRowsPerPage] = useState(25)
   const [page, setPage] = useState(1)
   const [selectedIds, setSelectedIds] = useState<(string | number)[]>([])
+  const [tableError, setTableError] = useState<string | null>(null)
 
   useEffect(() => {
     setSelectedIds([])
@@ -228,6 +231,34 @@ const ExhibitorTable = ({ segment, rows, loading, error, onReload, onSegmentChan
     setPage(1)
   }
 
+  const handleEdit = () => {
+    if (selectedIds.length === 0) {
+      setTableError('Pilih satu data untuk diedit.')
+      return
+    }
+    if (selectedIds.length > 1) {
+      setTableError('Hanya bisa memilih satu data untuk diedit.')
+      return
+    }
+    const targetId = selectedIds[0]
+    const row = rows.find((item) => item.id === targetId)
+    if (!row) {
+      setTableError('Data tidak ditemukan.')
+      return
+    }
+    setTableError(null)
+    onForm(row.raw, row.id)
+  }
+
+  const handleDelete = () => {
+    if (selectedIds.length === 0) {
+      setTableError('Pilih data yang akan dihapus.')
+      return
+    }
+    setTableError(null)
+    onConfirmDelete(selectedIds)
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-start gap-4">
@@ -261,7 +292,9 @@ const ExhibitorTable = ({ segment, rows, loading, error, onReload, onSegmentChan
           </div>
         </div>
         <div className="ml-auto flex items-center gap-2">
-          {error ? <span className="text-sm text-rose-600 font-semibold">{error}</span> : null}
+          {error || tableError ? (
+            <span className="text-sm text-rose-600 font-semibold">{error ?? tableError}</span>
+          ) : null}
           <button
             type="button"
             onClick={onReload}
@@ -275,7 +308,7 @@ const ExhibitorTable = ({ segment, rows, loading, error, onReload, onSegmentChan
           </button>
           <button
             type="button"
-            onClick={onAdd}
+            onClick={() => onForm(null, null)}
             className="inline-flex items-center gap-2 bg-rose-500 hover:bg-rose-600 text-white px-4 py-2.5 rounded-lg text-sm font-semibold shadow-sm"
           >
             <span className="text-lg leading-none">+</span>
@@ -309,15 +342,19 @@ const ExhibitorTable = ({ segment, rows, loading, error, onReload, onSegmentChan
           <div className="flex items-center gap-2 ml-2">
             <button
               type="button"
+              onClick={handleEdit}
               className="w-9 h-9 inline-flex items-center justify-center rounded-md bg-slate-200 text-slate-600"
-              aria-label="Mark selected"
+              aria-label="Edit selected"
             >
               <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M20 6 9 17l-5-5" />
+                <path d="m3 17.25 2.5.25L17.81 5.19a1.5 1.5 0 0 0-2.12-2.12L3.38 15.38Z" />
+                <path d="M18 13v6" />
+                <path d="M12 19h6" />
               </svg>
             </button>
             <button
               type="button"
+              onClick={handleDelete}
               className="w-9 h-9 inline-flex items-center justify-center rounded-md bg-rose-500 text-white"
               aria-label="Delete selected"
             >
@@ -403,11 +440,11 @@ const ExhibitorTable = ({ segment, rows, loading, error, onReload, onSegmentChan
                       <td className="px-4 py-3 border-b border-slate-200 font-semibold text-slate-800">{row.company}</td>
                       <td className="px-4 py-3 border-b border-slate-200">{row.pic}</td>
                       <td className="px-4 py-3 border-b border-slate-200">{row.position}</td>
-                      <td className="px-4 py-3 border-b border-slate-200">{row.type}</td>
+                      <td className="px-4 py-3 border-b border-slate-200">{row.type ?? ''}</td>
                       <td className="px-4 py-3 border-b border-slate-200">{row.email}</td>
                       <td className="px-4 py-3 border-b border-slate-200">{row.phone}</td>
                       <td className="px-4 py-3 border-b border-slate-200">{row.city}</td>
-                      <td className="px-4 py-3 border-b border-slate-200">{row.updatedAt}</td>
+                      <td className="px-4 py-3 border-b border-slate-200">{row.updatedAt ?? ''}</td>
                     </tr>
                   ))
                 : null}
@@ -456,11 +493,15 @@ const ExhibitorTable = ({ segment, rows, loading, error, onReload, onSegmentChan
 }
 
 const ExhibitorPage = () => {
-  const [mode, setMode] = useState<'cards' | 'table' | 'add'>('cards')
+  const [mode, setMode] = useState<'cards' | 'table' | 'form'>('cards')
   const [segment, setSegment] = useState<ExhibitorSegment>('defence')
   const [rows, setRows] = useState<ExhibitorRow[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [editingRow, setEditingRow] = useState<Record<string, unknown> | null>(null)
+  const [editingId, setEditingId] = useState<string | number | null>(null)
+  const [deleteIds, setDeleteIds] = useState<(string | number)[] | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   const loadData = async (targetSegment: ExhibitorSegment) => {
     setLoading(true)
@@ -494,23 +535,85 @@ const ExhibitorPage = () => {
     )
   }
 
-  if (mode === 'add') {
-    return <AddDataPage variant="exhibitor" onBack={() => setMode('table')} />
+  if (mode === 'form') {
+    return (
+      <AddDataPage
+        variant="exhibitor"
+        initialRow={editingRow}
+        initialId={editingId}
+        onBack={() => {
+          setMode('table')
+          setEditingRow(null)
+          setEditingId(null)
+          loadData(segment)
+        }}
+      />
+    )
   }
 
   return (
-    <ExhibitorTable
-      segment={segment}
-      rows={rows}
-      loading={loading}
-      error={error}
-      onReload={() => loadData(segment)}
-      onSegmentChange={(next) => {
-        setSegment(next)
-      }}
-      onBack={() => setMode('cards')}
-      onAdd={() => setMode('add')}
-    />
+    <>
+      <ExhibitorTable
+        segment={segment}
+        rows={rows}
+        loading={loading}
+        error={error ?? deleteError}
+        onReload={() => loadData(segment)}
+        onSegmentChange={(next) => {
+          setSegment(next)
+        }}
+        onBack={() => setMode('cards')}
+        onForm={(row, id) => {
+          setEditingRow(row)
+          setEditingId(id)
+          setMode('form')
+        }}
+        onConfirmDelete={(ids) => setDeleteIds(ids)}
+      />
+
+      {deleteIds ? (
+        <div className="fixed inset-0 z-30 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200">
+            <div className="px-6 py-4 border-b border-slate-200">
+              <h3 className="text-lg font-bold text-slate-900">Hapus data</h3>
+              <p className="text-sm text-slate-600 mt-1">
+                Anda akan menghapus {deleteIds.length} data terpilih. Lanjutkan?
+              </p>
+            </div>
+            <div className="px-6 py-4 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setDeleteIds(null)
+                  setDeleteError(null)
+                }}
+                className="px-4 py-2 rounded-lg border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    setDeleteError(null)
+                    await deleteAddData(deleteIds)
+                    setDeleteIds(null)
+                    setSelectedIds([])
+                    loadData(segment)
+                  } catch (err) {
+                    setDeleteError(err instanceof Error ? err.message : 'Gagal menghapus data')
+                    setDeleteIds(null)
+                  }
+                }}
+                className="px-4 py-2 rounded-lg bg-rose-600 text-white font-semibold shadow-sm hover:bg-rose-700"
+              >
+                Hapus
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
   )
 }
 

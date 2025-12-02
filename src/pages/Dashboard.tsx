@@ -1,10 +1,14 @@
 import { useMemo, useState } from 'react'
-import Sidebar from '../components/Sidebar'
+
+import { Sidebar } from '../components/Sidebar'
 import type { PageKey } from '../types/navigation'
 import type { AuthenticatedUser } from './Login'
+
 import Home from './Home'
 import ExhibitorPage from './Exhibitor'
 import VisitorPage from './Visitor'
+import AddUserPage from './AddUser'
+import ChangePasswordPage from './ChangePassword'
 
 type DashboardProps = {
   user?: AuthenticatedUser | null
@@ -49,9 +53,9 @@ const DashboardPage = ({ user, onLogout }: DashboardProps) => {
       case 'reportJumlahGovernment':
         return <PlaceholderPanel title="Report - Jumlah Government" />
       case 'addUser':
-        return <PlaceholderPanel title="Add User" />
+        return <AddUserPage currentUser={user} />
       case 'changePassword':
-        return <PlaceholderPanel title="Change Password" />
+        return <ChangePasswordPage currentUser={user} />
       default:
         return <Home displayName={displayName} />
     }

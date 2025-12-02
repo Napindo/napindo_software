@@ -1,22 +1,22 @@
-import { Router } from "express"
+import { Router } from "express";
 import {
   listPengguna,
-  getPengguna,
+  getPenggunaByUsername,
   createPengguna,
   updatePengguna,
   deletePengguna,
   loginPengguna,
-  userHints,
-} from "../controllers/pengguna.controller"
+} from "../controllers/pengguna.controller";
 
-const r = Router()
+const router = Router();
 
-r.get("/hints", userHints)
-r.post("/login", loginPengguna)
-r.get("/", listPengguna)
-r.post("/", createPengguna)
-r.get("/:username", getPengguna)
-r.put("/:username", updatePengguna)
-r.delete("/:username", deletePengguna)
+router.get("/", listPengguna);
+router.get("/:username", getPenggunaByUsername);
+router.post("/", createPengguna);
+router.put("/:username", updatePengguna);
+router.delete("/:username", deletePengguna);
 
-export default r
+// login endpoint
+router.post("/login", loginPengguna);
+
+export default router;

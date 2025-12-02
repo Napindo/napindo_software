@@ -1,54 +1,46 @@
-import { ipcRenderer, contextBridge } from 'electron'
+import { contextBridge, ipcRenderer } from "electron";
 
-// --------- Expose some API to the Renderer process ---------
-contextBridge.exposeInMainWorld('ipcRenderer', {
-  on(...args: Parameters<typeof ipcRenderer.on>) {
-    const [channel, listener] = args
-    return ipcRenderer.on(channel, (event, ...args) => listener(event, ...args))
-  },
-  off(...args: Parameters<typeof ipcRenderer.off>) {
-    const [channel, ...omit] = args
-    return ipcRenderer.off(channel, ...omit)
-  },
-  send(...args: Parameters<typeof ipcRenderer.send>) {
-    const [channel, ...omit] = args
-    return ipcRenderer.send(channel, ...omit)
-  },
-  invoke(...args: Parameters<typeof ipcRenderer.invoke>) {
-    const [channel, ...omit] = args
-    return ipcRenderer.invoke(channel, ...omit)
-  },
+contextBridge.exposeInMainWorld("database", {
+  // dY"1 Test koneksi API
+  testConnection: () => ipcRenderer.invoke("db:testConnection"),
 
-  // You can expose other APTs you need here.
-  // ...
-})
+  // dY"1 Ambil data tabel (GABUNG / PENGGUNA)
+  fetchTableData: (tableName: string) =>
+    ipcRenderer.invoke("db:fetchTableData", tableName),
 
-contextBridge.exposeInMainWorld('database', {
-  testConnection: () => ipcRenderer.invoke('db:testConnection'),
-  fetchTableData: (tableName: string) => ipcRenderer.invoke('db:fetchTableData', tableName),
+  // dY"1 Ambil exhibitor/visitor berdasarkan segment (defence, water, livestock, dll)
   fetchExhibitors: (
-    segment:
-      | 'defence'
-      | 'aerospace'
-      | 'marine'
-      | 'water'
-      | 'waste'
-      | 'iismex'
-      | 'renergy'
-      | 'security'
-      | 'firex'
-      | 'livestock'
-      | 'agrotech'
-      | 'vet'
-      | 'fisheries'
-      | 'feed'
-      | 'dairy'
-      | 'horticulture',
+    segment: string,
     limit = 200,
-  ) => ipcRenderer.invoke('db:fetchExhibitors', segment, limit),
+    person: "exhibitor" | "visitor" = "exhibitor",
+  ) => ipcRenderer.invoke("db:fetchExhibitors", segment, limit, person),
+
+  // dY"1 Login user
   login: (payload: { username: string; password: string; division?: string | null }) =>
-    ipcRenderer.invoke('db:login', payload),
-  userHints: () => ipcRenderer.invoke('db:userHints'),
-  findCompany: (company: string) => ipcRenderer.invoke('db:findCompany', company),
-  saveAddData: (payload: Record<string, unknown>) => ipcRenderer.invoke('db:saveAddData', payload),
-})
+    ipcRenderer.invoke("db:login", payload),
+
+  // dY"1 Ambil hint user (daftar username & division)
+  userHints: () => ipcRenderer.invoke("db:userHints"),
+
+  // dY"1 Cari perusahaan (COMPANY LIKE %keyword%)
+  findCompany: (company: string) =>
+    ipcRenderer.invoke("db:findCompany", company),
+
+  // dY"1 Simpan data baru ke GABUNG
+  saveAddData: (payload: any) =>
+    ipcRenderer.invoke("db:saveAddData", payload),
+
+  // dY"1 Update data GABUNG berdasarkan NOURUT
+  updateAddData: (id: string | number, payload: any) =>
+    ipcRenderer.invoke("db:updateAddData", id, payload),
+
+  // dY"1 Hapus data GABUNG berdasarkan NOURUT (bisa banyak)
+  deleteAddData: (ids: Array<string | number>) =>
+    ipcRenderer.invoke("db:deleteAddData", ids),
+});
+
+// Jika suatu hari nanti kamu ingin re-enable report, tempatkan di sini:
+// reportLabelVisitor: (filter) => ipcRenderer.invoke("report:labelvisitor", filter),
+// reportLabelGover: (filter) => ipcRenderer.invoke("report:labelgover", filter),
+// reportBusinessVisitor: (filter) => ipcRenderer.invoke("report:businessvisitor", filter),
+// dst.

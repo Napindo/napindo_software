@@ -1,142 +1,285 @@
 export type ExhibitorSegment =
-  | 'defence'
-  | 'aerospace'
-  | 'marine'
-  | 'water'
-  | 'waste'
-  | 'iismex'
-  | 'renergy'
-  | 'security'
-  | 'firex'
-  | 'livestock'
-  | 'agrotech'
-  | 'vet'
-  | 'fisheries'
-  | 'feed'
-  | 'dairy'
-  | 'horticulture'
+  | "defence"
+  | "aerospace"
+  | "marine"
+  | "water"
+  | "waste"
+  | "iismex" // smart city / IISMEX
+  | "renergy" // renewable energy
+  | "security"
+  | "firex"
+  | "livestock"
+  | "agrotech"
+  | "vet"
+  | "fisheries"
+  | "feed"
+  | "dairy"
+  | "horticulture"
 
-type DatabaseResponse<T = unknown> =
-  | { success: true; rows?: T[]; message?: string }
+export type DatabaseResponse<T = unknown> =
+  | { success: true; rows?: T[]; data?: T; message?: string }
   | { success: false; message: string }
 
-export type ExhibitorRow = {
-  id: string | number
+export interface ExhibitorRow {
+  id: number | string
   company: string
   pic: string
   position: string
-  type: string
-  email: string
-  phone: string
+  address: string
   city: string
-  updatedAt: string
-  raw: Record<string, unknown>
+  phone: string
+  email: string
+  type?: string
+  updatedAt?: string
+  raw: Record<string, any>
 }
 
-const title = (value: unknown) => (value === null || value === undefined ? '' : String(value))
+/**
+ * Mapping dari segment di UI → segment code di backend (/api/gabung/:segment).
+ */
+const SEGMENT_TO_BACKEND: Record<ExhibitorSegment, string> = {
+  defence: "defence",
+  aerospace: "aerospace",
+  marine: "marine",
 
-const isFlagSet = (row: Record<string, unknown>, key: string) => {
-  const value = row[key.toLowerCase()]
-  if (value === undefined || value === null) return false
-  const normalized = String(value).trim().toLowerCase()
-  return normalized === 'x' || normalized === '1' || normalized === 'true' || normalized === 'yes'
+  water: "water",
+  waste: "waste",
+  iismex: "smart", // IISMEX = smart city
+  renergy: "energy",
+  security: "security",
+  firex: "fire",
+
+  livestock: "livestock",
+  agrotech: "agrotech",
+  vet: "vet",
+  fisheries: "fisheries",
+  feed: "feed",
+  dairy: "dairy",
+  horticulture: "horticulture",
 }
 
-const pickValue = (row: Record<string, unknown>, candidates: string[], fallback = '') => {
-  const lowerKeys = Object.keys(row).reduce<Record<string, unknown>>((acc, key) => {
-    acc[key.toLowerCase()] = row[key]
-    return acc
-  }, {})
+function getDatabaseBridge(): any {
+  return (window as any).database ?? null
+}
 
-  for (const candidate of candidates) {
-    const lower = candidate.toLowerCase()
-    if (lower in lowerKeys) {
-      return title(lowerKeys[lower])
+function getIpcRenderer(): any {
+  return (window as any).ipcRenderer ?? null
+}
+
+/**
+ * Ambil value dari beberapa candidate key (misal: ["COMPANY", "company"]).
+ */
+function pickValue(row: Record<string, any>, keys: string[]): string {
+  for (const key of keys) {
+    if (key in row && row[key] != null && String(row[key]).trim() !== "") {
+      return String(row[key]).trim()
+    }
+  }
+  return ""
+}
+
+/**
+ * Normalisasi baris mentah dari GABUNG jadi bentuk ExhibitorRow.
+ */
+function normalizeExhibitorRow(row: Record<string, any>, segment?: ExhibitorSegment): ExhibitorRow {
+  const lower: Record<string, any> = {}
+  for (const [k, v] of Object.entries(row)) {
+    lower[k.toLowerCase()] = v
+  }
+
+  const id =
+    (row as any).NOURUT ??
+    (row as any).nourut ??
+    lower["nourut"] ??
+    lower["id"] ??
+    lower["pk"] ??
+    String(Math.random())
+
+  const company = pickValue(row, ["COMPANY", "company", "nama_perusahaan"])
+  const pic = pickValue(row, ["NAME", "name", "contactperson"])
+  const position = pickValue(row, ["POSITION", "position", "jabatan"])
+  const address = pickValue(row, ["ADDRESS1", "address1", "alamat"])
+  const city = pickValue(row, ["CITY", "city", "kota"])
+  const phone = pickValue(row, ["PHONE", "phone", "telepon"])
+  const email = pickValue(row, ["EMAIL", "email"])
+  const updatedAt = pickValue(row, ["lastupdate", "tgl_jam_edit", "tgljamedit"])
+
+  const isFlagX = (key: string) => {
+    const val = lower[key.toLowerCase()]
+    if (val === undefined || val === null) return false
+    const text = String(val).trim().toLowerCase()
+    return text === "x" || text === "1" || text === "yes" || text === "true"
+  }
+
+  const visitorFlags = [
+    "visdefence",
+    "visaero",
+    "vismarine",
+    "viswater",
+    "viswaste",
+    "visenergy",
+    "vissmart",
+    "vissecure",
+    "visfire",
+    "vislives",
+    "visagritech",
+    "visindovet",
+    "visfish",
+    "visfeed",
+    "visdairy",
+    "vishorti",
+  ]
+
+  const exhibitorFlags = [
+    "exhdefence",
+    "exhaero",
+    "exhmarine",
+    "exhwater",
+    "exhwaste",
+    "exhenergy",
+    "exhsmart",
+    "exhsecure",
+    "exhfire",
+    "exhlives",
+    "exhagritech",
+    "exhindovet",
+    "exhfish",
+    "exhfeed",
+    "exhdairy",
+    "exhhorti",
+  ]
+
+  const vipVisitorFlags = ["vid", "vipaero", "vipmarine", "viw", "viwaste", "vipiismex", "vipidre", "vis", "vifire", "vil", "vipagri", "vipindovet", "vifish", "vifeed", "vidairy", "vihorti"]
+  const types: string[] = []
+
+  const hasVisitor = visitorFlags.some(isFlagX)
+  const hasExhibitor = exhibitorFlags.some(isFlagX)
+  const hasGover = isFlagX("gover")
+  const hasVip = vipVisitorFlags.some(isFlagX)
+
+  if (hasVisitor) types.push("Visitor")
+  if (hasExhibitor) types.push("Exhibitor")
+  if (hasGover) types.push("Gover")
+  if (hasVip) {
+    const vipBySegment: Partial<Record<ExhibitorSegment, string>> = {
+      defence: "vid",
+      aerospace: "vipaero",
+      marine: "vipmarine",
+      water: "viw",
+      waste: "viwaste",
+      iismex: "vipiismex",
+      renergy: "vpidre",
+      security: "vis",
+      firex: "vifire",
+      livestock: "vil",
+      agrotech: "vipagri",
+      vet: "vipindovet",
+      fisheries: "vifish",
+      feed: "vifeed",
+      dairy: "vidairy",
+      horticulture: "vihorti",
+    }
+    const vipKey = segment ? vipBySegment[segment] : undefined
+    const vipHit = vipKey ? isFlagX(vipKey) : hasVip
+
+    if (vipHit) {
+      if (hasExhibitor) types.push("VIP Exhibitor")
+      else if (hasVisitor) types.push("VIP Visitor")
     }
   }
 
-  return fallback
+  const type = types.join(", ")
+
+  return {
+    id,
+    company,
+    pic,
+    position,
+    address,
+    city,
+    phone,
+    email,
+    type,
+    updatedAt,
+    raw: row,
+  }
 }
 
-const normalizeRows = (rows: Record<string, unknown>[]): ExhibitorRow[] =>
-  rows.map((row, index) => {
-    const lowerKeys = Object.keys(row).reduce<Record<string, unknown>>((acc, key) => {
-      acc[key.toLowerCase()] = row[key]
-      return acc
-    }, {})
+/**
+ * Panggil bridge untuk ambil data exhibitor per segment.
+ */
+async function invokeFetchExhibitors(
+  segment: ExhibitorSegment,
+  limit = 200,
+  person: "exhibitor" | "visitor" = "exhibitor",
+): Promise<DatabaseResponse<Record<string, any>>> {
+  const backendSegment = SEGMENT_TO_BACKEND[segment] ?? segment
+  const db = getDatabaseBridge()
 
-    const id =
-      lowerKeys['id'] ??
-      lowerKeys['idx'] ??
-      lowerKeys['rowid'] ??
-      lowerKeys['no'] ??
-      lowerKeys['no.'] ??
-      `${index + 1}-${Date.now()}`
-
-    return {
-      id,
-      company: pickValue(row, ['company', 'company_name', 'perusahaan', 'nama_perusahaan', 'nama']), // fallback names
-      pic: pickValue(row, ['pic', 'contact', 'cp', 'person_in_charge']),
-      position: pickValue(row, ['position', 'jabatan', 'title']),
-      type:
-        (() => {
-          const parts: string[] = []
-          const exhibitorFlag = isFlagSet(lowerKeys, 'exhdefence')
-          const goverFlag = isFlagSet(lowerKeys, 'gover')
-          const vipFlag = exhibitorFlag && isFlagSet(lowerKeys, 'vid')
-          if (exhibitorFlag) parts.push('Exhibitor')
-          if (goverFlag) parts.push('Gover')
-          if (vipFlag) parts.push('VIP Exhibitor')
-          return parts.join(', ')
-        })() || pickValue(row, ['type', 'kategori', 'category']),
-      email: pickValue(row, ['email', 'e-mail']),
-      phone: pickValue(row, ['phone', 'telp', 'telpon', 'no_hp', 'mobile']),
-      city: pickValue(row, ['city', 'kota', 'state', 'country']),
-      updatedAt: pickValue(
-        row,
-        ['last_update', 'lastupdate', 'updated_at', 'tanggalupdate', 'tanggal_update', 'updateat'],
-      ),
-      raw: row,
-    }
-  })
-
-const invokeFetch = async (segment: ExhibitorSegment, limit: number) => {
-  if (window.database?.fetchExhibitors) {
-    return window.database.fetchExhibitors<Record<string, unknown>>(segment, limit)
+  if (db && typeof db.fetchExhibitors === "function") {
+    return db.fetchExhibitors(
+      backendSegment,
+      limit,
+      person,
+    ) as Promise<DatabaseResponse<Record<string, any>>>
   }
 
-  if (window.ipcRenderer?.invoke) {
-    return window.ipcRenderer.invoke('db:fetchExhibitors', segment, limit) as Promise<DatabaseResponse<Record<string, unknown>>>
+  const ipc = getIpcRenderer()
+  if (ipc && typeof ipc.invoke === "function") {
+    return ipc.invoke(
+      "db:fetchExhibitors",
+      backendSegment,
+      limit,
+      person,
+    ) as Promise<DatabaseResponse<Record<string, any>>>
   }
 
-  throw new Error('API database tidak tersedia di renderer.')
+  throw new Error("Bridge Electron untuk fetchExhibitors tidak tersedia")
 }
 
-export async function getExhibitorsBySegment(segment: ExhibitorSegment, limit = 200): Promise<ExhibitorRow[]> {
-  let response: DatabaseResponse<Record<string, unknown>>
-  try {
-    response = await invokeFetch(segment, limit)
-  } catch (primaryError) {
-    // Fallback ke segmen default (defence) bila endpoint khusus tidak tersedia
-    try {
-      response = await invokeFetch('defence', limit)
-    } catch (fallbackError) {
-      throw primaryError instanceof Error ? primaryError : fallbackError instanceof Error ? fallbackError : new Error('Gagal memuat data exhibitor')
-    }
+/**
+ * Ambil dan normalisasi data exhibitor untuk satu segment.
+ */
+export async function fetchExhibitors(
+  segment: ExhibitorSegment,
+  limit = 200,
+  person: "exhibitor" | "visitor" = "exhibitor",
+): Promise<ExhibitorRow[]> {
+  const response = await invokeFetchExhibitors(segment, limit, person)
+
+  if (!response || response.success === false) {
+    throw new Error(response?.message ?? "Gagal mengambil data exhibitor")
   }
 
-  if (!response.success) {
-    if (segment !== 'defence') {
-      const fallback = await invokeFetch('defence', limit)
-      if (!fallback.success) {
-        throw new Error(response.message || fallback.message || 'Gagal memuat data exhibitor')
-      }
-      response = fallback
-    } else {
-      throw new Error(response.message || 'Gagal memuat data exhibitor')
-    }
-  }
+  const rows = (response.rows ?? []) as Record<string, any>[]
 
-  const rows = response.rows ?? []
-  return normalizeRows(rows)
+  return rows.map((row) => normalizeExhibitorRow(row, segment))
+}
+
+/**
+ * Wrapper dengan nama lama yang dicari oleh Exhibitor.tsx
+ * import { getExhibitorsBySegment } from "../services/exhibitors";
+ */
+export async function getExhibitorsBySegment(
+  segment: ExhibitorSegment,
+  limit = 200,
+  person: "exhibitor" | "visitor" = "exhibitor",
+): Promise<ExhibitorRow[]> {
+  return fetchExhibitors(segment, limit, person)
+}
+
+/**
+ * (opsional) alias nama pendek
+ */
+export async function getExhibitors(
+  segment: ExhibitorSegment,
+  limit = 200,
+): Promise<ExhibitorRow[]> {
+  return fetchExhibitors(segment, limit)
+}
+
+export default {
+  fetchExhibitors,
+  getExhibitorsBySegment,
+  getExhibitors,
 }

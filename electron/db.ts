@@ -1,194 +1,253 @@
-import fs from 'node:fs'
-import path from 'node:path'
+import fs from "node:fs";
+import path from "node:path";
 
-type ExhibitorSegment =
-  | 'defence'
-  | 'aerospace'
-  | 'marine'
-  | 'water'
-  | 'waste'
-  | 'iismex'
-  | 'renergy'
-  | 'security'
-  | 'firex'
-  | 'livestock'
-  | 'agrotech'
-  | 'vet'
-  | 'fisheries'
-  | 'feed'
-  | 'dairy'
-  | 'horticulture'
+export type ExhibitorSegment =
+  | "defence"
+  | "aerospace"
+  | "marine"
+  | "water"
+  | "waste"
+  | "iismex"
+  | "renergy"
+  | "security"
+  | "firex"
+  | "livestock"
+  | "agrotech"
+  | "vet"
+  | "fisheries"
+  | "feed"
+  | "dairy"
+  | "horticulture";
+
+export type Gabung = {
+  nourut: number;
+  company: string | null;
+  name: string | null;
+  city: string | null;
+  propince: string | null;
+  code: string | null;
+  lastupdate: string | null;
+  // … tambahkan semua kolom sesuai prisma
+};
 
 type ApiResponse<T = unknown> =
-  | { success: true; data?: T; message?: string }
-  | { success: false; message: string }
+  | { ok?: boolean; success?: boolean; data?: T; rows?: T; items?: T; message?: string };
 
 type ApiResult<T = unknown> = {
-  status: number
-  body: ApiResponse<T>
-}
+  status: number;
+  body: ApiResponse<T>;
+};
 
-type LoginPayload = {
-  username: string
-  password: string
-  division?: string | null
-}
+const isResponseOk = (body?: ApiResponse<any>) =>
+  body?.ok === true || body?.success === true;
+
+const pickData = <T = unknown>(body?: ApiResponse<T>) => {
+  if (!body) return undefined;
+  if (typeof body.data !== "undefined") return body.data;
+  if (typeof (body as any).items !== "undefined") return (body as any).items;
+  if (typeof (body as any).rows !== "undefined") return (body as any).rows;
+  return undefined;
+};
+
+const uniqueClean = (values: Array<string | null | undefined>) =>
+  Array.from(
+    new Set(
+      values
+        .map((item) => (item == null ? "" : String(item).trim()))
+        .filter(Boolean),
+    ),
+  );
 
 function loadEnvFile(filePath: string) {
-  if (!fs.existsSync(filePath)) return
-  const content = fs.readFileSync(filePath, 'utf-8')
-  for (const line of content.split('\n')) {
-    const trimmed = line.trim()
-    if (!trimmed || trimmed.startsWith('#')) continue
-    const [key, ...rest] = trimmed.split('=')
-    if (!key) continue
-    if (typeof process.env[key] === 'undefined') {
-      process.env[key] = rest.join('=').trim()
+  if (!fs.existsSync(filePath)) return;
+  const content = fs.readFileSync(filePath, "utf-8");
+  for (const line of content.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const [key, ...rest] = trimmed.split("=");
+    if (typeof process.env[key] === "undefined") {
+      process.env[key] = rest.join("=").trim();
     }
   }
 }
 
-loadEnvFile(path.resolve(process.cwd(), '.env'))
+loadEnvFile(path.resolve(process.cwd(), ".env"));
 
-const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:3001'
-const API_PREFIX = process.env.API_PREFIX || '/api'
+const API_BASE_URL = process.env.API_BASE_URL || "http://localhost:3001";
+const API_PREFIX = process.env.API_PREFIX || "/api";
 
 async function apiFetch<T = unknown>(pathName: string, init: RequestInit = {}): Promise<ApiResult<T>> {
-  const url = `${API_BASE_URL.replace(/\/$/, '')}${API_PREFIX}${pathName}`
+  const url = `${API_BASE_URL.replace(/\/$/, "")}${API_PREFIX}${pathName}`;
+
   try {
     const response = await fetch(url, {
       ...init,
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         ...(init.headers || {}),
       },
-    })
+    });
 
-    const contentType = response.headers.get('content-type') || ''
-    let body: ApiResponse<T>
-    if (contentType.includes('application/json')) {
-      body = (await response.json()) as ApiResponse<T>
+    const contentType = response.headers.get("content-type") || "";
+    let body: ApiResponse<T>;
+
+    if (contentType.includes("application/json")) {
+      body = (await response.json()) as ApiResponse<T>;
     } else {
-      const text = await response.text()
-      body = { success: false, message: text || `Unexpected response from API (${response.status})` }
+      const text = await response.text();
+      body = { success: false, ok: false, message: text };
     }
-    return { status: response.status, body }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Tidak dapat terhubung ke API'
-    return { status: 500, body: { success: false, message } }
+
+    return { status: response.status, body };
+  } catch (err) {
+    return { status: 500, body: { success: false, message: "Tidak dapat terhubung ke API" } };
   }
 }
 
+/* ----------------- HEALTH ----------------- */
 export async function testConnection() {
-  const { body, status } = await apiFetch<{ serverTime?: string }>('/health')
-
-  if (!body.success) {
-    return { success: false as const, message: body.message || `Healthcheck gagal dengan status ${status}` }
+  const { body } = await apiFetch<{ serverTime?: string }>("/health");
+  if (!isResponseOk(body)) {
+    return { success: false, message: body.message };
   }
-
-  return {
-    success: true as const,
-    serverTime: body.data?.serverTime ?? body.data,
-  }
+  const data = pickData(body) as { serverTime?: string } | undefined;
+  return { success: true, serverTime: data?.serverTime };
 }
 
-export function getConnectionInfo() {
-  return {
-    apiUrl: `${API_BASE_URL}${API_PREFIX}`,
+/* ----------------- LOGIN ----------------- */
+export async function loginUser(payload: { username: string; password: string; division?: string | null }) {
+  const { body, status } = await apiFetch("/pengguna/login", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+  if (!isResponseOk(body)) {
+    if (status === 401) return null;
+    throw new Error(body.message || "Login gagal");
   }
+
+  return pickData(body);
 }
 
-export async function fetchTopRows(tableName: string, top = 10) {
-  const safeName = tableName.replace(/[^\w.]/g, '')
-  if (!safeName) {
-    throw new Error('Nama tabel tidak valid')
-  }
-  const { body } = await apiFetch<Record<string, unknown>[]>(`/gabung/table/${encodeURIComponent(safeName)}?limit=${top}`)
-
-  if (!body.success) {
-    throw new Error(body.message || 'Gagal mengambil data tabel')
-  }
-
-  return body.data ?? []
-}
-
-export async function fetchExhibitorsBySegment(segment: ExhibitorSegment, limit = 200) {
-  const { body } = await apiFetch<Record<string, unknown>[]>(`/gabung/${segment}?limit=${limit}`)
-
-  if (!body.success) {
-    throw new Error(body.message || 'Gagal memuat data exhibitor')
-  }
-
-  return body.data ?? []
-}
-
-export async function loginUser(payload: LoginPayload) {
-  const username = payload.username.trim()
-  const password = payload.password
-  const division = payload.division?.trim()
-
-  if (!username || !password) {
-    throw new Error('Username dan password wajib diisi')
-  }
-
-  const { body, status } = await apiFetch<{ username: string; division?: string | null; name?: string | null }>(
-    '/pengguna/login',
-    {
-      method: 'POST',
-      body: JSON.stringify({ username, password, division }),
-    },
-  )
-
-  if (!body.success) {
-    if (status === 401) {
-      return null
-    }
-
-    throw new Error(body.message || 'Gagal memproses login')
-  }
-
-  return body.data ?? null
-}
-
-export async function closePool() {
-  // Tidak ada pool yang perlu ditutup pada koneksi HTTP ke API
-}
-
+/* ----------------- USER HINTS ----------------- */
 export async function fetchUserHints() {
-  const { body } = await apiFetch<{ usernames: string[]; divisions: string[] }>('/pengguna/hints')
-
-  if (!body.success) {
-    throw new Error(body.message || 'Gagal memuat data pengguna')
+  const { body } = await apiFetch<Array<{ username?: string; division?: string | null }>>("/pengguna");
+  if (!isResponseOk(body)) {
+    throw new Error(body.message || "Gagal memuat data pengguna");
   }
 
-  return body.data ?? { usernames: [], divisions: [] }
+  const users = (pickData(body) as Array<{ username?: string; division?: string | null }> | undefined) ?? [];
+  const usernames = uniqueClean(users.map((user) => user?.username));
+  const divisions = uniqueClean(users.map((user) => user?.division));
+
+  return { usernames, divisions };
+}
+
+/* ----------------- GABUNG CRUD ----------------- */
+export async function fetchTopRows(tableName: string, top = 10) {
+  const safe = tableName.replace(/[^\w.]/g, "");
+  const params = new URLSearchParams({ limit: String(top) });
+  const { body } = await apiFetch(`/gabung/table-preview/${safe}?${params.toString()}`);
+  if (!isResponseOk(body)) throw new Error(body.message || "Gagal mengambil preview data");
+  const data = pickData(body) as any;
+  return data?.rows ?? data ?? [];
+}
+
+// Ambil data exhibitor per segment (defence, aerospace, marine, dll)
+export type PersonType = "exhibitor" | "visitor";
+
+export async function fetchExhibitorsBySegment(
+  segment: string,
+  limit = 200,
+  person: PersonType = "exhibitor",
+) {
+  const params = new URLSearchParams({ limit: String(limit), person });
+  const { body } = await apiFetch<{ items: Gabung[]; segment: string; limit: number; person?: PersonType }>(
+    `/gabung/segment/${encodeURIComponent(segment)}?${params.toString()}`,
+  );
+
+  if (!isResponseOk(body)) {
+    throw new Error(body.message || "Gagal mengambil data gabung");
+  }
+
+  const data: any = pickData(body) ?? {};
+  return (data.items ?? data.rows ?? data ?? []) as Gabung[];
 }
 
 export async function findCompanyByName(company: string) {
-  const name = company.trim()
-  if (!name) {
-    throw new Error('Nama company wajib diisi')
-  }
-
-  const search = new URLSearchParams({ company: name })
-  const { body } = await apiFetch<Record<string, unknown>[]>(`/gabung/company?${search.toString()}`)
-
-  if (!body.success) {
-    throw new Error(body.message || 'Gagal mencari data company')
-  }
-
-  return body.data ?? []
+  const trimmed = company.trim();
+  const encoded = encodeURIComponent(trimmed);
+  const { body } = await apiFetch(`/gabung/company/${encoded}`);
+  if (!isResponseOk(body)) throw new Error(body.message || "Gagal mencari perusahaan");
+  const data: any = pickData(body) ?? {};
+  return data.items ?? data.rows ?? data ?? [];
 }
 
 export async function saveAddData(payload: Record<string, unknown>) {
-  const { body } = await apiFetch('/gabung', {
-    method: 'POST',
+  const { body } = await apiFetch("/gabung", {
+    method: "POST",
     body: JSON.stringify(payload),
-  })
+  });
+  if (!isResponseOk(body)) throw new Error(body.message || "Gagal menyimpan data");
+  return pickData(body) ?? body;
+}
 
-  if (!body.success) {
-    throw new Error(body.message || 'Gagal menyimpan data')
+export async function updateAddData(id: number | string, payload: Record<string, unknown>) {
+  const safeId = encodeURIComponent(String(id));
+  const { body } = await apiFetch(`/gabung/${safeId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+  if (!isResponseOk(body)) throw new Error(body.message || "Gagal memperbarui data");
+  return pickData(body) ?? body;
+}
+
+export async function deleteAddData(ids: Array<string | number>) {
+  const uniqueIds = Array.from(new Set(ids.map((id) => String(id).trim()).filter(Boolean)));
+  const results: Array<{ id: string; success: boolean; message?: string }> = [];
+
+  for (const id of uniqueIds) {
+    const safeId = encodeURIComponent(id);
+    const { body } = await apiFetch(`/gabung/${safeId}`, { method: "DELETE" });
+    const ok = isResponseOk(body);
+    results.push({ id, success: ok, message: body.message });
+    if (!ok) {
+      throw new Error(body.message || `Gagal menghapus data ${id}`);
+    }
   }
 
-  return body.data ?? { success: true }
+  return results;
 }
+
+/* ----------------- REPORT ENDPOINTS ----------------- */
+export async function reportLabelVisitor(filter: unknown) {
+  const { body } = await apiFetch("/report/labelvisitor", {
+    method: "POST",
+    body: JSON.stringify(filter),
+  });
+
+  if (!body.success) throw new Error(body.message);
+  return body.data;
+}
+
+export async function reportLabelGover(filter: unknown) {
+  const { body } = await apiFetch("/report/labelgover", {
+    method: "POST",
+    body: JSON.stringify(filter),
+  });
+
+  if (!body.success) throw new Error(body.message);
+  return body.data;
+}
+
+export async function reportBusinessVisitor(filter: unknown) {
+  const { body } = await apiFetch("/report/businessvisitor", {
+    method: "POST",
+    body: JSON.stringify(filter),
+  });
+
+  if (!body.success) throw new Error(body.message);
+  return body.data;
+}
+
+// … lanjutkan untuk 3 report lainnya

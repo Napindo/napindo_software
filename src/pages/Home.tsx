@@ -6,7 +6,9 @@ const Home = ({ displayName }: HomeProps) => (
   <div className="w-full space-y-8 lg:space-y-10 pt-2">
     <header className="flex flex-col gap-1">
       <p className="text-lg font-bold text-slate-500">Hi, {displayName}</p>
-      <h1 className="text-3xl lg:text-4xl font-extrabold text-slate-900">Welcome to Napindo Software</h1>
+      <h1 className="text-3xl lg:text-4xl font-extrabold text-slate-900">
+        Welcome to Napindo Software
+      </h1>
     </header>
 
     <div className="grid gap-8">

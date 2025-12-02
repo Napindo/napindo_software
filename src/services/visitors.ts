@@ -1,159 +1,143 @@
-export type VisitorSegment =
-  | 'defence'
-  | 'aerospace'
-  | 'marine'
-  | 'water'
-  | 'waste'
-  | 'iismex'
-  | 'renergy'
-  | 'security'
-  | 'firex'
-  | 'livestock'
-  | 'agrotech'
-  | 'vet'
-  | 'fisheries'
-  | 'feed'
-  | 'dairy'
-  | 'horticulture'
+﻿import type { ExhibitorSegment } from "./exhibitors"
+import { fetchExhibitors } from "./exhibitors"
 
-type DatabaseResponse<T = unknown> =
-  | { success: true; rows?: T[]; message?: string }
-  | { success: false; message: string }
+export type VisitorSegment = ExhibitorSegment
 
-export type VisitorRow = {
-  id: string | number
+export interface VisitorRow {
+  id: number | string
   company: string
   pic: string
   position: string
-  type: string
-  email: string
-  phone: string
+  address: string
   city: string
-  updatedAt: string
-  raw: Record<string, unknown>
+  phone: string
+  email: string
+  type: string
+  raw: Record<string, any>
 }
 
-const title = (value: unknown) => (value === null || value === undefined ? '' : String(value))
+/**
+ * Deteksi tipe visitor berdasarkan flag kolom di GABUNG, termasuk VIP per segment.
+ */
+function detectVisitorType(raw: Record<string, any>, segment?: ExhibitorSegment): string {
+  const lowerKeys = Object.keys(raw).map((k) => k.toLowerCase())
 
-const isFlagSet = (row: Record<string, unknown>, key: string) => {
-  const value = row[key.toLowerCase()]
-  if (value === undefined || value === null) return false
-  const normalized = String(value).trim().toLowerCase()
-  return normalized === 'x' || normalized === '1' || normalized === 'true' || normalized === 'yes'
+  const hasGoverFlag =
+    lowerKeys.some((k) => k.includes("gover")) ||
+    lowerKeys.some((k) => k.includes("government"))
+
+  const isFlagX = (key: string) => {
+    const val = (raw as any)[key] ?? (raw as any)[key.toUpperCase()]
+    if (val === undefined || val === null) return false
+    const text = String(val).trim().toLowerCase()
+    return text === "x" || text === "1" || text === "yes" || text === "true"
+  }
+
+  const visitorFlags = [
+    "visdefence",
+    "visaero",
+    "vismarine",
+    "viswater",
+    "viswaste",
+    "visenergy",
+    "vissmart",
+    "vissecure",
+    "visfire",
+    "vislives",
+    "visagritech",
+    "visindovet",
+    "visfish",
+    "visfeed",
+    "visdairy",
+    "vishorti",
+  ]
+
+  const hasVisitor = visitorFlags.some(isFlagX)
+  const vipVisitorFlags = [
+    "vid",
+    "vipaero",
+    "vipmarine",
+    "viw",
+    "viwaste",
+    "vifire",
+    "vifish",
+    "vifeed",
+    "vidairy",
+    "vihorti",
+  ]
+  const vipBySegment: Partial<Record<ExhibitorSegment, string>> = {
+    defence: "vid",
+    aerospace: "vipaero",
+    marine: "vipmarine",
+    water: "viw",
+    waste: "viwaste",
+    security: "vis",
+    firex: "vifire",
+    fisheries: "vifish",
+    feed: "vifeed",
+    dairy: "vidairy",
+    horticulture: "vihorti",
+  }
+  const vipHit = segment ? isFlagX(vipBySegment[segment] ?? "") : vipVisitorFlags.some(isFlagX)
+
+  if (hasGoverFlag) return "Government Visitor"
+  if (vipHit && hasVisitor) return "VIP Visitor"
+  if (hasVisitor) return "Business Visitor"
+  return "Business Visitor"
 }
 
-const pickValue = (row: Record<string, unknown>, candidates: string[], fallback = '') => {
-  const lowerKeys = Object.keys(row).reduce<Record<string, unknown>>((acc, key) => {
-    acc[key.toLowerCase()] = row[key]
-    return acc
-  }, {})
+/**
+ * Konversi ExhibitorRow menjadi VisitorRow dengan tipe terdeteksi.
+ */
+function mapExhibitorToVisitor(ex: {
+  id: number | string
+  company: string
+  pic: string
+  position: string
+  address: string
+  city: string
+  phone: string
+  email: string
+  raw: Record<string, any>
+  type?: string
+  segment?: ExhibitorSegment
+}): VisitorRow {
+  const type = ex.type || detectVisitorType(ex.raw, ex.segment)
 
-  for (const candidate of candidates) {
-    const lower = candidate.toLowerCase()
-    if (lower in lowerKeys) {
-      return title(lowerKeys[lower])
-    }
+  return {
+    id: ex.id,
+    company: ex.company,
+    pic: ex.pic,
+    position: ex.position,
+    address: ex.address,
+    city: ex.city,
+    phone: ex.phone,
+    email: ex.email,
+    type,
+    raw: ex.raw,
   }
-
-  return fallback
 }
 
-const normalizeRows = (rows: Record<string, unknown>[]): VisitorRow[] =>
-  rows.map((row, index) => {
-    const lowerKeys = Object.keys(row).reduce<Record<string, unknown>>((acc, key) => {
-      acc[key.toLowerCase()] = row[key]
-      return acc
-    }, {})
-
-    const id =
-      lowerKeys['id'] ??
-      lowerKeys['idx'] ??
-      lowerKeys['rowid'] ??
-      lowerKeys['no'] ??
-      lowerKeys['no.'] ??
-      `${index + 1}-${Date.now()}`
-
-    return {
-      id,
-      company: pickValue(row, ['company', 'company_name', 'perusahaan', 'nama_perusahaan', 'nama']),
-      pic: pickValue(row, ['pic', 'contact', 'cp', 'person_in_charge']),
-      position: pickValue(row, ['position', 'jabatan', 'title']),
-      type:
-        (() => {
-          const parts: string[] = []
-          const visitorFlag =
-            isFlagSet(lowerKeys, 'vis') ||
-            isFlagSet(lowerKeys, 'visdefence') ||
-            isFlagSet(lowerKeys, 'viswater') ||
-            isFlagSet(lowerKeys, 'vislives') ||
-            isFlagSet(lowerKeys, 'visagritech') ||
-            isFlagSet(lowerKeys, 'visindovet') ||
-            isFlagSet(lowerKeys, 'visfish') ||
-            isFlagSet(lowerKeys, 'vissecure') ||
-            isFlagSet(lowerKeys, 'visfire') ||
-            isFlagSet(lowerKeys, 'visdairy') ||
-            isFlagSet(lowerKeys, 'visfeed') ||
-            isFlagSet(lowerKeys, 'vismarine') ||
-            isFlagSet(lowerKeys, 'visaero') ||
-            isFlagSet(lowerKeys, 'viswaste') ||
-            isFlagSet(lowerKeys, 'visenergy') ||
-            isFlagSet(lowerKeys, 'vissmart') ||
-            isFlagSet(lowerKeys, 'vishorti')
-          const goverFlag = isFlagSet(lowerKeys, 'gover')
-          const vipFlag = visitorFlag && isFlagSet(lowerKeys, 'vid')
-          if (visitorFlag) parts.push('Visitor')
-          if (goverFlag) parts.push('Gover')
-          if (vipFlag) parts.push('VIP Visitor')
-          return parts.join(', ')
-        })() || pickValue(row, ['type', 'kategori', 'category']),
-      email: pickValue(row, ['email', 'e-mail']),
-      phone: pickValue(row, ['phone', 'telp', 'telpon', 'no_hp', 'mobile']),
-      city: pickValue(row, ['city', 'kota', 'state', 'country']),
-      updatedAt: pickValue(
-        row,
-        ['last_update', 'lastupdate', 'updated_at', 'tanggalupdate', 'tanggal_update', 'updateat'],
-      ),
-      raw: row,
-    }
-  })
-
-const invokeFetch = async (segment: VisitorSegment, limit: number) => {
-  if (window.database?.fetchExhibitors) {
-    // Reuse existing endpoint; filter by VIS flags on client
-    return window.database.fetchExhibitors<Record<string, unknown>>(segment, limit)
-  }
-
-  if (window.ipcRenderer?.invoke) {
-    return window.ipcRenderer.invoke('db:fetchExhibitors', segment, limit) as Promise<DatabaseResponse<Record<string, unknown>>>
-  }
-
-  throw new Error('API database tidak tersedia di renderer.')
+/**
+ * Ambil data visitor berdasarkan segment (defence, water, dsb)
+ * dengan memanfaatkan service exhibitor yang sudah ada.
+ */
+export async function fetchVisitors(
+  segment: ExhibitorSegment,
+  limit = 200,
+): Promise<VisitorRow[]> {
+  const exhibitors = await fetchExhibitors(segment, limit, "visitor")
+  return exhibitors.map((row) => mapExhibitorToVisitor({ ...row, segment }))
 }
 
-export async function getVisitorsBySegment(segment: VisitorSegment, limit = 200): Promise<VisitorRow[]> {
-  let response: DatabaseResponse<Record<string, unknown>>
-  try {
-    response = await invokeFetch(segment, limit)
-  } catch (primaryError) {
-    try {
-      response = await invokeFetch('defence', limit)
-    } catch (fallbackError) {
-      throw primaryError instanceof Error ? primaryError : fallbackError instanceof Error ? fallbackError : new Error('Gagal memuat data visitor')
-    }
-  }
+export async function getVisitorsBySegment(
+  segment: ExhibitorSegment,
+  limit = 200,
+): Promise<VisitorRow[]> {
+  return fetchVisitors(segment, limit)
+}
 
-  if (!response.success) {
-    if (segment !== 'defence') {
-      const fallback = await invokeFetch('defence', limit)
-      if (!fallback.success) {
-        throw new Error(response.message || fallback.message || 'Gagal memuat data visitor')
-      }
-      response = fallback
-    } else {
-      throw new Error(response.message || 'Gagal memuat data visitor')
-    }
-  }
-
-  const rows = response.rows ?? []
-  return normalizeRows(rows)
+export default {
+  fetchVisitors,
+  getVisitorsBySegment,
 }

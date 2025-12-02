@@ -1,8 +1,21 @@
-export function ok(res: any, data: any, meta: any = {}) {
-  // Include both `success` and `ok` flags so old clients keep working while new ones rely on `success`.
-  return res.status(200).json({ success: true, ok: true, data, meta })
+// api/src/utils/apiResponse.ts
+
+export interface ApiSuccess<T = any> {
+  ok: true;
+  data: T;
+  message: string;
 }
 
-export function fail(res: any, message: string, code = 400) {
-  return res.status(code).json({ success: false, ok: false, message })
+export interface ApiError<T = any> {
+  ok: false;
+  message: string;
+  data?: T;
+}
+
+export function ok<T = any>(data: T, message = "OK"): ApiSuccess<T> {
+  return { ok: true, data, message };
+}
+
+export function fail<T = any>(message: string, data?: T): ApiError<T> {
+  return { ok: false, message, data };
 }

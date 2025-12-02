@@ -5,6 +5,19 @@ const node_url = require("node:url");
 const path = require("node:path");
 const fs = require("node:fs");
 var _documentCurrentScript = typeof document !== "undefined" ? document.currentScript : null;
+const isResponseOk = (body) => (body == null ? void 0 : body.ok) === true || (body == null ? void 0 : body.success) === true;
+const pickData = (body) => {
+  if (!body) return void 0;
+  if (typeof body.data !== "undefined") return body.data;
+  if (typeof body.items !== "undefined") return body.items;
+  if (typeof body.rows !== "undefined") return body.rows;
+  return void 0;
+};
+const uniqueClean = (values) => Array.from(
+  new Set(
+    values.map((item) => item == null ? "" : String(item).trim()).filter(Boolean)
+  )
+);
 function loadEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return;
   const content = fs.readFileSync(filePath, "utf-8");
@@ -12,7 +25,6 @@ function loadEnvFile(filePath) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith("#")) continue;
     const [key, ...rest] = trimmed.split("=");
-    if (!key) continue;
     if (typeof process.env[key] === "undefined") {
       process.env[key] = rest.join("=").trim();
     }
@@ -37,96 +49,99 @@ async function apiFetch(pathName, init = {}) {
       body = await response.json();
     } else {
       const text = await response.text();
-      body = { success: false, message: text || `Unexpected response from API (${response.status})` };
+      body = { success: false, ok: false, message: text };
     }
     return { status: response.status, body };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Tidak dapat terhubung ke API";
-    return { status: 500, body: { success: false, message } };
+  } catch (err) {
+    return { status: 500, body: { success: false, message: "Tidak dapat terhubung ke API" } };
   }
 }
 async function testConnection() {
-  var _a;
-  const { body, status } = await apiFetch("/health");
-  if (!body.success) {
-    return { success: false, message: body.message || `Healthcheck gagal dengan status ${status}` };
+  const { body } = await apiFetch("/health");
+  if (!isResponseOk(body)) {
+    return { success: false, message: body.message };
   }
-  return {
-    success: true,
-    serverTime: ((_a = body.data) == null ? void 0 : _a.serverTime) ?? body.data
-  };
-}
-async function fetchTopRows(tableName, top = 10) {
-  const safeName = tableName.replace(/[^\w.]/g, "");
-  if (!safeName) {
-    throw new Error("Nama tabel tidak valid");
-  }
-  const { body } = await apiFetch(`/gabung/table/${encodeURIComponent(safeName)}?limit=${top}`);
-  if (!body.success) {
-    throw new Error(body.message || "Gagal mengambil data tabel");
-  }
-  return body.data ?? [];
-}
-async function fetchExhibitorsBySegment(segment, limit = 200) {
-  const { body } = await apiFetch(`/gabung/${segment}?limit=${limit}`);
-  if (!body.success) {
-    throw new Error(body.message || "Gagal memuat data exhibitor");
-  }
-  return body.data ?? [];
+  const data = pickData(body);
+  return { success: true, serverTime: data == null ? void 0 : data.serverTime };
 }
 async function loginUser(payload) {
-  var _a;
-  const username = payload.username.trim();
-  const password = payload.password;
-  const division = (_a = payload.division) == null ? void 0 : _a.trim();
-  if (!username || !password) {
-    throw new Error("Username dan password wajib diisi");
+  const { body, status } = await apiFetch("/pengguna/login", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+  if (!isResponseOk(body)) {
+    if (status === 401) return null;
+    throw new Error(body.message || "Login gagal");
   }
-  const { body, status } = await apiFetch(
-    "/pengguna/login",
-    {
-      method: "POST",
-      body: JSON.stringify({ username, password, division })
-    }
-  );
-  if (!body.success) {
-    if (status === 401) {
-      return null;
-    }
-    throw new Error(body.message || "Gagal memproses login");
-  }
-  return body.data ?? null;
-}
-async function closePool() {
+  return pickData(body);
 }
 async function fetchUserHints() {
-  const { body } = await apiFetch("/pengguna/hints");
-  if (!body.success) {
+  const { body } = await apiFetch("/pengguna");
+  if (!isResponseOk(body)) {
     throw new Error(body.message || "Gagal memuat data pengguna");
   }
-  return body.data ?? { usernames: [], divisions: [] };
+  const users = pickData(body) ?? [];
+  const usernames = uniqueClean(users.map((user) => user == null ? void 0 : user.username));
+  const divisions = uniqueClean(users.map((user) => user == null ? void 0 : user.division));
+  return { usernames, divisions };
+}
+async function fetchTopRows(tableName, top = 10) {
+  const safe = tableName.replace(/[^\w.]/g, "");
+  const params = new URLSearchParams({ limit: String(top) });
+  const { body } = await apiFetch(`/gabung/table-preview/${safe}?${params.toString()}`);
+  if (!isResponseOk(body)) throw new Error(body.message || "Gagal mengambil preview data");
+  const data = pickData(body);
+  return (data == null ? void 0 : data.rows) ?? data ?? [];
+}
+async function fetchExhibitorsBySegment(segment, limit = 200, person = "exhibitor") {
+  const params = new URLSearchParams({ limit: String(limit), person });
+  const { body } = await apiFetch(
+    `/gabung/segment/${encodeURIComponent(segment)}?${params.toString()}`
+  );
+  if (!isResponseOk(body)) {
+    throw new Error(body.message || "Gagal mengambil data gabung");
+  }
+  const data = pickData(body) ?? {};
+  return data.items ?? data.rows ?? data ?? [];
 }
 async function findCompanyByName(company) {
-  const name = company.trim();
-  if (!name) {
-    throw new Error("Nama company wajib diisi");
-  }
-  const search = new URLSearchParams({ company: name });
-  const { body } = await apiFetch(`/gabung/company?${search.toString()}`);
-  if (!body.success) {
-    throw new Error(body.message || "Gagal mencari data company");
-  }
-  return body.data ?? [];
+  const trimmed = company.trim();
+  const encoded = encodeURIComponent(trimmed);
+  const { body } = await apiFetch(`/gabung/company/${encoded}`);
+  if (!isResponseOk(body)) throw new Error(body.message || "Gagal mencari perusahaan");
+  const data = pickData(body) ?? {};
+  return data.items ?? data.rows ?? data ?? [];
 }
 async function saveAddData(payload) {
   const { body } = await apiFetch("/gabung", {
     method: "POST",
     body: JSON.stringify(payload)
   });
-  if (!body.success) {
-    throw new Error(body.message || "Gagal menyimpan data");
+  if (!isResponseOk(body)) throw new Error(body.message || "Gagal menyimpan data");
+  return pickData(body) ?? body;
+}
+async function updateAddData(id, payload) {
+  const safeId = encodeURIComponent(String(id));
+  const { body } = await apiFetch(`/gabung/${safeId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload)
+  });
+  if (!isResponseOk(body)) throw new Error(body.message || "Gagal memperbarui data");
+  return pickData(body) ?? body;
+}
+async function deleteAddData(ids) {
+  const uniqueIds = Array.from(new Set(ids.map((id) => String(id).trim()).filter(Boolean)));
+  const results = [];
+  for (const id of uniqueIds) {
+    const safeId = encodeURIComponent(id);
+    const { body } = await apiFetch(`/gabung/${safeId}`, { method: "DELETE" });
+    const ok = isResponseOk(body);
+    results.push({ id, success: ok, message: body.message });
+    if (!ok) {
+      throw new Error(body.message || `Gagal menghapus data ${id}`);
+    }
   }
-  return body.data ?? { success: true };
+  return results;
 }
 const __dirname$1 = path.dirname(node_url.fileURLToPath(typeof document === "undefined" ? require("url").pathToFileURL(__filename).href : _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("main.cjs", document.baseURI).href));
 process.env.APP_ROOT = path.join(__dirname$1, "..");
@@ -157,7 +172,10 @@ function registerDatabaseHandlers() {
       const result = await testConnection();
       return { ...result };
     } catch (error) {
-      return { success: false, message: error instanceof Error ? error.message : String(error) };
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : String(error)
+      };
     }
   });
   electron.ipcMain.handle("db:fetchTableData", async (_event, tableName) => {
@@ -165,26 +183,38 @@ function registerDatabaseHandlers() {
       const rows = await fetchTopRows(tableName);
       return { success: true, rows };
     } catch (error) {
-      return { success: false, message: error instanceof Error ? error.message : String(error) };
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : String(error)
+      };
     }
   });
-  electron.ipcMain.handle("db:fetchExhibitors", async (_event, segment, limit = 200) => {
+  electron.ipcMain.handle("db:fetchExhibitors", async (_event, segment, limit = 200, person = "exhibitor") => {
     try {
-      const rows = await fetchExhibitorsBySegment(segment, limit);
+      const rows = await fetchExhibitorsBySegment(segment, limit, person);
       return { success: true, rows };
     } catch (error) {
-      return { success: false, message: error instanceof Error ? error.message : String(error) };
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : String(error)
+      };
     }
   });
   electron.ipcMain.handle("db:login", async (_event, payload) => {
     try {
       const user = await loginUser(payload);
       if (!user) {
-        return { success: false, message: "Username, password, atau divisi tidak cocok." };
+        return {
+          success: false,
+          message: "Username, password, atau divisi tidak cocok."
+        };
       }
       return { success: true, user };
     } catch (error) {
-      return { success: false, message: error instanceof Error ? error.message : String(error) };
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : String(error)
+      };
     }
   });
   electron.ipcMain.handle("db:userHints", async () => {
@@ -192,7 +222,10 @@ function registerDatabaseHandlers() {
       const hints = await fetchUserHints();
       return { success: true, hints };
     } catch (error) {
-      return { success: false, message: error instanceof Error ? error.message : String(error) };
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : String(error)
+      };
     }
   });
   electron.ipcMain.handle("db:findCompany", async (_event, company) => {
@@ -200,7 +233,10 @@ function registerDatabaseHandlers() {
       const rows = await findCompanyByName(company);
       return { success: true, rows };
     } catch (error) {
-      return { success: false, message: error instanceof Error ? error.message : String(error) };
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : String(error)
+      };
     }
   });
   electron.ipcMain.handle("db:saveAddData", async (_event, payload) => {
@@ -208,7 +244,32 @@ function registerDatabaseHandlers() {
       const result = await saveAddData(payload);
       return { success: true, data: result };
     } catch (error) {
-      return { success: false, message: error instanceof Error ? error.message : String(error) };
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+  electron.ipcMain.handle("db:updateAddData", async (_event, id, payload) => {
+    try {
+      const result = await updateAddData(id, payload);
+      return { success: true, data: result };
+    } catch (error) {
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+  electron.ipcMain.handle("db:deleteAddData", async (_event, ids) => {
+    try {
+      const result = await deleteAddData(ids);
+      return { success: true, data: result };
+    } catch (error) {
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : String(error)
+      };
     }
   });
 }
@@ -226,9 +287,6 @@ electron.app.on("activate", () => {
 electron.app.whenReady().then(() => {
   registerDatabaseHandlers();
   createWindow();
-});
-electron.app.on("before-quit", async () => {
-  await closePool();
 });
 exports.MAIN_DIST = MAIN_DIST;
 exports.RENDERER_DIST = RENDERER_DIST;

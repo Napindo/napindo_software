@@ -2,13 +2,14 @@ import { app, BrowserWindow, ipcMain } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import {
-  closePool,
   fetchExhibitorsBySegment,
   fetchTopRows,
   fetchUserHints,
   loginUser,
   findCompanyByName,
   saveAddData,
+  updateAddData,
+  deleteAddData,
   testConnection,
 } from './db.js'
 
@@ -30,7 +31,9 @@ export const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL']
 export const MAIN_DIST = path.join(process.env.APP_ROOT, 'dist-electron')
 export const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist')
 
-process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, 'public') : RENDERER_DIST
+process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL
+  ? path.join(process.env.APP_ROOT, 'public')
+  : RENDERER_DIST
 
 let win: BrowserWindow | null
 
@@ -44,7 +47,7 @@ function createWindow() {
 
   // Test active push message to Renderer-process.
   win.webContents.on('did-finish-load', () => {
-    win?.webContents.send('main-process-message', (new Date).toLocaleString())
+    win?.webContents.send('main-process-message', new Date().toLocaleString())
   })
 
   if (VITE_DEV_SERVER_URL) {
@@ -61,7 +64,10 @@ function registerDatabaseHandlers() {
       const result = await testConnection()
       return { ...result }
     } catch (error) {
-      return { success: false, message: error instanceof Error ? error.message : String(error) }
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : String(error),
+      }
     }
   })
 
@@ -70,16 +76,22 @@ function registerDatabaseHandlers() {
       const rows = await fetchTopRows(tableName)
       return { success: true, rows }
     } catch (error) {
-      return { success: false, message: error instanceof Error ? error.message : String(error) }
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : String(error),
+      }
     }
   })
 
-  ipcMain.handle('db:fetchExhibitors', async (_event, segment, limit = 200) => {
+  ipcMain.handle('db:fetchExhibitors', async (_event, segment, limit = 200, person = 'exhibitor') => {
     try {
-      const rows = await fetchExhibitorsBySegment(segment, limit)
+      const rows = await fetchExhibitorsBySegment(segment, limit, person)
       return { success: true, rows }
     } catch (error) {
-      return { success: false, message: error instanceof Error ? error.message : String(error) }
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : String(error),
+      }
     }
   })
 
@@ -88,12 +100,18 @@ function registerDatabaseHandlers() {
       const user = await loginUser(payload)
 
       if (!user) {
-        return { success: false, message: 'Username, password, atau divisi tidak cocok.' }
+        return {
+          success: false,
+          message: 'Username, password, atau divisi tidak cocok.',
+        }
       }
 
       return { success: true, user }
     } catch (error) {
-      return { success: false, message: error instanceof Error ? error.message : String(error) }
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : String(error),
+      }
     }
   })
 
@@ -102,7 +120,10 @@ function registerDatabaseHandlers() {
       const hints = await fetchUserHints()
       return { success: true, hints }
     } catch (error) {
-      return { success: false, message: error instanceof Error ? error.message : String(error) }
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : String(error),
+      }
     }
   })
 
@@ -111,7 +132,10 @@ function registerDatabaseHandlers() {
       const rows = await findCompanyByName(company)
       return { success: true, rows }
     } catch (error) {
-      return { success: false, message: error instanceof Error ? error.message : String(error) }
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : String(error),
+      }
     }
   })
 
@@ -120,7 +144,34 @@ function registerDatabaseHandlers() {
       const result = await saveAddData(payload)
       return { success: true, data: result }
     } catch (error) {
-      return { success: false, message: error instanceof Error ? error.message : String(error) }
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : String(error),
+      }
+    }
+  })
+
+  ipcMain.handle('db:updateAddData', async (_event, id, payload) => {
+    try {
+      const result = await updateAddData(id, payload)
+      return { success: true, data: result }
+    } catch (error) {
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : String(error),
+      }
+    }
+  })
+
+  ipcMain.handle('db:deleteAddData', async (_event, ids: Array<string | number>) => {
+    try {
+      const result = await deleteAddData(ids)
+      return { success: true, data: result }
+    } catch (error) {
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : String(error),
+      }
     }
   })
 }
@@ -146,8 +197,4 @@ app.on('activate', () => {
 app.whenReady().then(() => {
   registerDatabaseHandlers()
   createWindow()
-})
-
-app.on('before-quit', async () => {
-  await closePool()
 })

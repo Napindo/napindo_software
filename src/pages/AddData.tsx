@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from 'react'
 import { comboFields, comboOptions, type ComboFieldName, code2Options, code3Options } from '../constants/addDataOptions'
 import { provinceCityMap, provinceOptions } from '../constants/provinces'
 import { countryDial } from '../constants/countryDial'
@@ -12,7 +12,7 @@ import {
   posterFlagMap,
   tidakKirimFlagMap,
 } from '../constants/flagMaps'
-import { saveAddData, findCompanyRecords, type AddDataPayload } from '../services/addData'
+import { saveAddData, updateAddData, findCompanyRecords, type AddDataPayload } from '../services/addData'
 
 type AddDataVariant = 'exhibitor' | 'visitor'
 
@@ -57,6 +57,8 @@ type AddDataForm = {
 type AddDataProps = {
   variant: AddDataVariant
   onBack?: () => void
+  initialRow?: Record<string, unknown> | null
+  initialId?: string | number | null
 }
 
 type FieldName = keyof AddDataForm
@@ -188,7 +190,7 @@ const rightFields: FieldName[] = [
   'tidakDikirim',
 ]
 
-const defaultForm = (): AddDataForm => ({
+  const defaultForm = (): AddDataForm => ({
   typeOfBusiness: '',
   company: '',
   address1: '',
@@ -232,8 +234,13 @@ const helperText = (name: FieldName) => {
   return ''
 }
 
-const AddDataPage = ({ variant, onBack }: AddDataProps) => {
+const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null }: AddDataProps) => {
   const [form, setForm] = useState<AddDataForm>(defaultForm)
+  const [selectedId, setSelectedId] = useState<string | number | null>(null)
+  const [highlightIndex, setHighlightIndex] = useState(0)
+  const highlightIndexRef = useRef(0)
+  const rowsRef = useRef<Record<string, unknown>[]>([])
+  const popupRef = useRef<HTMLDivElement | null>(null)
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [openCombo, setOpenCombo] = useState<FieldName | null>(null)
   const [provinceQuery, setProvinceQuery] = useState('')
@@ -358,11 +365,15 @@ const AddDataPage = ({ variant, onBack }: AddDataProps) => {
       const rawValue = event.target.type === 'checkbox' ? (event.target as HTMLInputElement).checked : event.target.value
       if (field === 'verify') {
         const checked = Boolean(rawValue)
-        setForm((prev) => ({
-          ...prev,
-          verify: checked,
-          code2: checked ? 'OK' : prev.code2,
-        }))
+        setForm((prev) => {
+          const next: AddDataForm = { ...prev, verify: checked }
+          if (checked) {
+            next.code2 = 'OK'
+          } else {
+            next.code2 = ''
+          }
+          return next
+        })
         return
       }
       if (field === 'lastUpdate') {
@@ -432,6 +443,11 @@ const AddDataPage = ({ variant, onBack }: AddDataProps) => {
     return updateByOptions.filter((opt) => opt.toLowerCase().includes(term))
   }, [form.updateBy, updateByOptions])
 
+  const exhibitorYearSuggestions = useMemo(() => {
+    const yy = String(new Date().getFullYear() % 100).padStart(2, '0')
+    return [`EXH${yy}`]
+  }, [])
+
   const companyColumns = useMemo(() => {
     const preferred = ['nourut', 'company', 'name', 'position', 'city', 'code', 'phone', 'email', 'zip', 'lastupdate', 'tgljamedit']
     const seen = new Set<string>()
@@ -488,10 +504,137 @@ const AddDataPage = ({ variant, onBack }: AddDataProps) => {
         return
       }
       setCompanyLookup({ open: true, loading: false, rows, query })
+      setHighlightIndex(0)
     } catch (error) {
       setCompanyLookup((prev) => ({ ...prev, loading: false }))
       setFeedback({ type: 'error', message: error instanceof Error ? error.message : 'Gagal mencari company' })
     }
+  }
+
+  const toDateInput = (value: unknown) => {
+    if (!value) return ''
+    const parsed = new Date(String(value))
+    if (Number.isNaN(parsed.getTime())) return ''
+    return parsed.toISOString().slice(0, 10)
+  }
+
+  const isFlagX = (value: unknown) => {
+    if (value === undefined || value === null) return false
+    const text = String(value).trim().toLowerCase()
+    return text === 'x' || text === '1' || text === 'yes' || text === 'true'
+  }
+
+  const pickFlagLabels = (row: Record<string, unknown>, map: Record<string, string>) => {
+    const lower: Record<string, unknown> = {}
+    Object.entries(row || {}).forEach(([key, value]) => {
+      lower[key.toLowerCase()] = value
+    })
+
+    return Object.entries(map)
+      .filter(([, code]) => isFlagX(lower[code.toLowerCase()]))
+      .map(([label]) => label)
+  }
+
+  const pickFirstFilled = (lower: Record<string, unknown>, keys: string[]) => {
+    for (const key of keys) {
+      const val = lower[key]
+      if (val !== undefined && val !== null && String(val).trim() !== '') {
+        return val
+      }
+    }
+    return ''
+  }
+
+  const splitList = (value: unknown) =>
+    String(value ?? '')
+      .split(',')
+      .map((item) => sanitizeText(item, 'business'))
+      .filter(Boolean)
+
+  const applyCompanyRow = (row: Record<string, unknown>, options?: { keepPopup?: boolean }) => {
+    const lower: Record<string, unknown> = {}
+    Object.entries(row || {}).forEach(([key, value]) => {
+      lower[key.toLowerCase()] = value
+    })
+
+    const next: AddDataForm = {
+      typeOfBusiness: String(lower['pt_cv'] ?? lower['ptcv'] ?? ''),
+      company: String(lower['company'] ?? ''),
+      address1: String(lower['address1'] ?? ''),
+      address2: String(lower['address2'] ?? ''),
+      province: sanitizeText(String(lower['propince'] ?? ''), 'province'),
+      city: sanitizeText(String(lower['city'] ?? ''), 'city'),
+      zip: String(lower['zip'] ?? ''),
+      codePhone: String(lower['code'] ?? ''),
+      phoneNumber: String(lower['phone'] ?? ''),
+      facsimile: String(lower['facsimile'] ?? ''),
+      handphone: String(lower['handphone'] ?? ''),
+      sex: String(lower['sex'] ?? ''),
+      name: sanitizeText(String(lower['name'] ?? ''), 'name'),
+      position: sanitizeText(String(lower['position'] ?? ''), 'position'),
+      email: String(lower['email'] ?? ''),
+      website: String(lower['website'] ?? ''),
+      mainActive: splitList(pickFirstFilled(lower, ['main_activ', 'mainactiv'])),
+      business: splitList(pickFirstFilled(lower, ['business'])),
+      source: String(lower['code4'] ?? lower['source'] ?? ''),
+      updateBy: String(lower['source'] ?? ''),
+      forum: String(lower['forum'] ?? ''),
+      exhibitorTahun: String(lower['exhthn'] ?? ''),
+      code1: String(lower['code1'] ?? ''),
+      code2: String(lower['code2'] ?? ''),
+      code3: String(lower['code3'] ?? ''),
+      exhibitor: pickFlagLabels(lower, exhibitorFlagMap),
+      visitor: pickFlagLabels(lower, visitorFlagMap),
+      typeOfVisitor: pickFlagLabels(lower, typeOfVisitorFlagMap),
+      specialInvitationIndoDefence: pickFlagLabels(lower, invitationFlagMap),
+      openingCeremony: pickFlagLabels(lower, openingCeremonyFlagMap),
+      kartuUcapan: pickFlagLabels(lower, kartuUcapanFlagMap),
+      poster: pickFlagLabels(lower, posterFlagMap),
+      tidakDikirim: pickFlagLabels(lower, tidakKirimFlagMap),
+      lastUpdate: toDateInput(lower['lastupdate']),
+      verify: String(lower['code2'] ?? '').trim().toUpperCase() === 'OK',
+    }
+
+    setForm((prev) => ({ ...prev, ...next }))
+    const rawId = lower['nourut'] ?? lower['id'] ?? lower['pk']
+    const normalizedId =
+      rawId == null
+        ? null
+        : typeof rawId === 'number'
+        ? rawId
+        : String(rawId).trim() || null
+    setSelectedId(normalizedId)
+    if (!options?.keepPopup) {
+      setCompanyLookup((prev) => ({ ...prev, open: false }))
+    }
+    setHighlightIndex(0)
+    setFeedback({ type: 'success', message: 'Data company berhasil dimuat ke form.' })
+  }
+
+  const clampIndex = (value: number, max: number) => {
+    if (max <= 0) return 0
+    if (value < 0) return 0
+    if (value >= max) return max - 1
+    return value
+  }
+
+  const setHighlight = (next: number, total: number) => {
+    const clamped = clampIndex(next, total)
+    highlightIndexRef.current = clamped
+    setHighlightIndex(clamped)
+  }
+
+  const hasAnyInput = () => {
+    const baseline = defaultForm()
+    return Object.keys(form).some((key) => {
+      const current = (form as any)[key]
+      const initial = (baseline as any)[key]
+
+      if (Array.isArray(current)) {
+        return current.length > 0
+      }
+      return String(current ?? '') !== String(initial ?? '')
+    })
   }
 
   const applyFlags = (map: Record<string, string>, selected: string[], target: AddDataPayload) => {
@@ -504,10 +647,11 @@ const AddDataPage = ({ variant, onBack }: AddDataProps) => {
     })
   }
 
-  const buildPayload = (): AddDataPayload => {
+  const buildPayload = (overrideDate?: string): AddDataPayload => {
     const userName = (window.process as unknown as { env?: Record<string, string> })?.env?.USERNAME ?? 'app-user'
     const now = new Date()
     const tglJamEdit = now.toISOString().replace('T', ' ').slice(0, 19)
+    const dateValue = overrideDate ?? form.lastUpdate
 
     const payload: AddDataPayload = {
       ptCv: form.typeOfBusiness.trim(),
@@ -534,7 +678,7 @@ const AddDataPage = ({ variant, onBack }: AddDataProps) => {
       code1: form.code1.trim(),
       code2: form.code2.trim(),
       code3: form.code3.trim(),
-      lastupdate: new Date(form.lastUpdate).toISOString(),
+      lastupdate: new Date(dateValue).toISOString(),
       website: form.website.trim(),
       namauser: userName,
       tglJamEdit: tglJamEdit,
@@ -581,14 +725,26 @@ const AddDataPage = ({ variant, onBack }: AddDataProps) => {
         return
       }
 
+      if (action === 'update' && !selectedId) {
+        setFeedback({ type: 'error', message: 'Pilih data dari pencarian Company sebelum update.' })
+        return
+      }
+
       const actionLabel = action === 'add' ? 'Add/Save (F5)' : 'Update/Edit (F2)'
+      const overrideDate = action === 'update' ? new Date().toISOString().slice(0, 10) : undefined
+      if (overrideDate) {
+        setForm((prev) => ({ ...prev, lastUpdate: overrideDate }))
+      }
       setSaving(true)
       try {
-        const payload = buildPayload()
-        const response = await saveAddData(payload)
+        const payload = buildPayload(overrideDate)
+        const response = action === 'add' ? await saveAddData(payload) : await updateAddData(selectedId as string | number, payload)
         const success = response?.success !== false
         if (success) {
           setFeedback({ type: 'success', message: `${actionLabel} berhasil disimpan.` })
+          setForm(defaultForm())
+          setSelectedId(null)
+          setCompanyLookup((prev) => ({ ...prev, open: false, rows: [], query: '' }))
         } else {
           setFeedback({ type: 'error', message: response?.message ?? `${actionLabel} gagal.` })
         }
@@ -598,6 +754,92 @@ const AddDataPage = ({ variant, onBack }: AddDataProps) => {
         setSaving(false)
       }
     }
+
+  const handleCancel = () => {
+    const hasInput = hasAnyInput()
+    setFeedback(null)
+    setCompanyLookup((prev) => ({ ...prev, open: false }))
+    setSelectedId(null)
+
+    if (hasInput) {
+      setForm(defaultForm())
+      return
+    }
+
+    if (onBack) {
+      onBack()
+      setForm(defaultForm())
+    } else {
+      setForm(defaultForm())
+    }
+  }
+
+  const submitAdd = handleSubmit('add')
+  const submitUpdate = handleSubmit('update')
+
+  useEffect(() => {
+    const onKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (companyLookup.open) return
+      if (event.ctrlKey || event.metaKey || event.altKey) return
+
+      if (event.key === 'F5') {
+        event.preventDefault()
+        submitAdd(event as any)
+      } else if (event.key === 'F2') {
+        event.preventDefault()
+        submitUpdate(event as any)
+      } else if (event.key === 'Escape') {
+        event.preventDefault()
+        handleCancel()
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [companyLookup.open, submitAdd, submitUpdate, handleCancel])
+
+  useEffect(() => {
+    rowsRef.current = companyLookup.rows
+  }, [companyLookup.rows])
+
+  useEffect(() => {
+    if (initialRow) {
+      applyCompanyRow(initialRow, { keepPopup: true })
+      if (initialId !== undefined && initialId !== null) {
+        setSelectedId(initialId)
+      }
+    } else {
+      setSelectedId(null)
+      setForm(defaultForm())
+    }
+  }, [initialRow, initialId])
+
+  useEffect(() => {
+    if (companyLookup.open) {
+      setHighlight(0, companyLookup.rows.length)
+      popupRef.current?.focus()
+    }
+  }, [companyLookup.open, companyLookup.rows.length])
+
+  const handlePopupKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!companyLookup.open) return
+    if (event.ctrlKey || event.metaKey || event.altKey) return
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      event.stopPropagation()
+      setHighlight(highlightIndexRef.current + 1, companyLookup.rows.length)
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      event.stopPropagation()
+      setHighlight(highlightIndexRef.current - 1, companyLookup.rows.length)
+    } else if (event.key === 'Enter') {
+      event.preventDefault()
+      event.stopPropagation()
+      const row = companyLookup.rows[clampIndex(highlightIndexRef.current, companyLookup.rows.length)]
+      if (row) applyCompanyRow(row)
+    }
+  }
 
   const renderField = (name: FieldName) => {
     if (name === 'verify') {
@@ -740,6 +982,40 @@ const AddDataPage = ({ variant, onBack }: AddDataProps) => {
             </datalist>
           </div>
           <p className="text-xs text-slate-500">Saran mengikuti tahun berjalan.</p>
+        </div>
+      )
+    }
+
+    if (name === 'exhibitorTahun') {
+      return (
+        <div className="space-y-2" key={name}>
+          <label className="text-sm font-semibold text-slate-800 flex items-center gap-1">
+            {labelMap[name]}
+            {requiredFields.has(name) ? <span className="text-rose-600">*</span> : null}
+          </label>
+          <div className="relative">
+            <input
+              type="text"
+              value={form.exhibitorTahun}
+              onChange={(event) =>
+                setForm((prev) => ({
+                  ...prev,
+                  exhibitorTahun: event.target.value.toUpperCase(),
+                }))
+              }
+              list="exhibitor-year-options"
+              maxLength={minLength}
+              autoComplete="off"
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-rose-400 focus:ring-4 focus:ring-rose-100 transition"
+              placeholder="EXH25"
+            />
+            <datalist id="exhibitor-year-options">
+              {exhibitorYearSuggestions.map((option) => (
+                <option key={option} value={option} />
+              ))}
+            </datalist>
+          </div>
+          <p className="text-xs text-slate-500">Gunakan format EXHYY, contoh tahun ini: {exhibitorYearSuggestions[0]}.</p>
         </div>
       )
     }
@@ -911,7 +1187,7 @@ const AddDataPage = ({ variant, onBack }: AddDataProps) => {
         </div>
       ) : null}
 
-      <form className="bg-white border border-slate-200 shadow-sm rounded-2xl p-6 space-y-6" onSubmit={handleSubmit('add')}>
+      <form className="bg-white border border-slate-200 shadow-sm rounded-2xl p-6 space-y-6" onSubmit={submitAdd}>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="space-y-4">{leftFields.map((field) => renderField(field))}</div>
           <div className="space-y-4">{rightFields.map((field) => renderField(field))}</div>
@@ -926,14 +1202,14 @@ const AddDataPage = ({ variant, onBack }: AddDataProps) => {
           </button>
           <button
             type="button"
-            onClick={handleSubmit('update')}
+            onClick={submitUpdate}
             className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-slate-800 text-white font-semibold shadow-sm hover:bg-slate-900"
           >
             {saving ? 'Saving...' : 'Update/Edit (F2)'}
           </button>
           <button
             type="button"
-            onClick={onBack}
+            onClick={handleCancel}
             className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-slate-200 text-slate-700 font-semibold hover:bg-slate-300"
           >
             Cancel (ESC)
@@ -942,7 +1218,12 @@ const AddDataPage = ({ variant, onBack }: AddDataProps) => {
       </form>
 
       {companyLookup.open ? (
-        <div className="fixed inset-0 z-30 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+        <div
+          className="fixed inset-0 z-30 flex items-start justify-center bg-slate-900/60 backdrop-blur-sm p-4 pt-10"
+          tabIndex={-1}
+          ref={popupRef}
+          onKeyDown={handlePopupKeyDown}
+        >
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[80vh] overflow-hidden border border-slate-200">
             <div className="flex items-start justify-between gap-3 px-6 py-4 border-b border-slate-200">
               <div>
@@ -975,7 +1256,14 @@ const AddDataPage = ({ variant, onBack }: AddDataProps) => {
                   </thead>
                   <tbody className="divide-y divide-slate-200">
                     {companyLookup.rows.map((row, index) => (
-                      <tr key={String((row as Record<string, unknown>)['nourut'] ?? index)}>
+                      <tr
+                        key={String((row as Record<string, unknown>)['nourut'] ?? index)}
+                        className={`cursor-pointer ${
+                          highlightIndex === index ? 'bg-rose-50 ring-1 ring-rose-200' : 'hover:bg-rose-50'
+                        }`}
+                        onClick={() => applyCompanyRow(row)}
+                        onMouseEnter={() => setHighlight(index, companyLookup.rows.length)}
+                      >
                         {companyColumns.map((column) => (
                           <td key={column} className="px-3 py-2 align-top text-slate-800">
                             {formatCellValue((row as Record<string, unknown>)[column])}

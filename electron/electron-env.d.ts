@@ -50,10 +50,15 @@ interface Window {
         | 'dairy'
         | 'horticulture',
       limit?: number,
+      person?: 'exhibitor' | 'visitor',
     ) => Promise<DatabaseResponse<T>>
     login: (
       payload: { username: string; password: string; division?: string | null },
     ) => Promise<DatabaseResponse<{ username: string; division?: string | null; name?: string | null }>>
     userHints: () => Promise<DatabaseResponse<{ usernames: string[]; divisions: string[] }>>
+    findCompany: <T = Record<string, unknown>>(company: string) => Promise<DatabaseResponse<T>>
+    saveAddData: (payload: Record<string, unknown>) => Promise<DatabaseResponse>
+    updateAddData: (id: string | number, payload: Record<string, unknown>) => Promise<DatabaseResponse>
+    deleteAddData: (ids: Array<string | number>) => Promise<DatabaseResponse>
   }
 }

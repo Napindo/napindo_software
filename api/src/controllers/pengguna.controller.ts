@@ -1,112 +1,181 @@
-import prisma from "../prisma"
-import { ok, fail } from "../utils/apiResponse"
+import type { Request, Response } from "express";
+import prisma from "../prisma";
+import { ok, fail } from "../utils/apiResponse";
 
-const normalize = (value?: string | null) => value?.trim() ?? ""
-
-export async function listPengguna(req, res) {
+/**
+ * GET /pengguna
+ * Optional query: q (search by username or division)
+ */
+export async function listPengguna(req: Request, res: Response) {
   try {
-    const items = await prisma.pengguna.findMany()
-    return ok(res, items)
-  } catch (err) {
-    return fail(res, err.message)
+    const { q } = req.query;
+
+    const where: any = {};
+
+    if (q) {
+      const keyword = String(q);
+      where.OR = [
+        { username: { contains: keyword, mode: "insensitive" } },
+        { division: { contains: keyword, mode: "insensitive" } },
+      ];
+    }
+
+    const users = await prisma.pengguna.findMany({
+      where,
+      orderBy: { username: "asc" },
+    });
+
+    return res.json(ok(users));
+  } catch (err: any) {
+    return res.status(500).json(fail(err.message));
   }
 }
 
-export async function getPengguna(req, res) {
+/**
+ * GET /pengguna/:username
+ */
+export async function getPenggunaByUsername(req: Request, res: Response) {
   try {
-    const username = req.params.username
-    const item = await prisma.pengguna.findUnique({
+    const { username } = req.params;
+
+    const user = await prisma.pengguna.findUnique({
       where: { username },
-    })
-    if (!item) return fail(res, "User tidak ditemukan", 404)
+    });
 
-    return ok(res, item)
-  } catch (err) {
-    return fail(res, err.message)
+    if (!user) {
+      return res.status(404).json(fail("User tidak ditemukan"));
+    }
+
+    return res.json(ok(user));
+  } catch (err: any) {
+    return res.status(500).json(fail(err.message));
   }
 }
 
-export async function createPengguna(req, res) {
+/**
+ * POST /pengguna
+ * body: { username, password, division?, status? }
+ */
+export async function createPengguna(req: Request, res: Response) {
   try {
-    const item = await prisma.pengguna.create({
-      data: req.body,
-    })
-    return ok(res, item)
-  } catch (err) {
-    return fail(res, err.message)
-  }
-}
-
-export async function updatePengguna(req, res) {
-  try {
-    const username = req.params.username
-    const item = await prisma.pengguna.update({
-      where: { username },
-      data: req.body,
-    })
-    return ok(res, item)
-  } catch (err) {
-    return fail(res, err.message)
-  }
-}
-
-export async function deletePengguna(req, res) {
-  try {
-    const username = req.params.username
-    await prisma.pengguna.delete({ where: { username } })
-    return ok(res, true)
-  } catch (err) {
-    return fail(res, err.message)
-  }
-}
-
-export async function loginPengguna(req, res) {
-  try {
-    const username = normalize(req.body?.username)
-    const password = normalize(req.body?.password)
-    const division = normalize(req.body?.division)
+    const { username, password, division, status } = req.body;
 
     if (!username || !password) {
-      return fail(res, "Username dan password wajib diisi", 400)
+      return res
+        .status(400)
+        .json(fail("username dan password wajib diisi"));
+    }
+
+    const existing = await prisma.pengguna.findUnique({
+      where: { username },
+    });
+
+    if (existing) {
+      return res.status(409).json(fail("username sudah digunakan"));
+    }
+
+    const user = await prisma.pengguna.create({
+      data: {
+        username,
+        password,
+        division: division ?? null,
+        status: status ?? null,
+      },
+    });
+
+    return res.status(201).json(ok(user, "User berhasil dibuat"));
+  } catch (err: any) {
+    return res.status(500).json(fail(err.message));
+  }
+}
+
+/**
+ * PUT /pengguna/:username
+ * body: { password?, division?, status? }
+ */
+export async function updatePengguna(req: Request, res: Response) {
+  try {
+    const { username } = req.params;
+    const { password, division, status } = req.body ?? {};
+
+    const user = await prisma.pengguna.findUnique({ where: { username } });
+    if (!user) {
+      return res.status(404).json(fail("User tidak ditemukan"));
+    }
+
+    const updated = await prisma.pengguna.update({
+      where: { username },
+      data: {
+        password: password ?? user.password,
+        division: division ?? user.division,
+        status: status ?? user.status,
+      },
+    });
+
+    return res.json(ok(updated, "User berhasil diupdate"));
+  } catch (err: any) {
+    return res.status(500).json(fail(err.message));
+  }
+}
+
+/**
+ * DELETE /pengguna/:username
+ */
+export async function deletePengguna(req: Request, res: Response) {
+  try {
+    const { username } = req.params;
+
+    const user = await prisma.pengguna.findUnique({ where: { username } });
+    if (!user) {
+      return res.status(404).json(fail("User tidak ditemukan"));
+    }
+
+    await prisma.pengguna.delete({ where: { username } });
+
+    return res.json(ok(null, "User berhasil dihapus"));
+  } catch (err: any) {
+    return res.status(500).json(fail(err.message));
+  }
+}
+
+/**
+ * POST /pengguna/login
+ * body: { username, password }
+ * (untuk sekarang plaintext compare, sama seperti VB.NET lama)
+ */
+export async function loginPengguna(req: Request, res: Response) {
+  try {
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+      return res
+        .status(400)
+        .json(fail("username dan password wajib diisi"));
     }
 
     const user = await prisma.pengguna.findUnique({
       where: { username },
-    })
+    });
 
-    if (!user) {
-      return fail(res, "Username atau password salah", 401)
+    if (!user || user.password !== password) {
+      return res
+        .status(401)
+        .json(fail("Username atau password salah"));
     }
 
-    const storedDivision = normalize(user.division)
-    const isDivisionMatch = !division || !storedDivision || storedDivision.toLowerCase() === division.toLowerCase()
-
-    if (normalize(user.password) !== password || !isDivisionMatch) {
-      return fail(res, "Username, password, atau divisi tidak cocok.", 401)
-    }
-
-    return ok(res, {
-      username: user.username,
-      division: user.division,
-      name: user.username,
-    })
-  } catch (err) {
-    return fail(res, err.message)
-  }
-}
-
-export async function userHints(req, res) {
-  try {
-    const rows = await prisma.pengguna.findMany({
-      select: { username: true, division: true },
-      orderBy: { username: "asc" },
-    })
-
-    const usernames = Array.from(new Set(rows.map((row) => normalize(row.username)).filter(Boolean)))
-    const divisions = Array.from(new Set(rows.map((row) => normalize(row.division)).filter(Boolean)))
-
-    return ok(res, { usernames, divisions })
-  } catch (err) {
-    return fail(res, err.message)
+    // Untuk sekarang cukup kembalikan data user,
+    // nanti kalau perlu bisa ditambah token / session.
+    return res.json(
+      ok(
+        {
+          username: user.username,
+          division: user.division,
+          status: user.status,
+        },
+        "Login berhasil",
+      ),
+    );
+  } catch (err: any) {
+    return res.status(500).json(fail(err.message));
   }
 }

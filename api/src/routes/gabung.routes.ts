@@ -1,24 +1,26 @@
-import { Router } from "express"
+import { Router } from "express";
 import {
   listGabung,
+  listGabungBySegment,
   getGabung,
+  getTablePreview,
+  findGabungByCompany,
   createGabung,
   updateGabung,
   deleteGabung,
-  listGabungBySegment,
-  getTablePreview,
-  findGabungByCompany,
-} from "../controllers/gabung.controller"
+} from "../controllers/gabung.controller";
 
-const r = Router()
+const router = Router();
 
-r.get("/table/:name", getTablePreview)
-r.get("/company", findGabungByCompany)
-r.get("/:segment(defence|aerospace|marine)", listGabungBySegment)
-r.get("/", listGabung)
-r.get("/:id", getGabung)
-r.post("/", createGabung)
-r.put("/:id", updateGabung)
-r.delete("/:id", deleteGabung)
+router.get("/", listGabung);
+router.get("/segment/:segment", listGabungBySegment);
 
-export default r
+router.get("/table-preview/:name", getTablePreview);
+router.get("/company/:company", findGabungByCompany);
+router.get("/:id", getGabung);
+
+router.post("/", createGabung);
+router.put("/:id", updateGabung);
+router.delete("/:id", deleteGabung);
+
+export default router;

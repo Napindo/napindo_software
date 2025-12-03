@@ -7,6 +7,9 @@
   "directories": {
     "output": "release/${version}"
   },
+  "extraMetadata": {
+    "main": "dist-electron/main/index.cjs"
+  },
   "files": [
     "dist",
     "dist-electron"

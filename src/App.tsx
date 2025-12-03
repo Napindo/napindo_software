@@ -1,23 +1,37 @@
 import './App.css'
-import { useState } from 'react'
 import DashboardPage from './pages/Dashboard'
 import LoginPage, { type AuthenticatedUser } from './pages/Login'
+import { useAppStore } from './store/appStore'
+import GlobalStatusBar from './components/GlobalStatusBar'
 
 export default function App() {
-  const [user, setUser] = useState<AuthenticatedUser | null>(null)
+  const { user, setUser, clearUser, setActivePage, setGlobalMessage } = useAppStore()
 
   const handleLoginSuccess = (profile: AuthenticatedUser) => {
     setUser(profile)
+    setGlobalMessage({ type: 'success', text: 'Login berhasil' })
   }
 
   const handleLogout = () => {
     localStorage.removeItem('napindo-login')
-    setUser(null)
+    clearUser()
+    setActivePage('dashboard')
+    setGlobalMessage({ type: 'info', text: 'Anda telah logout' })
   }
 
   if (!user) {
-    return <LoginPage onSuccess={handleLoginSuccess} />
+    return (
+      <>
+        <GlobalStatusBar />
+        <LoginPage onSuccess={handleLoginSuccess} />
+      </>
+    )
   }
 
-  return <DashboardPage user={user} onLogout={handleLogout} />
+  return (
+    <>
+      <GlobalStatusBar />
+      <DashboardPage user={user} onLogout={handleLogout} />
+    </>
+  )
 }

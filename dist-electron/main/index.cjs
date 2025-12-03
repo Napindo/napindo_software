@@ -1,10 +1,31 @@
 "use strict";
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 const electron = require("electron");
-const node_url = require("node:url");
-const path = require("node:path");
 const fs = require("node:fs");
+const path = require("node:path");
+const node_url = require("node:url");
 var _documentCurrentScript = typeof document !== "undefined" ? document.currentScript : null;
+function createWindow(options) {
+  const window = new electron.BrowserWindow({
+    icon: path.join(options.publicDir, "electron-vite.svg"),
+    webPreferences: {
+      preload: options.preload
+    }
+  });
+  window.webContents.on("did-finish-load", () => {
+    window.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
+  });
+  window.webContents.on("did-fail-load", (_event, errorCode, errorDescription, validatedURL) => {
+    console.error("Renderer failed to load", { errorCode, errorDescription, validatedURL });
+  });
+  if (options.devServerUrl) {
+    window.loadURL(options.devServerUrl);
+    window.webContents.openDevTools({ mode: "detach" });
+  } else {
+    window.loadFile(path.join(options.rendererDist, "index.html"));
+  }
+  return window;
+}
 const isResponseOk = (body) => (body == null ? void 0 : body.ok) === true || (body == null ? void 0 : body.success) === true;
 const pickData = (body) => {
   if (!body) return void 0;
@@ -63,27 +84,6 @@ async function testConnection() {
   }
   const data = pickData(body);
   return { success: true, serverTime: data == null ? void 0 : data.serverTime };
-}
-async function loginUser(payload) {
-  const { body, status } = await apiFetch("/pengguna/login", {
-    method: "POST",
-    body: JSON.stringify(payload)
-  });
-  if (!isResponseOk(body)) {
-    if (status === 401) return null;
-    throw new Error(body.message || "Login gagal");
-  }
-  return pickData(body);
-}
-async function fetchUserHints() {
-  const { body } = await apiFetch("/pengguna");
-  if (!isResponseOk(body)) {
-    throw new Error(body.message || "Gagal memuat data pengguna");
-  }
-  const users = pickData(body) ?? [];
-  const usernames = uniqueClean(users.map((user) => user == null ? void 0 : user.username));
-  const divisions = uniqueClean(users.map((user) => user == null ? void 0 : user.division));
-  return { usernames, divisions };
 }
 async function fetchTopRows(tableName, top = 10) {
   const safe = tableName.replace(/[^\w.]/g, "");
@@ -159,39 +159,17 @@ async function reportLabelGover(filter) {
   if (!body.success) throw new Error(body.message);
   return body.data;
 }
-const __dirname$1 = path.dirname(node_url.fileURLToPath(typeof document === "undefined" ? require("url").pathToFileURL(__filename).href : _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("main.cjs", document.baseURI).href));
-process.env.APP_ROOT = path.join(__dirname$1, "..");
-const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
-const MAIN_DIST = path.join(process.env.APP_ROOT, "dist-electron");
-const RENDERER_DIST = path.join(process.env.APP_ROOT, "dist");
-process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, "public") : RENDERER_DIST;
-let win;
-function createWindow() {
-  win = new electron.BrowserWindow({
-    icon: path.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
-    webPreferences: {
-      preload: path.join(__dirname$1, "preload.mjs")
-    }
-  });
-  win.webContents.on("did-finish-load", () => {
-    win == null ? void 0 : win.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
-  });
-  if (VITE_DEV_SERVER_URL) {
-    win.loadURL(VITE_DEV_SERVER_URL);
-  } else {
-    win.loadFile(path.join(RENDERER_DIST, "index.html"));
-  }
-}
-function registerDatabaseHandlers() {
+const errorResponse$1 = (error) => ({
+  success: false,
+  message: error instanceof Error ? error.message : String(error)
+});
+function registerGabungIpcHandlers() {
   electron.ipcMain.handle("db:testConnection", async () => {
     try {
       const result = await testConnection();
       return { ...result };
     } catch (error) {
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : String(error)
-      };
+      return errorResponse$1(error);
     }
   });
   electron.ipcMain.handle("db:fetchTableData", async (_event, tableName) => {
@@ -199,10 +177,7 @@ function registerDatabaseHandlers() {
       const rows = await fetchTopRows(tableName);
       return { success: true, rows };
     } catch (error) {
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : String(error)
-      };
+      return errorResponse$1(error);
     }
   });
   electron.ipcMain.handle("db:fetchExhibitors", async (_event, segment, limit = 200, person = "exhibitor") => {
@@ -210,12 +185,84 @@ function registerDatabaseHandlers() {
       const rows = await fetchExhibitorsBySegment(segment, limit, person);
       return { success: true, rows };
     } catch (error) {
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : String(error)
-      };
+      return errorResponse$1(error);
     }
   });
+  electron.ipcMain.handle("db:findCompany", async (_event, company) => {
+    try {
+      const rows = await findCompanyByName(company);
+      return { success: true, rows };
+    } catch (error) {
+      return errorResponse$1(error);
+    }
+  });
+  electron.ipcMain.handle("db:saveAddData", async (_event, payload) => {
+    try {
+      const result = await saveAddData(payload);
+      return { success: true, data: result };
+    } catch (error) {
+      return errorResponse$1(error);
+    }
+  });
+  electron.ipcMain.handle("db:updateAddData", async (_event, id, payload) => {
+    try {
+      const result = await updateAddData(id, payload);
+      return { success: true, data: result };
+    } catch (error) {
+      return errorResponse$1(error);
+    }
+  });
+  electron.ipcMain.handle("db:deleteAddData", async (_event, ids) => {
+    try {
+      const result = await deleteAddData(ids);
+      return { success: true, data: result };
+    } catch (error) {
+      return errorResponse$1(error);
+    }
+  });
+  electron.ipcMain.handle("report:labelvisitor", async (_event, filter) => {
+    try {
+      const data = await reportLabelVisitor(filter);
+      return { success: true, data };
+    } catch (error) {
+      return errorResponse$1(error);
+    }
+  });
+  electron.ipcMain.handle("report:labelgover", async (_event, filter) => {
+    try {
+      const data = await reportLabelGover(filter);
+      return { success: true, data };
+    } catch (error) {
+      return errorResponse$1(error);
+    }
+  });
+}
+async function loginUser(payload) {
+  const { body, status } = await apiFetch("/pengguna/login", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+  if (!isResponseOk(body)) {
+    if (status === 401) return null;
+    throw new Error(body.message || "Login gagal");
+  }
+  return pickData(body);
+}
+async function fetchUserHints() {
+  const { body } = await apiFetch("/pengguna");
+  if (!isResponseOk(body)) {
+    throw new Error(body.message || "Gagal memuat data pengguna");
+  }
+  const users = pickData(body) ?? [];
+  const usernames = uniqueClean(users.map((user) => user == null ? void 0 : user.username));
+  const divisions = uniqueClean(users.map((user) => user == null ? void 0 : user.division));
+  return { usernames, divisions };
+}
+const errorResponse = (error) => ({
+  success: false,
+  message: error instanceof Error ? error.message : String(error)
+});
+function registerPenggunaIpcHandlers() {
   electron.ipcMain.handle("db:login", async (_event, payload) => {
     try {
       const user = await loginUser(payload);
@@ -227,10 +274,7 @@ function registerDatabaseHandlers() {
       }
       return { success: true, user };
     } catch (error) {
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : String(error)
-      };
+      return errorResponse(error);
     }
   });
   electron.ipcMain.handle("db:userHints", async () => {
@@ -238,93 +282,69 @@ function registerDatabaseHandlers() {
       const hints = await fetchUserHints();
       return { success: true, hints };
     } catch (error) {
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : String(error)
-      };
-    }
-  });
-  electron.ipcMain.handle("db:findCompany", async (_event, company) => {
-    try {
-      const rows = await findCompanyByName(company);
-      return { success: true, rows };
-    } catch (error) {
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : String(error)
-      };
-    }
-  });
-  electron.ipcMain.handle("db:saveAddData", async (_event, payload) => {
-    try {
-      const result = await saveAddData(payload);
-      return { success: true, data: result };
-    } catch (error) {
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : String(error)
-      };
-    }
-  });
-  electron.ipcMain.handle("db:updateAddData", async (_event, id, payload) => {
-    try {
-      const result = await updateAddData(id, payload);
-      return { success: true, data: result };
-    } catch (error) {
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : String(error)
-      };
-    }
-  });
-  electron.ipcMain.handle("db:deleteAddData", async (_event, ids) => {
-    try {
-      const result = await deleteAddData(ids);
-      return { success: true, data: result };
-    } catch (error) {
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : String(error)
-      };
-    }
-  });
-  electron.ipcMain.handle("report:labelvisitor", async (_event, filter) => {
-    try {
-      const data = await reportLabelVisitor(filter);
-      return { success: true, data };
-    } catch (error) {
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : String(error)
-      };
-    }
-  });
-  electron.ipcMain.handle("report:labelgover", async (_event, filter) => {
-    try {
-      const data = await reportLabelGover(filter);
-      return { success: true, data };
-    } catch (error) {
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : String(error)
-      };
+      return errorResponse(error);
     }
   });
 }
-electron.app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
-    electron.app.quit();
-    win = null;
+function registerReportsIpcHandlers() {
+  electron.ipcMain.handle("report:businessvisitor", async () => ({
+    success: false,
+    message: "Not implemented yet."
+  }));
+}
+const __dirname$1 = path.dirname(node_url.fileURLToPath(typeof document === "undefined" ? require("url").pathToFileURL(__filename).href : _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("main/index.cjs", document.baseURI).href));
+function resolveAppRoot() {
+  const directParent = path.resolve(__dirname$1, "..");
+  if (path.basename(directParent) === "dist-electron") {
+    return path.resolve(directParent, "..");
   }
+  const electronParent = path.resolve(__dirname$1, "..", "..");
+  if (path.basename(electronParent) === "electron") {
+    return path.resolve(electronParent, "..");
+  }
+  return path.resolve(directParent);
+}
+const APP_ROOT = resolveAppRoot();
+process.env.APP_ROOT = APP_ROOT;
+const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
+const MAIN_DIST = path.join(APP_ROOT, "dist-electron");
+const RENDERER_DIST = path.join(APP_ROOT, "dist");
+process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(APP_ROOT, "public") : RENDERER_DIST;
+const preloadCandidates = [
+  path.join(MAIN_DIST, "preload/index.js"),
+  path.join(MAIN_DIST, "preload/index.cjs"),
+  path.join(MAIN_DIST, "preload.js"),
+  path.join(MAIN_DIST, "preload.mjs"),
+  path.join(__dirname$1, "..", "preload.mjs")
+];
+const preloadPath = preloadCandidates.find((candidate) => fs.existsSync(candidate)) ?? path.join(MAIN_DIST, "preload/index.js");
+const windowConfig = {
+  devServerUrl: VITE_DEV_SERVER_URL,
+  rendererDist: RENDERER_DIST,
+  preload: preloadPath,
+  publicDir: process.env.VITE_PUBLIC ?? path.join(APP_ROOT, "public")
+};
+let mainWindow = null;
+function createMainWindow() {
+  mainWindow = createWindow(windowConfig);
+  return mainWindow;
+}
+electron.app.whenReady().then(() => {
+  registerGabungIpcHandlers();
+  registerPenggunaIpcHandlers();
+  registerReportsIpcHandlers();
+  createMainWindow();
 });
 electron.app.on("activate", () => {
   if (electron.BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
+    createMainWindow();
   }
 });
-electron.app.whenReady().then(() => {
-  registerDatabaseHandlers();
-  createWindow();
+electron.app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
+    electron.app.quit();
+    mainWindow = null;
+  }
 });
 exports.MAIN_DIST = MAIN_DIST;
 exports.RENDERER_DIST = RENDERER_DIST;

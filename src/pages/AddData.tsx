@@ -13,6 +13,7 @@ import {
   tidakKirimFlagMap,
 } from '../constants/flagMaps'
 import { saveAddData, updateAddData, findCompanyRecords, type AddDataPayload } from '../services/addData'
+import { useAppStore } from '../store/appStore'
 
 type AddDataVariant = 'exhibitor' | 'visitor'
 
@@ -235,6 +236,7 @@ const helperText = (name: FieldName) => {
 }
 
 const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null }: AddDataProps) => {
+  const { user, setGlobalMessage } = useAppStore()
   const [form, setForm] = useState<AddDataForm>(defaultForm)
   const [selectedId, setSelectedId] = useState<string | number | null>(null)
   const [highlightIndex, setHighlightIndex] = useState(0)
@@ -648,7 +650,10 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null }: A
   }
 
   const buildPayload = (overrideDate?: string): AddDataPayload => {
-    const userName = (window.process as unknown as { env?: Record<string, string> })?.env?.USERNAME ?? 'app-user'
+    const userName =
+      user?.username ??
+      (window.process as unknown as { env?: Record<string, string> })?.env?.USERNAME ??
+      'app-user'
     const now = new Date()
     const tglJamEdit = now.toISOString().replace('T', ' ').slice(0, 19)
     const dateValue = overrideDate ?? form.lastUpdate
@@ -722,11 +727,13 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null }: A
       const errors = validate()
       if (errors.length > 0) {
         setFeedback({ type: 'error', message: errors[0] })
+        setGlobalMessage({ type: 'error', text: errors[0] })
         return
       }
 
       if (action === 'update' && !selectedId) {
         setFeedback({ type: 'error', message: 'Pilih data dari pencarian Company sebelum update.' })
+        setGlobalMessage({ type: 'error', text: 'Pilih data dari pencarian Company sebelum update.' })
         return
       }
 
@@ -742,14 +749,17 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null }: A
         const success = response?.success !== false
         if (success) {
           setFeedback({ type: 'success', message: `${actionLabel} berhasil disimpan.` })
+          setGlobalMessage({ type: 'success', text: `${actionLabel} berhasil disimpan.` })
           setForm(defaultForm())
           setSelectedId(null)
           setCompanyLookup((prev) => ({ ...prev, open: false, rows: [], query: '' }))
         } else {
           setFeedback({ type: 'error', message: response?.message ?? `${actionLabel} gagal.` })
+          setGlobalMessage({ type: 'error', text: response?.message ?? `${actionLabel} gagal.` })
         }
       } catch (error) {
         setFeedback({ type: 'error', message: error instanceof Error ? error.message : `${actionLabel} gagal.` })
+        setGlobalMessage({ type: 'error', text: error instanceof Error ? error.message : `${actionLabel} gagal.` })
       } finally {
         setSaving(false)
       }

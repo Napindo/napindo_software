@@ -1,33 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import AddDataPage from './AddData'
 import type { ExhibitorRow, ExhibitorSegment } from '../services/exhibitors'
-import { getExhibitorsBySegment } from '../services/exhibitors'
+import { fetchExhibitors } from '../services/exhibitors'
 import { deleteAddData } from '../services/addData'
-
-const createLogoDataUrl = (title: string, subtitles: string[], accent: string, secondary: string) => {
-  const startY = 140 - subtitles.length * 18
-  const subtitleText = subtitles
-    .map(
-      (line, index) =>
-        `<text x="50%" y="${startY + index * 28}" text-anchor="middle" font-size="22" font-weight="600" fill="${secondary}">${line}</text>`,
-    )
-    .join('')
-
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="560" height="260" viewBox="0 0 560 260">
-    <defs>
-      <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stop-color="${accent}" />
-        <stop offset="100%" stop-color="${secondary}" />
-      </linearGradient>
-    </defs>
-    <rect width="100%" height="100%" fill="white" />
-    <rect x="18" y="18" width="524" height="224" rx="28" fill="url(#bg)" opacity="0.08" />
-    <text x="50%" y="86" text-anchor="middle" font-size="28" font-weight="800" fill="${accent}" letter-spacing="0.5">${title}</text>
-    ${subtitleText}
-  </svg>`
-
-  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`
-}
+import { useAppStore } from '../store/appStore'
 
 const eventCards = [
   {
@@ -203,7 +179,7 @@ const ExhibitorTable = ({ segment, rows, loading, error, onReload, onSegmentChan
     return bySegment.filter((row) =>
       [row.company, row.pic, row.position, row.type, row.email, row.phone, row.city]
         .filter(Boolean)
-        .some((value) => value.toLowerCase().includes(lower)),
+        .some((value) => typeof value === 'string' && value.toLowerCase().includes(lower)),
     )
   }, [rows, search, segment])
 
@@ -292,9 +268,7 @@ const ExhibitorTable = ({ segment, rows, loading, error, onReload, onSegmentChan
           </div>
         </div>
         <div className="ml-auto flex items-center gap-2">
-          {error || tableError ? (
-            <span className="text-sm text-rose-600 font-semibold">{error ?? tableError}</span>
-          ) : null}
+          {error || tableError ? <span className="text-sm text-rose-600 font-semibold">{error ?? tableError}</span> : null}
           <button
             type="button"
             onClick={onReload}
@@ -493,6 +467,7 @@ const ExhibitorTable = ({ segment, rows, loading, error, onReload, onSegmentChan
 }
 
 const ExhibitorPage = () => {
+  const { setGlobalMessage } = useAppStore()
   const [mode, setMode] = useState<'cards' | 'table' | 'form'>('cards')
   const [segment, setSegment] = useState<ExhibitorSegment>('defence')
   const [rows, setRows] = useState<ExhibitorRow[]>([])
@@ -502,15 +477,17 @@ const ExhibitorPage = () => {
   const [editingId, setEditingId] = useState<string | number | null>(null)
   const [deleteIds, setDeleteIds] = useState<(string | number)[] | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [tableNonce, setTableNonce] = useState(0)
 
   const loadData = async (targetSegment: ExhibitorSegment) => {
     setLoading(true)
     setError(null)
     try {
-      const data = await getExhibitorsBySegment(targetSegment, 200)
+      const data = await fetchExhibitors(targetSegment, 200)
       setRows(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal memuat data exhibitor')
+      setGlobalMessage({ type: 'error', text: err instanceof Error ? err.message : 'Gagal memuat data exhibitor' })
       setRows([])
     } finally {
       setLoading(false)
@@ -554,6 +531,7 @@ const ExhibitorPage = () => {
   return (
     <>
       <ExhibitorTable
+        key={tableNonce}
         segment={segment}
         rows={rows}
         loading={loading}
@@ -576,9 +554,7 @@ const ExhibitorPage = () => {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200">
             <div className="px-6 py-4 border-b border-slate-200">
               <h3 className="text-lg font-bold text-slate-900">Hapus data</h3>
-              <p className="text-sm text-slate-600 mt-1">
-                Anda akan menghapus {deleteIds.length} data terpilih. Lanjutkan?
-              </p>
+              <p className="text-sm text-slate-600 mt-1">Anda akan menghapus {deleteIds.length} data terpilih. Lanjutkan?</p>
             </div>
             <div className="px-6 py-4 flex justify-end gap-3">
               <button
@@ -598,11 +574,16 @@ const ExhibitorPage = () => {
                     setDeleteError(null)
                     await deleteAddData(deleteIds)
                     setDeleteIds(null)
-                    setSelectedIds([])
                     loadData(segment)
+                    setTableNonce((n) => n + 1)
+                    setGlobalMessage({ type: 'success', text: 'Data berhasil dihapus' })
                   } catch (err) {
                     setDeleteError(err instanceof Error ? err.message : 'Gagal menghapus data')
                     setDeleteIds(null)
+                    setGlobalMessage({
+                      type: 'error',
+                      text: err instanceof Error ? err.message : 'Gagal menghapus data',
+                    })
                   }
                 }}
                 className="px-4 py-2 rounded-lg bg-rose-600 text-white font-semibold shadow-sm hover:bg-rose-700"

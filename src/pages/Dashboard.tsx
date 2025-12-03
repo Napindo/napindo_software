@@ -1,14 +1,17 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 
 import { Sidebar } from '../components/Sidebar'
 import type { PageKey } from '../types/navigation'
 import type { AuthenticatedUser } from './Login'
+import { useAppStore } from '../store/appStore'
 
 import Home from './Home'
 import ExhibitorPage from './Exhibitor'
 import VisitorPage from './Visitor'
 import AddUserPage from './AddUser'
 import ChangePasswordPage from './ChangePassword'
+import PrintLabelPerusahaan from './PrintLabelPerusahaan'
+import PrintLabelGovernment from './PrintLabelGovernment'
 
 type DashboardProps = {
   user?: AuthenticatedUser | null
@@ -28,7 +31,7 @@ const DashboardPage = ({ user, onLogout }: DashboardProps) => {
     return user.name?.trim() || user.username
   }, [user])
 
-  const [activePage, setActivePage] = useState<PageKey>('dashboard')
+  const { activePage } = useAppStore()
 
   const renderContent = () => {
     switch (activePage) {
@@ -41,9 +44,9 @@ const DashboardPage = ({ user, onLogout }: DashboardProps) => {
       case 'importData':
         return <PlaceholderPanel title="Import Data" />
       case 'printPerusahaan':
-        return <PlaceholderPanel title="Print Label - Perusahaan" />
+        return <PrintLabelPerusahaan />
       case 'printGovernment':
-        return <PlaceholderPanel title="Print Label - Government" />
+        return <PrintLabelGovernment />
       case 'reportPerusahaan':
         return <PlaceholderPanel title="Report - Perusahaan" />
       case 'reportGovernment':
@@ -66,7 +69,7 @@ const DashboardPage = ({ user, onLogout }: DashboardProps) => {
       <div className="gradient-blob gradient-blob--one" />
       <div className="gradient-blob gradient-blob--two" />
 
-      <Sidebar activePage={activePage} onNavigate={setActivePage} onLogout={onLogout} />
+      <Sidebar onLogout={onLogout} />
 
       <main className="flex-1 relative z-10 px-6 lg:px-8 py-6 lg:py-8">
         <div className="bg-white/90 backdrop-blur-xl border border-white shadow-card rounded-3xl p-6 lg:p-10 dashboard-shell min-h-[calc(100vh-140px)]">

@@ -1,6 +1,7 @@
 import type { ChangeEvent, FormEvent } from "react";
 import { useEffect, useState } from "react";
 import ComboField from "./ComboField";
+import { useAppStore, type AppUser } from "../store/appStore";
 
 type LoginStatus = "idle" | "loading" | "success" | "error";
 
@@ -15,11 +16,7 @@ type HintsCache = {
   divisions: string[];
 };
 
-export type AuthenticatedUser = {
-  username: string;
-  name?: string;
-  division?: string | null;
-};
+export type AuthenticatedUser = AppUser;
 
 const REMEMBER_KEY = "napindo-login";
 const HINTS_KEY = "napindo-hints";
@@ -93,6 +90,8 @@ type LoginPageProps = {
 };
 
 function LoginPage({ onSuccess }: LoginPageProps) {
+  const { setUser, setGlobalMessage } = useAppStore();
+
   const [form, setForm] = useState<LoginForm>({
     username: "",
     password: "",
@@ -230,6 +229,8 @@ function LoginPage({ onSuccess }: LoginPageProps) {
         setWelcomeName(user.name ?? user.username);
         setMessage("Login berhasil, sedang mengarahkan Anda...");
 
+        setUser(user);
+        setGlobalMessage({ type: "success", text: "Login berhasil" });
         onSuccess?.(user);
       } else {
         setStatus("error");

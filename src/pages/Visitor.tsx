@@ -2,9 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import AddDataPage from './AddData'
 import { InputDeck } from './Exhibitor'
 import type { VisitorRow, VisitorSegment } from '../services/visitors'
-import { getVisitorsBySegment } from '../services/visitors'
+import { fetchVisitors } from '../services/visitors'
 import { deleteAddData } from '../services/addData'
-import React from 'react'
+import { useAppStore } from '../store/appStore'
 
 const visitorDefenceGroup: VisitorSegment[] = ['defence', 'aerospace', 'marine']
 const visitorWaterGroup: VisitorSegment[] = ['water', 'waste', 'iismex', 'renergy', 'security', 'firex']
@@ -119,7 +119,7 @@ const VisitorTable = ({ segment, rows, loading, error, onReload, onSegmentChange
     return bySegment.filter((row) =>
       [row.company, row.pic, row.position, row.type, row.email, row.phone, row.city]
         .filter(Boolean)
-        .some((value) => value.toLowerCase().includes(lower)),
+        .some((value) => typeof value === 'string' && value.toLowerCase().includes(lower)),
     )
   }, [rows, search, segment])
 
@@ -166,7 +166,7 @@ const VisitorTable = ({ segment, rows, loading, error, onReload, onSegmentChange
     onAdd(row.raw, row.id)
   }
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (selectedIds.length === 0) {
       setTableError('Pilih data yang akan dihapus.')
       return
@@ -207,10 +207,8 @@ const VisitorTable = ({ segment, rows, loading, error, onReload, onSegmentChange
             ))}
           </div>
         </div>
-       <div className="ml-auto flex items-center gap-2">
-         {error || tableError ? (
-            <span className="text-sm text-rose-600 font-semibold">{error ?? tableError}</span>
-          ) : null}
+        <div className="ml-auto flex items-center gap-2">
+          {error || tableError ? <span className="text-sm text-rose-600 font-semibold">{error ?? tableError}</span> : null}
           <button
             type="button"
             onClick={onReload}
@@ -409,6 +407,7 @@ const VisitorTable = ({ segment, rows, loading, error, onReload, onSegmentChange
 }
 
 const VisitorPage = () => {
+  const { setGlobalMessage } = useAppStore()
   const [mode, setMode] = useState<'cards' | 'table' | 'form'>('cards')
   const [segment, setSegment] = useState<VisitorSegment>('defence')
   const [rows, setRows] = useState<VisitorRow[]>([])
@@ -418,15 +417,17 @@ const VisitorPage = () => {
   const [editingId, setEditingId] = useState<string | number | null>(null)
   const [deleteIds, setDeleteIds] = useState<(string | number)[] | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [tableNonce, setTableNonce] = useState(0)
 
   const loadData = async (targetSegment: VisitorSegment) => {
     setLoading(true)
     setError(null)
     try {
-      const data = await getVisitorsBySegment(targetSegment, 200)
+      const data = await fetchVisitors(targetSegment, 200)
       setRows(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal memuat data visitor')
+      setGlobalMessage({ type: 'error', text: err instanceof Error ? err.message : 'Gagal memuat data visitor' })
       setRows([])
     } finally {
       setLoading(false)
@@ -470,6 +471,7 @@ const VisitorPage = () => {
   return (
     <>
       <VisitorTable
+        key={tableNonce}
         segment={segment}
         rows={rows}
         loading={loading}
@@ -492,9 +494,7 @@ const VisitorPage = () => {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200">
             <div className="px-6 py-4 border-b border-slate-200">
               <h3 className="text-lg font-bold text-slate-900">Hapus data</h3>
-              <p className="text-sm text-slate-600 mt-1">
-                Anda akan menghapus {deleteIds.length} data terpilih. Lanjutkan?
-              </p>
+              <p className="text-sm text-slate-600 mt-1">Anda akan menghapus {deleteIds.length} data terpilih. Lanjutkan?</p>
             </div>
             <div className="px-6 py-4 flex justify-end gap-3">
               <button
@@ -514,11 +514,16 @@ const VisitorPage = () => {
                     setDeleteError(null)
                     await deleteAddData(deleteIds)
                     setDeleteIds(null)
-                    setSelectedIds([])
                     loadData(segment)
+                    setTableNonce((n) => n + 1)
+                    setGlobalMessage({ type: 'success', text: 'Data berhasil dihapus' })
                   } catch (err) {
                     setDeleteError(err instanceof Error ? err.message : 'Gagal menghapus data')
                     setDeleteIds(null)
+                    setGlobalMessage({
+                      type: 'error',
+                      text: err instanceof Error ? err.message : 'Gagal menghapus data',
+                    })
                   }
                 }}
                 className="px-4 py-2 rounded-lg bg-rose-600 text-white font-semibold shadow-sm hover:bg-rose-700"

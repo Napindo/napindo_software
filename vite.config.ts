@@ -9,29 +9,37 @@ export default defineConfig({
     react(),
     electron({
       main: {
-        // Shortcut of `build.lib.entry`.
-        entry: 'electron/main.ts',
-        // Force CJS output so Electron can use __dirname/require safely.
+        entry: 'electron/main/index.ts',
         vite: {
           build: {
             lib: {
-              entry: 'electron/main.ts',
+              entry: 'electron/main/index.ts',
               formats: ['cjs'],
-              fileName: 'main',
+              fileName: () => 'main/index',
             },
             rollupOptions: {
               output: {
-                entryFileNames: 'main.cjs',
+                entryFileNames: 'main/index.cjs',
                 format: 'cjs',
               },
             },
+            outDir: 'dist-electron',
           },
         },
       },
       preload: {
-        // Shortcut of `build.rollupOptions.input`.
-        // Preload scripts may contain Web assets, so use the `build.rollupOptions.input` instead `build.lib.entry`.
-        input: path.join(__dirname, 'electron/preload.ts'),
+        input: path.join(__dirname, 'electron/preload/index.ts'),
+        vite: {
+          build: {
+            rollupOptions: {
+              input: path.join(__dirname, 'electron/preload/index.ts'),
+              output: {
+                entryFileNames: 'preload/index.cjs',
+              },
+            },
+            outDir: 'dist-electron',
+          },
+        },
       },
       // Ployfill the Electron and Node.js API for Renderer process.
       // If you want use Node.js in Renderer process, the `nodeIntegration` needs to be enabled in the Main process.

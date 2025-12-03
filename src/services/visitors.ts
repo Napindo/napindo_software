@@ -13,6 +13,7 @@ export interface VisitorRow {
   phone: string
   email: string
   type: string
+  updatedAt?: string
   raw: Record<string, any>
 }
 

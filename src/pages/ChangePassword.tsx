@@ -1,5 +1,6 @@
 import { useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
 import type { AuthenticatedUser } from './Login'
+import { useAppStore } from '../store/appStore'
 
 type ChangePasswordForm = {
   username: string
@@ -18,9 +19,11 @@ const inputClass =
   'w-full rounded-xl border border-slate-200 bg-slate-100/80 px-4 py-3 text-slate-800 placeholder-slate-400 focus:border-rose-400 focus:ring-4 focus:ring-rose-100 transition'
 
 const ChangePasswordPage = ({ currentUser }: ChangePasswordProps) => {
+  const { user, setGlobalMessage } = useAppStore()
+  const resolvedUser = currentUser ?? user
   const [form, setForm] = useState<ChangePasswordForm>({
-    username: currentUser?.username ?? '',
-    division: currentUser?.division ?? '',
+    username: resolvedUser?.username ?? '',
+    division: resolvedUser?.division ?? '',
     currentPassword: '',
     newPassword: '',
     showPassword: false,
@@ -59,6 +62,7 @@ const ChangePasswordPage = ({ currentUser }: ChangePasswordProps) => {
     }
 
     setMessage('Password siap diubah. Integrasi API dapat ditambahkan di sini.')
+    setGlobalMessage({ type: 'success', text: 'Password siap diubah (placeholder, sambungkan ke API).' })
   }
 
   const passwordType = form.showPassword ? 'text' : 'password'

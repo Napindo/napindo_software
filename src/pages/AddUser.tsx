@@ -1,5 +1,6 @@
 import { useMemo, useState, type FormEvent, type ChangeEvent } from 'react'
 import type { AuthenticatedUser } from './Login'
+import { useAppStore } from '../store/appStore'
 
 type AddUserForm = {
   username: string
@@ -18,11 +19,12 @@ const inputClass =
   'w-full rounded-xl border border-slate-200 bg-slate-100/80 px-4 py-3 text-slate-800 placeholder-slate-400 focus:border-rose-400 focus:ring-4 focus:ring-rose-100 transition'
 
 const AddUserPage = (_props: AddUserPageProps) => {
+  const { user, setGlobalMessage } = useAppStore()
   const [form, setForm] = useState<AddUserForm>({
-    username: '',
+    username: user?.username ?? '',
     password: '',
     confirmPassword: '',
-    division: '',
+    division: user?.division ?? '',
     showPassword: false,
   })
   const [message, setMessage] = useState<string | null>(null)
@@ -59,6 +61,7 @@ const AddUserPage = (_props: AddUserPageProps) => {
     }
 
     setMessage('Data user siap disimpan. Integrasi API dapat ditambahkan di sini.')
+    setGlobalMessage({ type: 'success', text: 'User tersimpan (placeholder, sambungkan ke API).' })
   }
 
   const passwordType = form.showPassword ? 'text' : 'password'

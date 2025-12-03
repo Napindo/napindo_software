@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { PageKey } from '../types/navigation'
+import { useAppStore } from '../store/appStore'
 
 type IconName =
   | 'grid'
@@ -23,8 +24,6 @@ type NavParent = {
 type NavItem = NavLeaf | NavParent
 
 export type SidebarProps = {
-  activePage: PageKey
-  onNavigate: (page: PageKey) => void
   onLogout?: () => void
 }
 
@@ -175,7 +174,8 @@ const navStructure: { title?: string; items: NavItem[] }[] = [
   },
 ]
 
-export const Sidebar = ({ activePage, onNavigate, onLogout }: SidebarProps) => {
+export const Sidebar = ({ onLogout }: SidebarProps) => {
+  const { activePage, setActivePage } = useAppStore()
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
     'Input Data': true,
     'Print Label': true,
@@ -245,7 +245,7 @@ export const Sidebar = ({ activePage, onNavigate, onLogout }: SidebarProps) => {
                           <button
                             key={child.label}
                             type="button"
-                            onClick={() => onNavigate(child.page)}
+                            onClick={() => setActivePage(child.page)}
                             className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition ${
                               child.page === activePage
                                 ? 'bg-rose-500 text-white shadow-md ring-1 ring-rose-200'
@@ -267,7 +267,7 @@ export const Sidebar = ({ activePage, onNavigate, onLogout }: SidebarProps) => {
                 return (
                   <button
                     key={leaf.label}
-                    onClick={() => onNavigate(leaf.page)}
+                    onClick={() => setActivePage(leaf.page)}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded-xl transition relative overflow-hidden ${
                       leaf.page === activePage
                         ? 'bg-gradient-to-r from-rose-500 to-rose-600 text-white shadow-md active-nav'

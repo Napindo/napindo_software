@@ -317,6 +317,7 @@ export function PrintLabelTemplate({ title, onSubmit }: { title: string; onSubmi
   const [message, setMessage] = useState('Gunakan panel filter untuk menyesuaikan label. Ringkasan akan ditampilkan di sini.')
   const [error, setError] = useState<string | null>(null)
   const [count, setCount] = useState(0)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [options, setOptions] = useState<LabelOptions>({
     code1: [],
     code2: [],
@@ -380,13 +381,32 @@ export function PrintLabelTemplate({ title, onSubmit }: { title: string; onSubmi
     setChecks((prev) => ({ ...prev, [key]: !prev[key] }))
   }
 
-  const handleSubmit = async (action: 'preview' | 'export') => {
+  const handleSubmit = async (action: 'preview') => {
     setLoading(true)
     setError(null)
     try {
       const result = await onSubmit({ ...payload, action })
-      setCount(result.total ?? result.totalCount ?? result.count ?? 0)
-      setMessage('Laporan berhasil dimuat. Gunakan Export bila ingin menyimpan.')
+      const total = result.total ?? result.totalCount ?? result.count ?? 0
+      setCount(total)
+      setMessage(`Laporan berhasil dimuat. Total data: ${total}. Memuat preview PDF...`)
+
+      // Muat preview PDF (tidak memunculkan dialog simpan)
+      const pdfResult = await onSubmit({ ...payload, action: 'preview-pdf' })
+      const base64 = extractBase64(pdfResult?.data)
+      if (base64) {
+        const url = base64ToBlobUrl(base64, (pdfResult?.data as any)?.contentType || 'application/pdf')
+        setPreviewUrl((prev) => {
+          if (prev) URL.revokeObjectURL(prev)
+          return url
+        })
+        setMessage(`Preview siap. Total data: ${total}.`)
+      } else {
+        setPreviewUrl((prev) => {
+          if (prev) URL.revokeObjectURL(prev)
+          return null
+        })
+        setMessage(`Laporan berhasil dimuat (tanpa preview). Total data: ${total}.`)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal memuat laporan')
       setMessage('Gagal memuat laporan, coba lagi.')
@@ -404,6 +424,10 @@ export function PrintLabelTemplate({ title, onSubmit }: { title: string; onSubmi
     setChecks({})
     setCount(0)
     setError(null)
+    setPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev)
+      return null
+    })
     setMessage('Gunakan panel filter untuk menyesuaikan label. Ringkasan akan ditampilkan di sini.')
   }
 
@@ -430,6 +454,25 @@ export function PrintLabelTemplate({ title, onSubmit }: { title: string; onSubmi
     </section>
   )
 
+  const handleExport = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const result = await onSubmit({ ...payload, action: 'export-save' })
+      const canceled = (result?.data as any)?.canceled
+      if (canceled) {
+        setMessage('Export dibatalkan.')
+      } else {
+        setMessage('Export selesai. File disimpan sesuai pilihan Anda.')
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal mengekspor file')
+      setMessage('Export gagal, coba lagi.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="space-y-5">
       <div className="flex flex-col gap-2">
@@ -448,7 +491,7 @@ export function PrintLabelTemplate({ title, onSubmit }: { title: string; onSubmi
         </button>
         <button
           type="button"
-          onClick={() => handleSubmit('export')}
+          onClick={handleExport}
           disabled={loading}
           className="px-5 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60"
         >
@@ -548,30 +591,36 @@ export function PrintLabelTemplate({ title, onSubmit }: { title: string; onSubmi
         </div>
 
         <aside className="bg-white border border-slate-200 rounded-3xl shadow-sm p-5 flex flex-col gap-4">
-          <div className="border border-slate-200 rounded-2xl bg-slate-50">
-            <div className="px-4 py-3 border-b border-slate-200">
-              <h3 className="text-base font-semibold text-slate-700">Preview</h3>
-            </div>
-            <div className="p-4">
+        <div className="border border-slate-200 rounded-2xl bg-slate-50">
+          <div className="px-4 py-3 border-b border-slate-200">
+            <h3 className="text-base font-semibold text-slate-700">Preview</h3>
+          </div>
+          <div className="p-4">
               <p className="text-sm text-slate-600 leading-relaxed">{message}</p>
               {error ? <p className="text-sm font-semibold text-rose-600 mt-2">{error}</p> : null}
             </div>
           </div>
 
-          <div className="border border-slate-200 rounded-2xl bg-slate-50">
-            <div className="px-4 py-3 flex items-center gap-3 border-b border-slate-200">
-              <h4 className="text-sm font-semibold text-slate-700">Jumlah Data</h4>
-              <span className="text-2xl font-bold text-slate-900">{count}</span>
+        <div className="border border-slate-200 rounded-2xl bg-slate-50">
+          <div className="px-4 py-3 flex items-center gap-3 border-b border-slate-200">
+            <h4 className="text-sm font-semibold text-slate-700">Jumlah Data</h4>
+            <span className="text-2xl font-bold text-slate-900">{count}</span>
+          </div>
+          <div className="p-4">
+            <div className="h-[340px] rounded-xl border border-dashed border-slate-300 bg-white overflow-hidden">
+              {previewUrl ? (
+                <iframe title="Preview Label PDF" src={previewUrl} className="w-full h-full border-0" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm">
+                  Preview laporan akan tampil di sini.
+                </div>
+              )}
             </div>
-            <div className="p-4">
-              <div className="h-[340px] rounded-xl border border-dashed border-slate-300 bg-white flex items-center justify-center text-slate-400 text-sm">
-                Preview laporan akan tampil di sini.
-              </div>
-              <div className="flex justify-between text-[11px] text-slate-500 mt-2">
-                <span>Current Page No.:</span>
-                <span>Total Page No.:</span>
-                <span>Zoom Factor: 100%</span>
-              </div>
+            <div className="flex justify-between text-[11px] text-slate-500 mt-2">
+              <span>Current Page No.:</span>
+              <span>Total Page No.:</span>
+              <span>Zoom Factor: 100%</span>
+            </div>
             </div>
           </div>
         </aside>
@@ -583,3 +632,34 @@ export function PrintLabelTemplate({ title, onSubmit }: { title: string; onSubmi
 const PrintLabelPerusahaan = () => <PrintLabelTemplate title="Cetak Label Perusahaan" onSubmit={requestLabelPerusahaan} />
 
 export default PrintLabelPerusahaan
+
+function extractBase64(data: unknown): string | null {
+  const payload: any = data
+  if (!payload) return null
+  if (typeof payload.base64 === 'string') return payload.base64
+  if (typeof payload === 'string') return payload
+  if (payload?.buffer && typeof payload.buffer === 'string') return payload.buffer
+  if (payload?.buffer?.type === 'Buffer' && Array.isArray(payload.buffer.data)) {
+    const arr = new Uint8Array(payload.buffer.data)
+    return toBase64(arr)
+  }
+  if (payload?.data && typeof payload.data === 'string') return payload.data
+  return null
+}
+
+function toBase64(bytes: Uint8Array): string {
+  let binary = ''
+  bytes.forEach((b) => {
+    binary += String.fromCharCode(b)
+  })
+  return btoa(binary)
+}
+
+function base64ToBlobUrl(base64: string, contentType = 'application/pdf') {
+  const byteString = atob(base64)
+  const len = byteString.length
+  const bytes = new Uint8Array(len)
+  for (let i = 0; i < len; i += 1) bytes[i] = byteString.charCodeAt(i)
+  const blob = new Blob([bytes], { type: contentType })
+  return URL.createObjectURL(blob)
+}

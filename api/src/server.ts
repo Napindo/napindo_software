@@ -3,6 +3,7 @@ import express from "express"
 import cors from "cors"
 import gabungRoutes from "./routes/gabung.routes"
 import penggunaRoutes from "./routes/pengguna.routes"
+import reportRoutes from "./routes/report.routes"
 import prisma from "./prisma"
 
 const app = express()
@@ -30,6 +31,7 @@ router.get("/health", async (_req, res) => {
 
 router.use("/gabung", gabungRoutes)
 router.use("/pengguna", penggunaRoutes)
+router.use("/report", reportRoutes)
 
 app.use(API_PREFIX, router)
 

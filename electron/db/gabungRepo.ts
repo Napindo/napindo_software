@@ -84,8 +84,8 @@ export async function reportLabelVisitor(filter: unknown) {
     body: JSON.stringify(filter),
   })
 
-  if (!body.success) throw new Error(body.message)
-  return body.data
+  if (!isResponseOk(body)) throw new Error(body.message || 'Gagal memuat label visitor')
+  return pickData(body) ?? body.data
 }
 
 export async function reportLabelGover(filter: unknown) {
@@ -94,8 +94,8 @@ export async function reportLabelGover(filter: unknown) {
     body: JSON.stringify(filter),
   })
 
-  if (!body.success) throw new Error(body.message)
-  return body.data
+  if (!isResponseOk(body)) throw new Error(body.message || 'Gagal memuat label gover')
+  return pickData(body) ?? body.data
 }
 
 export async function reportBusinessVisitor(filter: unknown) {
@@ -104,6 +104,12 @@ export async function reportBusinessVisitor(filter: unknown) {
     body: JSON.stringify(filter),
   })
 
-  if (!body.success) throw new Error(body.message)
-  return body.data
+  if (!isResponseOk(body)) throw new Error(body.message || 'Gagal memuat business visitor')
+  return pickData(body) ?? body.data
+}
+
+export async function reportLabelOptions() {
+  const { body } = await apiFetch('/report/label/options')
+  if (!isResponseOk(body)) throw new Error(body.message || 'Gagal memuat opsi label')
+  return pickData(body) ?? body.data
 }

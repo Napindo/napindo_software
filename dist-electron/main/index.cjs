@@ -148,18 +148,31 @@ async function reportLabelVisitor(filter) {
     method: "POST",
     body: JSON.stringify(filter)
   });
-  if (!body.success) throw new Error(body.message);
-  return body.data;
+  if (!isResponseOk(body)) throw new Error(body.message || "Gagal memuat label visitor");
+  return pickData(body) ?? body.data;
 }
 async function reportLabelGover(filter) {
   const { body } = await apiFetch("/report/labelgover", {
     method: "POST",
     body: JSON.stringify(filter)
   });
-  if (!body.success) throw new Error(body.message);
-  return body.data;
+  if (!isResponseOk(body)) throw new Error(body.message || "Gagal memuat label gover");
+  return pickData(body) ?? body.data;
 }
-const errorResponse$1 = (error) => ({
+async function reportBusinessVisitor(filter) {
+  const { body } = await apiFetch("/report/businessvisitor", {
+    method: "POST",
+    body: JSON.stringify(filter)
+  });
+  if (!isResponseOk(body)) throw new Error(body.message || "Gagal memuat business visitor");
+  return pickData(body) ?? body.data;
+}
+async function reportLabelOptions() {
+  const { body } = await apiFetch("/report/label/options");
+  if (!isResponseOk(body)) throw new Error(body.message || "Gagal memuat opsi label");
+  return pickData(body) ?? body.data;
+}
+const errorResponse$2 = (error) => ({
   success: false,
   message: error instanceof Error ? error.message : String(error)
 });
@@ -169,7 +182,7 @@ function registerGabungIpcHandlers() {
       const result = await testConnection();
       return { ...result };
     } catch (error) {
-      return errorResponse$1(error);
+      return errorResponse$2(error);
     }
   });
   electron.ipcMain.handle("db:fetchTableData", async (_event, tableName) => {
@@ -177,7 +190,7 @@ function registerGabungIpcHandlers() {
       const rows = await fetchTopRows(tableName);
       return { success: true, rows };
     } catch (error) {
-      return errorResponse$1(error);
+      return errorResponse$2(error);
     }
   });
   electron.ipcMain.handle("db:fetchExhibitors", async (_event, segment, limit = 200, person = "exhibitor") => {
@@ -185,7 +198,7 @@ function registerGabungIpcHandlers() {
       const rows = await fetchExhibitorsBySegment(segment, limit, person);
       return { success: true, rows };
     } catch (error) {
-      return errorResponse$1(error);
+      return errorResponse$2(error);
     }
   });
   electron.ipcMain.handle("db:findCompany", async (_event, company) => {
@@ -193,7 +206,7 @@ function registerGabungIpcHandlers() {
       const rows = await findCompanyByName(company);
       return { success: true, rows };
     } catch (error) {
-      return errorResponse$1(error);
+      return errorResponse$2(error);
     }
   });
   electron.ipcMain.handle("db:saveAddData", async (_event, payload) => {
@@ -201,7 +214,7 @@ function registerGabungIpcHandlers() {
       const result = await saveAddData(payload);
       return { success: true, data: result };
     } catch (error) {
-      return errorResponse$1(error);
+      return errorResponse$2(error);
     }
   });
   electron.ipcMain.handle("db:updateAddData", async (_event, id, payload) => {
@@ -209,7 +222,7 @@ function registerGabungIpcHandlers() {
       const result = await updateAddData(id, payload);
       return { success: true, data: result };
     } catch (error) {
-      return errorResponse$1(error);
+      return errorResponse$2(error);
     }
   });
   electron.ipcMain.handle("db:deleteAddData", async (_event, ids) => {
@@ -217,7 +230,7 @@ function registerGabungIpcHandlers() {
       const result = await deleteAddData(ids);
       return { success: true, data: result };
     } catch (error) {
-      return errorResponse$1(error);
+      return errorResponse$2(error);
     }
   });
   electron.ipcMain.handle("report:labelvisitor", async (_event, filter) => {
@@ -225,7 +238,7 @@ function registerGabungIpcHandlers() {
       const data = await reportLabelVisitor(filter);
       return { success: true, data };
     } catch (error) {
-      return errorResponse$1(error);
+      return errorResponse$2(error);
     }
   });
   electron.ipcMain.handle("report:labelgover", async (_event, filter) => {
@@ -233,7 +246,15 @@ function registerGabungIpcHandlers() {
       const data = await reportLabelGover(filter);
       return { success: true, data };
     } catch (error) {
-      return errorResponse$1(error);
+      return errorResponse$2(error);
+    }
+  });
+  electron.ipcMain.handle("report:labeloptions", async () => {
+    try {
+      const data = await reportLabelOptions();
+      return { success: true, data };
+    } catch (error) {
+      return errorResponse$2(error);
     }
   });
 }
@@ -258,7 +279,7 @@ async function fetchUserHints() {
   const divisions = uniqueClean(users.map((user) => user == null ? void 0 : user.division));
   return { usernames, divisions };
 }
-const errorResponse = (error) => ({
+const errorResponse$1 = (error) => ({
   success: false,
   message: error instanceof Error ? error.message : String(error)
 });
@@ -274,7 +295,7 @@ function registerPenggunaIpcHandlers() {
       }
       return { success: true, user };
     } catch (error) {
-      return errorResponse(error);
+      return errorResponse$1(error);
     }
   });
   electron.ipcMain.handle("db:userHints", async () => {
@@ -282,15 +303,23 @@ function registerPenggunaIpcHandlers() {
       const hints = await fetchUserHints();
       return { success: true, hints };
     } catch (error) {
-      return errorResponse(error);
+      return errorResponse$1(error);
     }
   });
 }
+const errorResponse = (error) => ({
+  success: false,
+  message: error instanceof Error ? error.message : String(error)
+});
 function registerReportsIpcHandlers() {
-  electron.ipcMain.handle("report:businessvisitor", async () => ({
-    success: false,
-    message: "Not implemented yet."
-  }));
+  electron.ipcMain.handle("report:businessvisitor", async (_event, filter) => {
+    try {
+      const data = await reportBusinessVisitor(filter);
+      return { success: true, data };
+    } catch (error) {
+      return errorResponse(error);
+    }
+  });
 }
 const __dirname$1 = path.dirname(node_url.fileURLToPath(typeof document === "undefined" ? require("url").pathToFileURL(__filename).href : _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("main/index.cjs", document.baseURI).href));
 function resolveAppRoot() {

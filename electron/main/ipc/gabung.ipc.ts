@@ -8,6 +8,7 @@ import {
   updateAddData,
   reportLabelGover,
   reportLabelVisitor,
+  reportLabelOptions,
 } from '../../db/gabungRepo.js'
 import { testConnection } from '../../db/index.js'
 
@@ -92,6 +93,15 @@ export function registerGabungIpcHandlers() {
   ipcMain.handle('report:labelgover', async (_event, filter) => {
     try {
       const data = await reportLabelGover(filter)
+      return { success: true, data }
+    } catch (error) {
+      return errorResponse(error)
+    }
+  })
+
+  ipcMain.handle('report:labeloptions', async () => {
+    try {
+      const data = await reportLabelOptions()
       return { success: true, data }
     } catch (error) {
       return errorResponse(error)

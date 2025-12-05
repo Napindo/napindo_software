@@ -49,3 +49,22 @@ export async function requestLabelPerusahaan(filter: unknown): Promise<PrintLabe
 export async function requestLabelGovernment(filter: unknown): Promise<PrintLabelResult> {
   return invokeReport('report:labelgover', filter)
 }
+
+export async function requestLabelOptions(): Promise<any> {
+  const bridge = getBridge()
+  if (bridge && typeof bridge.reportLabelOptions === 'function') {
+    const resp = await bridge.reportLabelOptions()
+    return resp?.data ?? resp
+  }
+
+  const ipc = getIpc()
+  if (ipc?.invoke) {
+    const response = await ipc.invoke('report:labeloptions')
+    if (response?.success === false) {
+      throw new Error(response?.message ?? 'Gagal memuat opsi label')
+    }
+    return response?.data ?? response
+  }
+
+  throw new Error('Bridge Electron untuk opsi label tidak tersedia')
+}

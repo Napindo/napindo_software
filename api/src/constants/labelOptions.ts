@@ -1,0 +1,123 @@
+import path from "node:path"
+
+// Constants for label filter options (backend-side copy to avoid importing from renderer root)
+export const code2Options = ["OK", "ERROR", "RESIGN"]
+
+export const businessOptions = [
+  "Additives",
+  "Aerospace",
+  "Aircraft",
+  "Ammunition",
+  "Aquaculture",
+  "Armor",
+  "Army",
+  "Artillery",
+  "Audio",
+  "Automation",
+  "Aviation",
+  "Biotech",
+  "Breeding",
+  "Cages",
+  "Cattle",
+  "Chicken, Broiler",
+  "Coldchain",
+  "Communication",
+  "Cybersecurity",
+  "Dairy",
+  "Defence",
+  "Desalination",
+  "Digital",
+  "Drainage",
+  "Drone",
+  "Electronics",
+  "Engineering",
+  "Environmental",
+  "Equipment",
+  "Exhibition",
+  "Farm",
+  "Feed",
+  "Filtration",
+  "Firearms",
+  "Fisheries",
+  "Furniture",
+  "Genetics",
+  "Goat",
+  "Health",
+  "Helicopter",
+  "Horticulture",
+  "Husbandry",
+  "Hydrology",
+  "Infantry",
+  "Infrastructure",
+  "Innovation",
+  "IoT",
+  "Irrigation",
+  "Livestock",
+  "Logistics",
+  "Mabel",
+  "Machinery",
+  "Maintenance",
+  "Maritime",
+  "Medicine",
+  "Membrane",
+  "Metering",
+  "Missiles",
+  "Monitoring",
+  "Naval",
+  "Nutrition",
+  "Packaging",
+  "Pharmaceutical",
+  "Pipe",
+  "Plantation",
+  "Poultry",
+  "Processing",
+  "Pump",
+  "Radar",
+  "Recycling",
+  "Robotics",
+  "Sanitation",
+  "Satellite",
+  "SDTI",
+  "Seaweed",
+  "Security",
+  "Seed",
+  "Sewage",
+  "Sheep",
+  "Simulation",
+  "Slaughter",
+  "Smart",
+  "Sonar",
+  "Storage",
+  "Surveillance",
+  "Sustainability",
+  "Tank",
+  "Technology",
+  "Thermal",
+  "Training",
+  "Treatment",
+  "Unmanned",
+  "Vaccine",
+  "Valve",
+  "Vehicle",
+  "Ventilation",
+  "Veterinary",
+  "Waste",
+  "Water",
+  "Weapons",
+]
+
+// Province list: try to load the same catalog used in renderer (src/constants/provinces.ts -> provinceOptions)
+export const provinceOptions: string[] = (() => {
+  try {
+    // Resolve from project root (process.cwd() is root when running API)
+    const modPath = path.resolve(process.cwd(), "src", "constants", "provinces")
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const mod = require(modPath)
+    if (Array.isArray(mod.provinceOptions)) {
+      return mod.provinceOptions as string[]
+    }
+  } catch {
+    // ignore, fallback below
+  }
+  return []
+})()

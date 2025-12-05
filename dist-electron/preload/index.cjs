@@ -11,5 +11,6 @@ electron.contextBridge.exposeInMainWorld("database", {
   updateAddData: (id, payload) => electron.ipcRenderer.invoke("db:updateAddData", id, payload),
   deleteAddData: (ids) => electron.ipcRenderer.invoke("db:deleteAddData", ids),
   reportLabelVisitor: (filter) => electron.ipcRenderer.invoke("report:labelvisitor", filter),
-  reportLabelGover: (filter) => electron.ipcRenderer.invoke("report:labelgover", filter)
+  reportLabelGover: (filter) => electron.ipcRenderer.invoke("report:labelgover", filter),
+  reportLabelOptions: () => electron.ipcRenderer.invoke("report:labeloptions")
 });

@@ -4,6 +4,7 @@ const electron = require("electron");
 const fs = require("node:fs");
 const path = require("node:path");
 const node_url = require("node:url");
+const fs$1 = require("node:fs/promises");
 var _documentCurrentScript = typeof document !== "undefined" ? document.currentScript : null;
 function createWindow(options) {
   const window = new electron.BrowserWindow({
@@ -172,6 +173,68 @@ async function reportLabelOptions() {
   if (!isResponseOk(body)) throw new Error(body.message || "Gagal memuat opsi label");
   return pickData(body) ?? body.data;
 }
+async function renderLabelVisitorPdf(filter) {
+  const url = `${API_BASE_URL.replace(/\/$/, "")}${API_PREFIX}/report/labelvisitor/print`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(filter)
+  });
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || "Gagal mencetak label perusahaan");
+  }
+  const arrayBuffer = await response.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  return {
+    contentType: response.headers.get("content-type") || "application/pdf",
+    filename: "print-label-perusahaan.pdf",
+    buffer,
+    base64: buffer.toString("base64")
+  };
+}
+async function renderLabelVisitorExcel(filter) {
+  const url = `${API_BASE_URL.replace(/\/$/, "")}${API_PREFIX}/report/labelvisitor/export/excel`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(filter || {})
+  });
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || "Gagal mengunduh Excel");
+  }
+  const arrayBuffer = await response.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  return {
+    contentType: response.headers.get("content-type") || "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    filename: "print-label-perusahaan.xlsx",
+    buffer,
+    base64: buffer.toString("base64")
+  };
+}
+async function renderLabelVisitorWord(filter) {
+  const url = `${API_BASE_URL.replace(/\/$/, "")}${API_PREFIX}/report/labelvisitor/export/word`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(filter || {})
+  });
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || "Gagal mengunduh Word");
+  }
+  const arrayBuffer = await response.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  return {
+    contentType: response.headers.get("content-type") || "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    filename: "print-label-perusahaan.docx",
+    buffer,
+    base64: buffer.toString("base64")
+  };
+}
 const errorResponse$2 = (error) => ({
   success: false,
   message: error instanceof Error ? error.message : String(error)
@@ -316,6 +379,58 @@ function registerReportsIpcHandlers() {
     try {
       const data = await reportBusinessVisitor(filter);
       return { success: true, data };
+    } catch (error) {
+      return errorResponse(error);
+    }
+  });
+  electron.ipcMain.handle("report:labelvisitor:pdf", async (_event, filter) => {
+    try {
+      const data = await renderLabelVisitorPdf(filter);
+      return { success: true, data };
+    } catch (error) {
+      return errorResponse(error);
+    }
+  });
+  electron.ipcMain.handle("report:labelvisitor:excel", async (_event, filter) => {
+    try {
+      const data = await renderLabelVisitorExcel(filter);
+      return { success: true, data };
+    } catch (error) {
+      return errorResponse(error);
+    }
+  });
+  electron.ipcMain.handle("report:labelvisitor:word", async (_event, filter) => {
+    try {
+      const data = await renderLabelVisitorWord(filter);
+      return { success: true, data };
+    } catch (error) {
+      return errorResponse(error);
+    }
+  });
+  electron.ipcMain.handle("report:labelvisitor:export-save", async (_event, filter) => {
+    try {
+      const { canceled, filePath } = await electron.dialog.showSaveDialog({
+        title: "Simpan Label Perusahaan",
+        defaultPath: "print-label-perusahaan.pdf",
+        filters: [
+          { name: "PDF", extensions: ["pdf"] },
+          { name: "Excel", extensions: ["xlsx"] },
+          { name: "Word", extensions: ["docx"] }
+        ],
+        properties: ["createDirectory", "showOverwriteConfirmation"]
+      });
+      if (canceled || !filePath) return { success: false, canceled: true };
+      const ext = path.extname(filePath).toLowerCase();
+      let payload;
+      if (ext === ".xlsx") {
+        payload = await renderLabelVisitorExcel(filter);
+      } else if (ext === ".docx") {
+        payload = await renderLabelVisitorWord(filter);
+      } else {
+        payload = await renderLabelVisitorPdf(filter);
+      }
+      await fs$1.writeFile(filePath, payload.buffer);
+      return { success: true, path: filePath, filename: path.basename(filePath), contentType: payload.contentType };
     } catch (error) {
       return errorResponse(error);
     }

@@ -2,6 +2,8 @@ import {
   apiFetch,
   isResponseOk,
   pickData,
+  API_BASE_URL,
+  API_PREFIX,
   type Gabung,
   type PersonType,
 } from './index.js'
@@ -112,4 +114,95 @@ export async function reportLabelOptions() {
   const { body } = await apiFetch('/report/label/options')
   if (!isResponseOk(body)) throw new Error(body.message || 'Gagal memuat opsi label')
   return pickData(body) ?? body.data
+}
+
+export async function renderLabelVisitorPdf(filter: unknown) {
+  const url = `${API_BASE_URL.replace(/\/$/, '')}${API_PREFIX}/report/labelvisitor/print`
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(filter),
+  })
+
+  if (!response.ok) {
+    const message = await response.text()
+    throw new Error(message || 'Gagal mencetak label perusahaan')
+  }
+
+  const arrayBuffer = await response.arrayBuffer()
+  const buffer = Buffer.from(arrayBuffer)
+  return {
+    contentType: response.headers.get('content-type') || 'application/pdf',
+    filename: 'print-label-perusahaan.pdf',
+    buffer,
+    base64: buffer.toString('base64'),
+  }
+}
+
+async function renderBinary(url: string, filename: string) {
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({}),
+  })
+
+  if (!response.ok) {
+    const message = await response.text()
+    throw new Error(message || `Gagal mengunduh ${filename}`)
+  }
+
+  const arrayBuffer = await response.arrayBuffer()
+  const buffer = Buffer.from(arrayBuffer)
+  return {
+    contentType: response.headers.get('content-type') || 'application/octet-stream',
+    filename,
+    buffer,
+    base64: buffer.toString('base64'),
+  }
+}
+
+export async function renderLabelVisitorExcel(filter: unknown) {
+  const url = `${API_BASE_URL.replace(/\/$/, '')}${API_PREFIX}/report/labelvisitor/export/excel`
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(filter || {}),
+  })
+  if (!response.ok) {
+    const message = await response.text()
+    throw new Error(message || 'Gagal mengunduh Excel')
+  }
+  const arrayBuffer = await response.arrayBuffer()
+  const buffer = Buffer.from(arrayBuffer)
+  return {
+    contentType: response.headers.get('content-type') || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    filename: 'print-label-perusahaan.xlsx',
+    buffer,
+    base64: buffer.toString('base64'),
+  }
+}
+
+export async function renderLabelVisitorWord(filter: unknown) {
+  const url = `${API_BASE_URL.replace(/\/$/, '')}${API_PREFIX}/report/labelvisitor/export/word`
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(filter || {}),
+  })
+  if (!response.ok) {
+    const message = await response.text()
+    throw new Error(message || 'Gagal mengunduh Word')
+  }
+  const arrayBuffer = await response.arrayBuffer()
+  const buffer = Buffer.from(arrayBuffer)
+  return {
+    contentType: response.headers.get('content-type') || 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    filename: 'print-label-perusahaan.docx',
+    buffer,
+    base64: buffer.toString('base64'),
+  }
 }

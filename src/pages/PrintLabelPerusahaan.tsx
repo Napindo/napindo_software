@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { PrintLabelResult } from '../services/printLabel'
-import { requestLabelPerusahaan } from '../services/printLabel'
+import { requestLabelOptions, requestLabelPerusahaan } from '../services/printLabel'
 
 // TODO: integrate additional report/label endpoints here when backend is ready.
 
@@ -8,6 +8,20 @@ type SelectFilter = { key: string; activeKey: string; label: string; placeholder
 type TextFilter = { key: string; activeKey: string; label: string; placeholder?: string }
 type CheckboxItem = { key: string; label: string }
 type CheckboxGroup = { title: string; items: CheckboxItem[] }
+
+type LabelOptions = {
+  code1: string[]
+  code2: string[]
+  code3: string[]
+  source: string[]
+  nonSource: string[]
+  forum: string[]
+  exhthn: string[]
+  province: string[]
+  updatedBy: string[]
+  business: string[]
+  nonBusiness: string[]
+}
 
 const selectFilters: SelectFilter[] = [
   { key: 'cmbcode1', activeKey: 'ckcode1', label: 'Code 1' },
@@ -21,9 +35,22 @@ const selectFilters: SelectFilter[] = [
   { key: 'cmbupdate', activeKey: 'ckupdate', label: 'Updated By' },
 ]
 
+// Memetakan nama kontrol UI ke key opsi hasil API
+const optionKeyMap: Record<string, keyof LabelOptions> = {
+  cmbcode1: 'code1',
+  cmbcode2: 'code2',
+  cmbcode3: 'code3',
+  cmbsource: 'source',
+  cmbnonsource: 'nonSource',
+  cmbforum: 'forum',
+  cmbexhthn: 'exhthn',
+  cmbprov: 'province',
+  cmbupdate: 'updatedBy',
+}
+
 const textFilters: TextFilter[] = [
-  { key: 'tbusiness', activeKey: 'cbusiness', label: 'Business', placeholder: 'Masukkan kata kunci business' },
-  { key: 'tnonbusiness', activeKey: 'cnonbusiness', label: 'Non Business', placeholder: 'Masukkan kata kunci non business' },
+  { key: 'tbusiness', activeKey: 'cbusiness', label: 'Business', placeholder: 'Pilih business' },
+  { key: 'tnonbusiness', activeKey: 'cnonbusiness', label: 'Non Business', placeholder: 'Pilih non business' },
 ]
 
 const visitorGroup: CheckboxGroup = {
@@ -290,6 +317,38 @@ export function PrintLabelTemplate({ title, onSubmit }: { title: string; onSubmi
   const [message, setMessage] = useState('Gunakan panel filter untuk menyesuaikan label. Ringkasan akan ditampilkan di sini.')
   const [error, setError] = useState<string | null>(null)
   const [count, setCount] = useState(0)
+  const [options, setOptions] = useState<LabelOptions>({
+    code1: [],
+    code2: [],
+    code3: [],
+    source: [],
+    nonSource: [],
+    forum: [],
+    exhthn: [],
+    province: [],
+    updatedBy: [],
+    business: [],
+    nonBusiness: [],
+  })
+
+  useEffect(() => {
+    let cancelled = false
+    requestLabelOptions()
+      .then((data) => {
+        if (cancelled || !data) return
+        setOptions((prev) => ({
+          ...prev,
+          ...data,
+          nonSource: data?.nonSource ?? data?.source ?? prev.nonSource,
+        }))
+      })
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : 'Gagal memuat opsi filter')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const payload = useMemo(() => {
     const base: Record<string, unknown> = {
@@ -425,19 +484,27 @@ export function PrintLabelTemplate({ title, onSubmit }: { title: string; onSubmi
 
               {selectFilters.map((filter) => (
                 <div key={filter.key} className="grid grid-cols-1 md:grid-cols-[180px_1fr_auto] items-center gap-3">
-                  <label className="text-sm font-semibold text-slate-700">{filter.label}</label>
-                  <input
-                    type="text"
-                    value={selectValues[filter.key] ?? ''}
-                    onChange={(e) => setSelectValues((prev) => ({ ...prev, [filter.key]: e.target.value }))}
-                    placeholder={filter.placeholder ?? 'Pilih / ketik nilai'}
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-200"
-                  />
-                  <label className="inline-flex items-center gap-2 text-sm text-slate-700 justify-end">
-                    <input
-                      type="checkbox"
-                      checked={Boolean(selectActive[filter.activeKey])}
-                      onChange={() => setSelectActive((prev) => ({ ...prev, [filter.activeKey]: !prev[filter.activeKey] }))}
+              <label className="text-sm font-semibold text-slate-700">{filter.label}</label>
+              <select
+                value={selectValues[filter.key] ?? ''}
+                onChange={(e) => setSelectValues((prev) => ({ ...prev, [filter.key]: e.target.value }))}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-200 bg-white text-slate-700"
+                style={{ color: selectValues[filter.key] ? undefined : '#9ca3af' }}
+              >
+                <option value="" className="text-slate-400">
+                  Pilih {filter.label}
+                </option>
+                {(options[optionKeyMap[filter.key]] ?? []).map((opt) => (
+                  <option key={opt} value={opt} className="text-slate-700">
+                    {opt}
+                  </option>
+                ))}
+              </select>
+              <label className="inline-flex items-center gap-2 text-sm text-slate-700 justify-end">
+                <input
+                  type="checkbox"
+                  checked={Boolean(selectActive[filter.activeKey])}
+                  onChange={() => setSelectActive((prev) => ({ ...prev, [filter.activeKey]: !prev[filter.activeKey] }))}
                       className="w-4 h-4 accent-rose-500"
                     />
                     Aktif
@@ -447,19 +514,27 @@ export function PrintLabelTemplate({ title, onSubmit }: { title: string; onSubmi
 
               {textFilters.map((filter) => (
                 <div key={filter.key} className="grid grid-cols-1 md:grid-cols-[180px_1fr_auto] items-center gap-3">
-                  <label className="text-sm font-semibold text-slate-700">{filter.label}</label>
-                  <input
-                    type="text"
-                    value={textValues[filter.key] ?? ''}
-                    onChange={(e) => setTextValues((prev) => ({ ...prev, [filter.key]: e.target.value }))}
-                    placeholder={filter.placeholder ?? 'Ketik nilai'}
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-200"
-                  />
-                  <label className="inline-flex items-center gap-2 text-sm text-slate-700 justify-end">
-                    <input
-                      type="checkbox"
-                      checked={Boolean(textActive[filter.activeKey])}
-                      onChange={() => setTextActive((prev) => ({ ...prev, [filter.activeKey]: !prev[filter.activeKey] }))}
+              <label className="text-sm font-semibold text-slate-700">{filter.label}</label>
+              <select
+                value={textValues[filter.key] ?? ''}
+                onChange={(e) => setTextValues((prev) => ({ ...prev, [filter.key]: e.target.value }))}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-200 bg-white text-slate-700"
+                style={{ color: textValues[filter.key] ? undefined : '#9ca3af' }}
+              >
+                <option value="" className="text-slate-400">
+                  Pilih {filter.label}
+                </option>
+                {(filter.key === 'tbusiness' ? options.business : options.nonBusiness).map((opt) => (
+                  <option key={opt} value={opt} className="text-slate-700">
+                    {opt}
+                  </option>
+                ))}
+              </select>
+              <label className="inline-flex items-center gap-2 text-sm text-slate-700 justify-end">
+                <input
+                  type="checkbox"
+                  checked={Boolean(textActive[filter.activeKey])}
+                  onChange={() => setTextActive((prev) => ({ ...prev, [filter.activeKey]: !prev[filter.activeKey] }))}
                       className="w-4 h-4 accent-rose-500"
                     />
                     Aktif

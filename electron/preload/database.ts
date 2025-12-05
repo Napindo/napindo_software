@@ -27,4 +27,5 @@ contextBridge.exposeInMainWorld('database', {
 
   reportLabelVisitor: (filter: unknown) => ipcRenderer.invoke('report:labelvisitor', filter),
   reportLabelGover: (filter: unknown) => ipcRenderer.invoke('report:labelgover', filter),
+  reportLabelOptions: () => ipcRenderer.invoke('report:labeloptions'),
 })

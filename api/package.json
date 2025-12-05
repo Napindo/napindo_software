@@ -14,8 +14,12 @@
   "dependencies": {
     "@prisma/client": "^6.19.0",
     "cors": "^2.8.5",
+    "docx": "^8.5.0",
     "dotenv": "^16.4.5",
-    "express": "^4.19.2"
+    "exceljs": "^4.4.0",
+    "express": "^4.19.2",
+    "jsreport": "^4.10.1",
+    "node-fetch": "^2.7.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",

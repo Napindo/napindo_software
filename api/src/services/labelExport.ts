@@ -1,6 +1,7 @@
 import ExcelJS from "exceljs"
 import {
   AlignmentType,
+  BorderStyle,
   Document,
   HeightRule,
   Packer,
@@ -9,11 +10,35 @@ import {
   TableCell,
   TableRow,
   TextRun,
+  VerticalAlign,
   WidthType,
 } from "docx"
 import type { LabelRow } from "./labelRender"
 
-const mmToTwip = (mm: number) => Math.round(mm * 56.7) // 1 mm ≈ 56.7 twips
+// Convert millimeters to twips (1 mm is roughly 56.7 twips)
+const mmToTwip = (mm: number) => Math.round(mm * 56.7)
+const RUN_FONT = "Arial Narrow"
+const LABEL_WIDTH_MM = 75
+const LABEL_HEIGHT_MM = 38
+const COLUMN_GAP_MM = 2 // 0.2 cm
+const ROW_GAP_MM = 2 // 0.2 cm
+const BADGE_ROW_HEIGHT = mmToTwip(6)
+
+const BORDER_NONE = {
+  top: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+  bottom: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+  left: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+  right: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+  insideHorizontal: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+  insideVertical: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+}
+
+const LABEL_INNER_MARGINS = {
+  top: mmToTwip(1),
+  bottom: mmToTwip(1),
+  left: mmToTwip(1),
+  right: mmToTwip(1),
+}
 
 export async function buildLabelExcel(rows: LabelRow[]) {
   const wb = new ExcelJS.Workbook()
@@ -40,7 +65,6 @@ export async function buildLabelExcel(rows: LabelRow[]) {
     })
   })
 
-  // Auto header styling
   sheet.getRow(1).font = { bold: true }
 
   const buffer = await wb.xlsx.writeBuffer()
@@ -48,101 +72,167 @@ export async function buildLabelExcel(rows: LabelRow[]) {
 }
 
 export async function buildLabelDocx(rows: LabelRow[], title: string) {
-  const labelWidthMm = 75
-  const labelHeightMm = 38
-  const gapColMm = 22
+  const labelWidthTwip = mmToTwip(LABEL_WIDTH_MM)
+  const labelHeightTwip = mmToTwip(LABEL_HEIGHT_MM)
+  const gapColTwip = mmToTwip(COLUMN_GAP_MM)
+  const gapRowTwip = mmToTwip(ROW_GAP_MM)
+  const tableWidthTwip = labelWidthTwip * 2 + gapColTwip
 
-  const labelWidthTwip = mmToTwip(labelWidthMm)
-  const tableWidthTwip = labelWidthTwip * 2 + mmToTwip(gapColMm)
+  // Margins: Top 0.4 cm, Right 0.15 cm, Bottom 3 cm, Left 1.32 cm
+  const pageMarginTop = mmToTwip(4)
+  const pageMarginRight = mmToTwip(1.5)
+  const pageMarginBottom = mmToTwip(30)
+  const pageMarginLeft = mmToTwip(13.2)
 
-  const pageMarginTop = mmToTwip(10)
-  const pageMarginRight = mmToTwip(14)
-  const pageMarginBottom = mmToTwip(16)
-  const pageMarginLeft = mmToTwip(16)
-
-  // Group rows into pairs for table rows
-  const paired: Array<[LabelRow | undefined, LabelRow | undefined]> = []
+  const grouped: Array<[LabelRow | undefined, LabelRow | undefined]> = []
   for (let i = 0; i < rows.length; i += 2) {
-    paired.push([rows[i], rows[i + 1]])
+    grouped.push([rows[i], rows[i + 1]])
   }
 
-  const makeLabelParas = (row: LabelRow | undefined, idx: number) => {
-    if (!row) return [new Paragraph("")]
-    const paras: Paragraph[] = []
+  const makeLabelContent = (row: LabelRow | undefined, idx: number) => {
+    if (!row) return { body: [new Paragraph("")], badge: new Paragraph("") }
+    const body: Paragraph[] = []
 
-    const nameText = `${row.sex ? `${row.sex} ` : ""}${row.contactName ?? ""}`
-    paras.push(
+    body.push(
       new Paragraph({
-        children: [new TextRun({ text: nameText, bold: true, size: 17 })], // ~8.5pt
-        spacing: { after: 40 },
+        children: [new TextRun({ text: "Kepada Yth.", size: 17, bold: true, font: RUN_FONT })],
+        spacing: { after: 10 },
+      }),
+    )
+
+    const nameText = `${row.sex ? `${row.sex} ` : ""}${row.contactName ?? ""}`.trim()
+    body.push(
+      new Paragraph({
+        children: [new TextRun({ text: nameText, size: 17, bold: true, font: RUN_FONT })], // 8.5pt
+        spacing: { after: 18 },
       }),
     )
 
     if (row.position) {
-      paras.push(
+      body.push(
         new Paragraph({
-          children: [new TextRun({ text: row.position, bold: true, size: 16 })], // ~8pt
-          spacing: { after: 30 },
+          children: [new TextRun({ text: row.position, size: 17, bold: true, italics: true, font: RUN_FONT })],
+          spacing: { after: 18 },
         }),
       )
     }
 
     if (row.companyName) {
-      paras.push(new Paragraph({ children: [new TextRun({ text: row.companyName, size: 15 })], spacing: { after: 20 } }))
+      body.push(
+        new Paragraph({
+          children: [new TextRun({ text: row.companyName, size: 15, font: RUN_FONT })], // 7.5pt
+          spacing: { after: 8 },
+        }),
+      )
     }
+
     if (row.addressLine1) {
-      paras.push(new Paragraph({ children: [new TextRun({ text: row.addressLine1, size: 15 })], spacing: { after: 20 } }))
+      body.push(
+        new Paragraph({
+          children: [new TextRun({ text: row.addressLine1, size: 17, font: RUN_FONT })],
+          spacing: { after: 8 },
+        }),
+      )
     }
     if (row.addressLine2) {
-      paras.push(new Paragraph({ children: [new TextRun({ text: row.addressLine2, size: 15 })], spacing: { after: 20 } }))
+      body.push(
+        new Paragraph({
+          children: [new TextRun({ text: row.addressLine2, size: 17, font: RUN_FONT })],
+          spacing: { after: 8 },
+        }),
+      )
     }
 
     const cityZip = `${row.city ?? ""}${row.postcode ? ` ${row.postcode}` : ""}`.trim()
     if (cityZip) {
-      paras.push(new Paragraph({ children: [new TextRun({ text: cityZip, size: 15 })], spacing: { after: 20 } }))
-    }
-    if (row.province) {
-      paras.push(new Paragraph({ children: [new TextRun({ text: row.province, size: 15 })], spacing: { after: 20 } }))
-    }
-    if (row.country) {
-      paras.push(new Paragraph({ children: [new TextRun({ text: row.country, size: 15 })], spacing: { after: 20 } }))
+      body.push(
+        new Paragraph({
+          children: [new TextRun({ text: cityZip, size: 17, font: RUN_FONT })],
+          spacing: { after: 0 },
+        }),
+      )
     }
 
-    // Badge on bottom-right (simulated by right-aligned paragraph)
-    paras.push(
-      new Paragraph({
-        alignment: AlignmentType.RIGHT,
-        children: [new TextRun({ text: `${title} ${idx + 1}`, size: 15 })],
-        spacing: { before: 80, after: 0 },
+    const badge = new Paragraph({
+      alignment: AlignmentType.RIGHT,
+      children: [new TextRun({ text: `${title}${idx + 1}`, size: 15, font: RUN_FONT })], // 7.5pt
+      spacing: { before: mmToTwip(6), after: 0 },
+    })
+
+    return { body, badge }
+  }
+
+  const buildLabelCell = (row: LabelRow | undefined, idx: number) => {
+    const { body, badge } = makeLabelContent(row, idx)
+
+    const innerTable = new Table({
+      width: { size: labelWidthTwip, type: WidthType.DXA },
+      columnWidths: [labelWidthTwip],
+      borders: BORDER_NONE,
+      rows: [
+        new TableRow({
+          children: [
+            new TableCell({
+              children: body,
+              margins: LABEL_INNER_MARGINS,
+              verticalAlign: VerticalAlign.TOP,
+            }),
+          ],
+        }),
+        new TableRow({
+          height: { value: BADGE_ROW_HEIGHT, rule: HeightRule.ATLEAST },
+          children: [
+            new TableCell({
+              children: [badge],
+              margins: LABEL_INNER_MARGINS,
+              verticalAlign: VerticalAlign.BOTTOM,
+            }),
+          ],
+        }),
+      ],
+      layout: "fixed",
+    })
+
+    return new TableCell({
+      width: { size: labelWidthTwip, type: WidthType.DXA },
+      children: [innerTable],
+      margins: { top: 0, bottom: 0, left: 0, right: 0 },
+      verticalAlign: VerticalAlign.TOP,
+    })
+  }
+
+  const makeSpacerCell = (widthTwip: number) =>
+    new TableCell({
+      width: { size: widthTwip, type: WidthType.DXA },
+      children: [new Paragraph("")],
+      margins: { top: 0, bottom: 0, left: 0, right: 0 },
+    })
+
+  const tableRows: TableRow[] = []
+  grouped.forEach((pair, pairIndex) => {
+    const [c1, c2] = pair
+    const baseIndex = pairIndex * 2
+    tableRows.push(
+      new TableRow({
+        height: { value: labelHeightTwip, rule: HeightRule.EXACT },
+        children: [buildLabelCell(c1, baseIndex), makeSpacerCell(gapColTwip), buildLabelCell(c2, baseIndex + 1)],
       }),
     )
 
-    return paras
-  }
-
-  const tableRows = paired.map((pair, pairIndex) => {
-    const [left, right] = pair
-    const baseIndex = pairIndex * 2
-    return new TableRow({
-      children: [
-        new TableCell({
-          width: { size: labelWidthTwip, type: WidthType.DXA },
-          children: makeLabelParas(left, baseIndex),
-          margins: { top: mmToTwip(2), bottom: mmToTwip(2), left: mmToTwip(2), right: mmToTwip(2) },
-          height: { value: labelHeightMm * 56.7, rule: HeightRule.EXACT },
+    if (pairIndex < grouped.length - 1) {
+      tableRows.push(
+        new TableRow({
+          height: { value: gapRowTwip, rule: HeightRule.EXACT },
+          children: [makeSpacerCell(labelWidthTwip), makeSpacerCell(gapColTwip), makeSpacerCell(labelWidthTwip)],
         }),
-        new TableCell({
-          width: { size: labelWidthTwip, type: WidthType.DXA },
-          children: makeLabelParas(right, baseIndex + 1),
-          margins: { top: mmToTwip(2), bottom: mmToTwip(2), left: mmToTwip(2), right: mmToTwip(2) },
-          height: { value: labelHeightMm * 56.7, rule: HeightRule.EXACT },
-        }),
-      ],
-    })
+      )
+    }
   })
 
   const table = new Table({
     width: { size: tableWidthTwip, type: WidthType.DXA },
+    columnWidths: [labelWidthTwip, gapColTwip, labelWidthTwip],
+    borders: BORDER_NONE,
     rows: tableRows,
     layout: "fixed",
   })
@@ -160,9 +250,7 @@ export async function buildLabelDocx(rows: LabelRow[], title: string) {
             },
           },
         },
-        children: [
-          table,
-        ],
+        children: [table],
       },
     ],
   })

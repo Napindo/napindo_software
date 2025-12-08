@@ -8,133 +8,106 @@ export const printLabelPerusahaanHtml = `<!DOCTYPE html>
   <style>
     @page {
       size: A4;
-      /* Mendekati posisi di ruler pada contoh Word; tweak jika masih geser di cetak */
-      margin: 10mm 12mm 12mm 12mm; /* top right bottom left */
+      /* Margin: Top 0.4 cm, Right 0.15 cm, Bottom 3 cm, Left 1.32 cm */
+      margin: 0.4cm 0.15cm 3cm 1.32cm;
+    }
+
+    * {
+      font-family: "Arial Narrow", "Arial", sans-serif !important;
     }
 
     body {
       margin: 0;
-      font-family: "Arial Narrow", Arial, sans-serif;
-      font-size: 8.5pt; /* default 8.5pt */
+      font-size: 8.5pt;
+      line-height: 1.05;
       color: #111;
     }
 
-    /* Header: Judul_Label + total */
-    .report-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin: 0 2mm 6mm 2mm;
-      font-size: 7.5pt; /* judul lebih kecil */
-    }
-
-    /* Tom & Jerry No.121: 75 x 38 mm label size */
+    /* Grid: 2 kolom, ukuran label 75mm x 38mm, gap 2mm */
     .labels-grid {
       display: grid;
-      grid-template-columns: repeat(2, 75mm); /* label width */
-      grid-auto-rows: 38mm;                   /* label height */
-      column-gap: 18mm;                       /* gutter between columns */
-      row-gap: 10mm;                          /* gutter antar baris */
-      justify-content: center;                /* center the two labels on A4 */
+      grid-template-columns: repeat(2, 75mm);
+      grid-auto-rows: 38mm;
+      column-gap: 2mm;
+      row-gap: 2mm;
       padding: 0;
     }
 
-    /* Label box */
     .label {
-      box-sizing: border-box;
       position: relative;
-      padding: 2.5mm 3mm;
-      border: none;
+      box-sizing: border-box;
+      padding: 1.5mm 2mm 1.5mm 1mm;
       break-inside: avoid;
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 6mm;
-      height: 100%;
+      min-height: 38mm;
     }
 
-    .label-text {
-      flex: 1;
-      min-width: 0;
+    .label p {
+      margin: 0;
+      padding: 0;
     }
 
-    .name {
+    .greeting {
       font-size: 8.5pt;
+      margin-bottom: 0.4mm;
       font-weight: 700;
+    }
+
+    .name-line {
+      font-size: 8.5pt;
       margin-bottom: 0.35mm;
-      line-height: 1.02;
+      font-weight: 700;
     }
 
     .position {
       font-size: 8.5pt;
+      margin-bottom: 0.3mm;
       font-weight: 700;
-      margin-bottom: 0.35mm;
-      line-height: 1.02;
+      font-style: italic;
     }
 
     .company {
-      font-size: 7.5pt; /* hanya company 7.5pt */
+      font-size: 7.5pt; /* company 7.5pt */
       margin-bottom: 0.25mm;
-      line-height: 1.02;
     }
 
-    .address-line {
+    .address1,
+    .address2 {
       font-size: 8.5pt;
-      line-height: 1.02;
-      margin-bottom: 0.15mm;
+      margin-bottom: 0.25mm;
     }
 
-    .city-zip {
+    .city-line {
+      display: block;
       font-size: 8.5pt;
-      line-height: 1.02;
-      margin-top: 0.15mm;
+      margin-top: 0.25mm;
+      margin-bottom: 4mm; /* space for badge at bottom */
     }
 
-    /* Right-side badge: Judul Print Label + NoUrut */
-    .badge {
+    .label-meta {
       position: absolute;
-      right: 2mm;
-      bottom: 2mm;
-      padding: 0.6mm 1.8mm;
-      border: none;
-      display: inline-block;
+      right: 1mm;
+      bottom: 1mm;
       font-size: 7.5pt; /* judul label 7.5pt */
-      min-width: 24mm;
+      white-space: nowrap;
       text-align: right;
-      line-height: 1.02;
-      align-self: flex-end;
     }
   </style>
 </head>
 <body>
-  <div class="report-header">
-    <div>{{title}}</div>
-    <div>Total data: {{totalCount}}</div>
-  </div>
-
   <div class="labels-grid">
     {{#each rows}}
-      <div class="label">
-        <div class="label-text">
-          <div class="name">
-            {{#if sex}}{{sex}} {{/if}}{{contactName}}
-          </div>
-          <div class="position">{{position}}</div>
-          <div class="company">{{companyName}}</div>
-
-          <div class="address-line">{{addressLine1}}</div>
-          {{#if addressLine2}}<div class="address-line">{{addressLine2}}</div>{{/if}}
-          <div class="city-zip">
-            {{#if city}}{{city}}{{/if}}{{#if postcode}} {{postcode}}{{/if}}
-          </div>
-          {{#if province}}<div class="address-line">{{province}}</div>{{/if}}
-          {{#if country}}<div class="address-line">{{country}}</div>{{/if}}
-        </div>
-
-        <div class="badge">
-          {{title}} {{add @index 1}}
-        </div>
-      </div>
+    <div class="label">
+      <p class="greeting">Kepada Yth.</p>
+      <p class="name-line">{{#if sex}}{{sex}} {{/if}}{{contactName}}</p>
+      <p class="position">{{position}}</p>
+      <p class="company">{{companyName}}</p>
+      <p class="address1">{{addressLine1}}</p>
+      {{#if addressLine2}}
+        <p class="address2">{{addressLine2}}</p>
+      {{/if}}
+      <p class="city-line">{{city}}{{#if postcode}} {{postcode}}{{/if}}</p>
+      <span class="label-meta">{{title}}{{add @index 1}}</span>
+    </div>
     {{/each}}
   </div>
 </body>

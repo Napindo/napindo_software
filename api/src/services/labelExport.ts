@@ -33,11 +33,12 @@ const BORDER_NONE = {
   insideVertical: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
 }
 
+// Padding dalam label (selaras dengan HTML: padding 2mm, margin-top 5mm ditiru dengan margin atas sel)
 const LABEL_INNER_MARGINS = {
-  top: mmToTwip(1),
-  bottom: mmToTwip(1),
-  left: mmToTwip(1),
-  right: mmToTwip(1),
+  top: mmToTwip(4),
+  bottom: mmToTwip(4),
+  left: mmToTwip(4),
+  right: mmToTwip(4),
 }
 
 export async function buildLabelExcel(rows: LabelRow[]) {
@@ -78,7 +79,7 @@ export async function buildLabelDocx(rows: LabelRow[], title: string) {
   const gapRowTwip = mmToTwip(ROW_GAP_MM)
   const tableWidthTwip = labelWidthTwip * 2 + gapColTwip
 
-  // Margins: Top 0.4 cm, Right 0.15 cm, Bottom 3 cm, Left 1.32 cm
+  // Margins mengikuti HTML (.page padding): Top 0.4 cm, Right 0.15 cm, Bottom 3 cm, Left 1.32 cm
   const pageMarginTop = mmToTwip(4)
   const pageMarginRight = mmToTwip(1.5)
   const pageMarginBottom = mmToTwip(30)
@@ -95,24 +96,24 @@ export async function buildLabelDocx(rows: LabelRow[], title: string) {
 
     body.push(
       new Paragraph({
-        children: [new TextRun({ text: "Kepada Yth.", size: 17, bold: true, font: RUN_FONT })],
-        spacing: { after: 10 },
+        children: [new TextRun({ text: "Kepada Yth.", size: 18, bold: true, font: RUN_FONT })], // 9pt
+        spacing: { after: mmToTwip(0.6) },
       }),
     )
 
     const nameText = `${row.sex ? `${row.sex} ` : ""}${row.contactName ?? ""}`.trim()
     body.push(
       new Paragraph({
-        children: [new TextRun({ text: nameText, size: 17, bold: true, font: RUN_FONT })], // 8.5pt
-        spacing: { after: 18 },
+        children: [new TextRun({ text: nameText, size: 18, bold: true, font: RUN_FONT })], // 9pt
+        spacing: { after: mmToTwip(0.6) },
       }),
     )
 
     if (row.position) {
       body.push(
         new Paragraph({
-          children: [new TextRun({ text: row.position, size: 17, bold: true, italics: true, font: RUN_FONT })],
-          spacing: { after: 18 },
+          children: [new TextRun({ text: row.position, size: 18, bold: true, italics: true, font: RUN_FONT })],
+          spacing: { after: mmToTwip(0.6) },
         }),
       )
     }
@@ -120,8 +121,8 @@ export async function buildLabelDocx(rows: LabelRow[], title: string) {
     if (row.companyName) {
       body.push(
         new Paragraph({
-          children: [new TextRun({ text: row.companyName, size: 15, font: RUN_FONT })], // 7.5pt
-          spacing: { after: 8 },
+          children: [new TextRun({ text: row.companyName, size: 16, font: RUN_FONT, bold: true })], // 8pt
+          spacing: { after: mmToTwip(0.6) },
         }),
       )
     }
@@ -129,16 +130,16 @@ export async function buildLabelDocx(rows: LabelRow[], title: string) {
     if (row.addressLine1) {
       body.push(
         new Paragraph({
-          children: [new TextRun({ text: row.addressLine1, size: 17, font: RUN_FONT })],
-          spacing: { after: 8 },
+          children: [new TextRun({ text: row.addressLine1, size: 18, font: RUN_FONT })],
+          spacing: { after: mmToTwip(0.6) },
         }),
       )
     }
     if (row.addressLine2) {
       body.push(
         new Paragraph({
-          children: [new TextRun({ text: row.addressLine2, size: 17, font: RUN_FONT })],
-          spacing: { after: 8 },
+          children: [new TextRun({ text: row.addressLine2, size: 18, font: RUN_FONT })],
+          spacing: { after: mmToTwip(0.6) },
         }),
       )
     }
@@ -147,16 +148,16 @@ export async function buildLabelDocx(rows: LabelRow[], title: string) {
     if (cityZip) {
       body.push(
         new Paragraph({
-          children: [new TextRun({ text: cityZip, size: 17, font: RUN_FONT })],
-          spacing: { after: 0 },
+          children: [new TextRun({ text: cityZip, size: 18, font: RUN_FONT })],
+          spacing: { after: mmToTwip(0.6) },
         }),
       )
     }
 
     const badge = new Paragraph({
       alignment: AlignmentType.RIGHT,
-      children: [new TextRun({ text: `${title}${idx + 1}`, size: 15, font: RUN_FONT })], // 7.5pt
-      spacing: { before: mmToTwip(6), after: 0 },
+      children: [new TextRun({ text: `${title}${idx + 1}`, size: 16, font: RUN_FONT })], // 8pt
+      spacing: { before: mmToTwip(2), after: mmToTwip(2) },
     })
 
     return { body, badge }
@@ -232,6 +233,7 @@ export async function buildLabelDocx(rows: LabelRow[], title: string) {
   const table = new Table({
     width: { size: tableWidthTwip, type: WidthType.DXA },
     columnWidths: [labelWidthTwip, gapColTwip, labelWidthTwip],
+    alignment: AlignmentType.CENTER,
     borders: BORDER_NONE,
     rows: tableRows,
     layout: "fixed",

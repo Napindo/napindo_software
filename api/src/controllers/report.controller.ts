@@ -58,6 +58,7 @@ function mapDbRowToLabel(row: any) {
     companyName: row?.COMPANY ?? "",
     contactName: row?.NAME ?? "",
     position: row?.POSITION ?? row?.TITLE ?? "",
+    nourut: row?.NOURUT ?? row?.NO_URUT ?? row?.NO ?? "",
     addressLine1: row?.ALAMAT ?? row?.ADDRESS ?? "",
     addressLine2: row?.ADDRESS2 ?? "",
     city: row?.CITY ?? "",

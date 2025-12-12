@@ -1,0 +1,30 @@
+{
+    "name": "labelperusahaan",
+    "engine": "handlebars",
+    "recipe": "chrome-pdf",
+    "data": {
+        "shortid": "ANgNckk1k"
+    },
+    "shortid": "dGZACvJF_8",
+    "chrome": {
+        "printBackground": true,
+        "marginTop": "0.4cm",
+        "marginRight": "0.15cm",
+        "marginBottom": "3cm",
+        "marginLeft": "1.32cm",
+        "landscape": false
+    },
+    "creationDate": {
+        "$$date": 1765270284736
+    },
+    "modificationDate": {
+        "$$date": 1765356568065
+    },
+    "_id": "SqQJO51uavdgee3m",
+    "$entitySet": "templates",
+    "scripts": [
+        {
+            "shortid": "PL-Smqtn4r"
+        }
+    ]
+}

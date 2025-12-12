@@ -591,36 +591,45 @@ export function PrintLabelTemplate({ title, onSubmit }: { title: string; onSubmi
         </div>
 
         <aside className="bg-white border border-slate-200 rounded-3xl shadow-sm p-5 flex flex-col gap-4">
-        <div className="border border-slate-200 rounded-2xl bg-slate-50">
-          <div className="px-4 py-3 border-b border-slate-200">
-            <h3 className="text-base font-semibold text-slate-700">Preview</h3>
-          </div>
-          <div className="p-4">
+          <div className="border border-slate-200 rounded-2xl bg-slate-50">
+            <div className="px-4 py-3 flex items-center justify-between border-b border-slate-200">
+              <h3 className="text-base font-semibold text-slate-700">Preview</h3>
+              <span className="px-3 py-1 text-xs font-semibold text-sky-700 bg-sky-100 rounded-full border border-sky-200">
+                {count} data
+              </span>
+            </div>
+            <div className="p-4 space-y-3">
               <p className="text-sm text-slate-600 leading-relaxed">{message}</p>
-              {error ? <p className="text-sm font-semibold text-rose-600 mt-2">{error}</p> : null}
+              {error ? <p className="text-sm font-semibold text-rose-600">{error}</p> : null}
+              <div className="relative h-[400px] rounded-xl border border-dashed border-slate-300 bg-white overflow-hidden">
+                {previewUrl ? (
+                  <iframe title="Preview Label PDF" src={previewUrl} className="w-full h-full border-0" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm">
+                    Preview laporan akan tampil di sini.
+                  </div>
+                )}
+                {loading ? (
+                  <div className="absolute inset-0 bg-white/70 flex items-center justify-center text-sm font-semibold text-slate-600">
+                    Memproses...
+                  </div>
+                ) : null}
+              </div>
+              <div className="flex justify-between text-[11px] text-slate-500">
+                <span>Current Page No.:</span>
+                <span>Total Page No.:</span>
+                <span>Zoom Factor: 100%</span>
+              </div>
             </div>
           </div>
 
-        <div className="border border-slate-200 rounded-2xl bg-slate-50">
-          <div className="px-4 py-3 flex items-center gap-3 border-b border-slate-200">
-            <h4 className="text-sm font-semibold text-slate-700">Jumlah Data</h4>
-            <span className="text-2xl font-bold text-slate-900">{count}</span>
-          </div>
-          <div className="p-4">
-            <div className="h-[340px] rounded-xl border border-dashed border-slate-300 bg-white overflow-hidden">
-              {previewUrl ? (
-                <iframe title="Preview Label PDF" src={previewUrl} className="w-full h-full border-0" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm">
-                  Preview laporan akan tampil di sini.
-                </div>
-              )}
+          <div className="border border-slate-200 rounded-2xl bg-slate-50">
+            <div className="px-4 py-3 flex items-center gap-3 border-b border-slate-200">
+              <h4 className="text-sm font-semibold text-slate-700">Jumlah Data</h4>
+              <span className="text-2xl font-bold text-slate-900">{count}</span>
             </div>
-            <div className="flex justify-between text-[11px] text-slate-500 mt-2">
-              <span>Current Page No.:</span>
-              <span>Total Page No.:</span>
-              <span>Zoom Factor: 100%</span>
-            </div>
+            <div className="p-4 text-sm text-slate-600">
+              <p>Total data sesuai filter dan kondisi aktif.</p>
             </div>
           </div>
         </aside>
@@ -636,14 +645,22 @@ export default PrintLabelPerusahaan
 function extractBase64(data: unknown): string | null {
   const payload: any = data
   if (!payload) return null
-  if (typeof payload.base64 === 'string') return payload.base64
-  if (typeof payload === 'string') return payload
-  if (payload?.buffer && typeof payload.buffer === 'string') return payload.buffer
-  if (payload?.buffer?.type === 'Buffer' && Array.isArray(payload.buffer.data)) {
-    const arr = new Uint8Array(payload.buffer.data)
-    return toBase64(arr)
+  if (typeof payload.base64 === 'string' && payload.base64.trim()) return payload.base64.trim()
+  if (typeof payload === 'string' && payload.trim()) return payload.trim()
+
+  const buf = payload?.buffer ?? payload?.data
+  if (typeof buf === 'string' && buf.trim()) return buf.trim()
+
+  if (buf?.type === 'Buffer' && Array.isArray(buf.data)) {
+    return toBase64(new Uint8Array(buf.data))
   }
-  if (payload?.data && typeof payload.data === 'string') return payload.data
+
+  if (buf instanceof ArrayBuffer) return toBase64(new Uint8Array(buf))
+  if (ArrayBuffer.isView(buf) && buf.buffer) return toBase64(new Uint8Array(buf.buffer))
+
+  if (payload?.data?.type === 'Buffer' && Array.isArray(payload.data.data)) {
+    return toBase64(new Uint8Array(payload.data.data))
+  }
   return null
 }
 

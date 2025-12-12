@@ -1,5 +1,5 @@
 {
-  "httpPort": 5488,
+  "httpPort": 5490,
   "allowLocalFilesAccess": false,
   "store": {
     "provider": "fs"

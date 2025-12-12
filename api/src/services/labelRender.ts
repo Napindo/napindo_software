@@ -16,6 +16,7 @@ export type LabelRow = {
   country?: string
   postcode?: string
   sex?: string
+  nourut?: string | number
 }
 
 export type LabelReportData = {
@@ -25,7 +26,7 @@ export type LabelReportData = {
 }
 
 export async function renderLabelPerusahaanPdf(data: LabelReportData) {
-  // Inline template so it works even if not pre-created in Studio.
+  // Render inline untuk memastikan selalu konsisten tanpa mengandalkan template yang tersimpan di server.
   const response = await renderWithJsreport({
     template: {
       name: PRINT_LABEL_TEMPLATE_NAME,
@@ -33,6 +34,13 @@ export async function renderLabelPerusahaanPdf(data: LabelReportData) {
       engine: "handlebars",
       recipe: "chrome-pdf",
       helpers: printLabelPerusahaanHelpers,
+      chrome: {
+        format: "A4",
+        marginTop: "0cm",
+        marginRight: "0cm",
+        marginBottom: "0cm",
+        marginLeft: "0cm",
+      },
     },
     data,
   })

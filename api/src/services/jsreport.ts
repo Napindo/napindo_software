@@ -1,6 +1,6 @@
 import fetch from "node-fetch"
 
-function getAuthHeader() {
+function getAuthHeader(): Record<string, string> {
   const user = process.env.JSREPORT_USER || process.env.JSREPORT_USERNAME || ""
   const pass = process.env.JSREPORT_PASSWORD || process.env.JSREPORT_PASS || ""
   if (!user && !pass) return {}
@@ -13,24 +13,32 @@ function resolveBaseUrl() {
     process.env.JSREPORT_URL ||
     process.env.JSREPORT_BASE_URL ||
     process.env.JSREPORT_HOST ||
+    process.env.JSREPORT_PORT ||
     ""
 
-  if (envUrl) return envUrl
+  if (envUrl) {
+    // Jika hanya port yang diberikan, lengkapi jadi http://127.0.0.1:<port>
+    if (/^\d+$/.test(envUrl.trim())) return `http://127.0.0.1:${envUrl.trim()}`
+    return envUrl
+  }
 
-  // Default to IPv4 to avoid ::1 resolution issues
-  return "http://127.0.0.1:5488"
+  // Default to IPv4 to avoid ::1 resolution issues (JSReport running on 5490 per setup)
+  return "http://127.0.0.1:5490"
 }
 
 export async function renderWithJsreport(body: any) {
   const baseUrl = resolveBaseUrl()
   const url = `${baseUrl.replace(/\/$/, "")}/api/report`
 
+  const authHeader = getAuthHeader()
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...authHeader,
+  }
+
   const response = await fetch(url, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...getAuthHeader(),
-    },
+    headers,
     body: JSON.stringify(body),
   })
 

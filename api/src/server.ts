@@ -8,6 +8,7 @@ import prisma from "./prisma"
 
 const app = express()
 const API_PREFIX = process.env.API_PREFIX || "/api"
+const HOST = process.env.HOST || "0.0.0.0"
 const PORT = Number(process.env.PORT || 3001)
 
 app.use(cors())
@@ -35,6 +36,7 @@ router.use("/report", reportRoutes)
 
 app.use(API_PREFIX, router)
 
-app.listen(PORT, () => {
+// Listen strictly on PORT (default 3001); if in use, let it error
+app.listen(PORT, HOST, () => {
   console.log(`API berjalan di port ${PORT} dengan prefix ${API_PREFIX}`)
 })

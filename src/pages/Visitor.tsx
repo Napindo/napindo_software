@@ -103,7 +103,6 @@ const VisitorTable = ({ segment, rows, loading, error, onReload, onSegmentChange
   const [page, setPage] = useState(1)
   const [selectedIds, setSelectedIds] = useState<(string | number)[]>([])
   const [tableError, setTableError] = useState<string | null>(null)
-  const [deleteIds, setDeleteIds] = useState<(string | number)[] | null>(null)
 
   useEffect(() => {
     setSelectedIds([])

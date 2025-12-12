@@ -6,6 +6,10 @@ export type PrintLabelResult = {
   message?: string
 }
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
+const API_PREFIX = import.meta.env.VITE_API_PREFIX || '/api'
+const buildApiUrl = (path: string) => `${API_BASE_URL.replace(/\/$/, '')}${API_PREFIX}${path}`
+
 const getBridge = () => (window as any).database ?? null
 const getIpc = () => (window as any).ipcRenderer ?? null
 
@@ -18,6 +22,9 @@ const extractCount = (payload: any): number => {
   if (Array.isArray(payload)) return payload.length
   return 0
 }
+
+const pickApiData = (body: any) => body?.data ?? body?.items ?? body?.rows ?? body
+const isApiOk = (body: any) => body?.ok === true || body?.success === true
 
 async function invokeReport(channel: 'report:labelvisitor' | 'report:labelgover', filter: unknown): Promise<PrintLabelResult> {
   const bridge = getBridge()
@@ -39,7 +46,18 @@ async function invokeReport(channel: 'report:labelvisitor' | 'report:labelgover'
     return { data, total: extractCount(data) }
   }
 
-  throw new Error('Bridge Electron untuk report label tidak tersedia')
+  const path = channel === 'report:labelvisitor' ? '/report/labelvisitor' : '/report/labelgover'
+  const res = await fetch(buildApiUrl(path), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(filter ?? {}),
+  })
+  const body = await res.json()
+  if (!isApiOk(body)) {
+    throw new Error(body?.message ?? 'Gagal memuat laporan')
+  }
+  const data = pickApiData(body)
+  return { data, total: extractCount(data) }
 }
 
 export async function requestLabelPerusahaan(filter: unknown): Promise<PrintLabelResult> {
@@ -84,6 +102,26 @@ export async function requestLabelPerusahaan(filter: unknown): Promise<PrintLabe
       const data = response?.data ?? response
       const base64: string | undefined = data?.base64 || data?.buffer
       return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
+    }
+
+    const res = await fetch(buildApiUrl('/report/labelvisitor/print'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(filter ?? {}),
+    })
+    if (!res.ok) {
+      const message = await res.text()
+      throw new Error(message || 'Gagal memuat preview PDF')
+    }
+    const buffer = await res.arrayBuffer()
+    const base64 = arrayBufferToBase64(buffer)
+    return {
+      data: {
+        base64,
+        contentType: res.headers.get('content-type') || 'application/pdf',
+        filename: 'print-label-perusahaan.pdf',
+      },
+      total: payload?.total,
     }
 
     throw new Error('Bridge Electron untuk preview PDF tidak tersedia')
@@ -176,4 +214,13 @@ export async function requestLabelOptions(): Promise<any> {
   }
 
   throw new Error('Bridge Electron untuk opsi label tidak tersedia')
+}
+
+function arrayBufferToBase64(buffer: ArrayBuffer) {
+  let binary = ''
+  const bytes = new Uint8Array(buffer)
+  bytes.forEach((b) => {
+    binary += String.fromCharCode(b)
+  })
+  return btoa(binary)
 }

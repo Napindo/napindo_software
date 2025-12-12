@@ -10,7 +10,8 @@ function createWindow(options) {
   const window = new electron.BrowserWindow({
     icon: path.join(options.publicDir, "electron-vite.svg"),
     webPreferences: {
-      preload: options.preload
+      preload: options.preload,
+      devTools: false
     }
   });
   window.webContents.on("did-finish-load", () => {
@@ -21,7 +22,6 @@ function createWindow(options) {
   });
   if (options.devServerUrl) {
     window.loadURL(options.devServerUrl);
-    window.webContents.openDevTools({ mode: "detach" });
   } else {
     window.loadFile(path.join(options.rendererDist, "index.html"));
   }

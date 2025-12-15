@@ -27,14 +27,14 @@
       height: 100%;
     }
 
-    /* wrapper label: lebar total tabel di Word (2 × 7.5 cm + 0.2 cm gap) */
+    /* wrapper label: lebar total tabel di Word (2 x 7.5 cm + 0.2 cm gap) */
     .labels-wrapper {
       box-sizing: border-box;
       width: 15.2cm;     /* 7.5 + 7.5 + 0.2 */
       margin: 0 auto;    /* center di dalam area antara margin */
     }
 
-    /* Grid: 2 kolom, ukuran label fisik 75×38 mm */
+    /* Grid: 2 kolom, ukuran label fisik 75x38 mm */
     .labels-grid {
       display: grid;
       grid-template-columns: repeat(2, 7.5cm); /* sama seperti Word */
@@ -44,36 +44,43 @@
     }
 
     .label {
-      position: relative;
       box-sizing: border-box;
-      margin-top: 5mm;
-      padding: 2mm;
-      break-inside: avoid;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 4mm;
+      gap: 2mm;
       min-height: 3.8cm;
+      break-inside: avoid;
+    }
+
+    .label-body {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6mm;
     }
 
     .label p {
-      margin: 1mm;
+      margin: 0;
       padding: 0;
     }
 
-    .greeting   { font-size: 9pt; margin-bottom: 0.6mm; font-weight: 700; }
-    .name-line  { font-size: 9pt; margin-bottom: 0.6mm; font-weight: 700; }
-    .position   { font-size: 9pt; margin-bottom: 0.6mm; font-weight: 700; font-style: italic; }
-    .company    { font-size: 8pt; font-weight: 700; margin-bottom: 0.6mm; }
+    .greeting   { font-size: 9pt; font-weight: 700; }
+    .name-line  { font-size: 9pt; font-weight: 700; }
+    .position   { font-size: 9pt; font-weight: 700; font-style: italic; }
+    .company    { font-size: 8pt; font-weight: 700; }
     .address1,
-    .address2   { font-size: 9pt; margin-bottom: 2mm; }
-    .city-line  { display: block; font-size: 9pt; margin-top: 0.6mm; margin-bottom: 3mm; }
+    .address2   { font-size: 9pt; }
+    .city-line  { font-size: 9pt; }
 
     .label-meta {
-      position: absolute;
-      right: 1mm;
-      bottom: 1mm;
-      top: 80%;
-      left: 67%;
       font-size: 8pt;
-      white-space: nowrap;
-      text-align: left;
+      min-height: 6mm;
+      display: flex;
+      align-items: flex-end;
+      justify-content: flex-end;
+      padding-top: 2mm;
+      text-align: right;
     }
   </style>
 </head>
@@ -83,16 +90,18 @@
       <div class="labels-grid">
         {{#each rows}}
         <div class="label">
-          <p class="greeting">Kepada Yth.</p>
-          <p class="name-line">{{#if sex}}{{sex}} {{/if}}{{contactName}}</p>
-          <p class="position">{{position}}</p>
-          <p class="company">{{companyName}}</p>
-          <p class="address1">{{addressLine1}}</p>
-          {{#if addressLine2}}
-            <p class="address2">{{addressLine2}}</p>
-          {{/if}}
-          <p class="city-line">{{city}}{{#if postcode}} {{postcode}}{{/if}}</p>
-          <span class="label-meta">{{title}}{{add @index 1}}</span>
+          <div class="label-body">
+            <p class="greeting">Kepada Yth.</p>
+            <p class="name-line">{{#if sex}}{{sex}} {{/if}}{{contactName}}</p>
+            <p class="position">{{position}}</p>
+            <p class="company">{{companyName}}</p>
+            <p class="address1">{{addressLine1}}</p>
+            {{#if addressLine2}}
+              <p class="address2">{{addressLine2}}</p>
+            {{/if}}
+            <p class="city-line">{{city}}{{#if postcode}} {{postcode}}{{/if}}</p>
+          </div>
+          <div class="label-meta">{{title}}{{add @index 1}}</div>
         </div>
         {{/each}}
       </div>

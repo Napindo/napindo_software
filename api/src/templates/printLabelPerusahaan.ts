@@ -7,8 +7,8 @@ export const printLabelPerusahaanHtml = `<!DOCTYPE html>
   <meta charset="utf-8" />
   <style>
     @page {
-      size: A5;
-      margin: 0; /* semua margin di-handle oleh .page */
+      size: A4;
+      margin: 0;
     }
 
     * {
@@ -30,29 +30,29 @@ export const printLabelPerusahaanHtml = `<!DOCTYPE html>
       height: 100%;
     }
 
-    /* wrapper label: lebar total tabel di Word (2 × 7.5 cm + 0.2 cm gap) */
+    /* wrapper label: lebar total tabel di Word (2 x 7.5 cm + 0.2 cm gap) */
     .labels-wrapper {
       box-sizing: border-box;
       width: 15.2cm;     /* 7.5 + 7.5 + 0.2 */
       margin: 0 auto;    /* center di dalam area antara margin */
     }
 
-    /* Grid: 2 kolom, ukuran label fisik 75×38 mm */
+    /* Grid: 2 kolom, ukuran label fisik 75x38 mm */
     .labels-grid {
       display: grid;
-      grid-template-columns: repeat(2, 7.5cm); /* sama seperti Word */
-      grid-auto-rows: 3.8cm;                   /* 38 mm */
-      column-gap: 0.2cm;                       /* 2 mm */
+      grid-template-columns: repeat(2, 7.5cm); 
+      grid-auto-rows: 3.8cm;                   
+      column-gap: 0.2cm;
       row-gap: 0.2cm;
     }
 
     .label {
-      position: relative;
+      display: flex;
       box-sizing: border-box;
-      margin-top: 5mm;
-      padding: 2mm;
-      break-inside: avoid;
+      padding: 5mm;
+      gap: 2mm;
       min-height: 3.8cm;
+      break-inside: avoid;
     }
 
     .label p {
@@ -70,10 +70,6 @@ export const printLabelPerusahaanHtml = `<!DOCTYPE html>
 
     .label-meta {
       position: absolute;
-      right: 1mm;
-      bottom: 1mm;
-      top: 80%;
-      left: 67%;
       font-size: 8pt;
       white-space: nowrap;
       text-align: left;
@@ -86,16 +82,18 @@ export const printLabelPerusahaanHtml = `<!DOCTYPE html>
       <div class="labels-grid">
         {{#each rows}}
         <div class="label">
-          <p class="greeting">Kepada Yth.</p>
-          <p class="name-line">{{#if sex}}{{sex}} {{/if}}{{contactName}}</p>
-          <p class="position">{{position}}</p>
-          <p class="company">{{companyName}}</p>
-          <p class="address1">{{addressLine1}}</p>
-          {{#if addressLine2}}
-            <p class="address2">{{addressLine2}}</p>
-          {{/if}}
-          <p class="city-line">{{city}}{{#if postcode}} {{postcode}}{{/if}}</p>
-          <span class="label-meta">{{title}}{{add @index 1}}</span>
+          <div class="label-body">
+            <p class="greeting">Kepada Yth.</p>
+            <p class="name-line">{{#if sex}}{{sex}} {{/if}}{{contactName}}</p>
+            <p class="position">{{position}}</p>
+            <p class="company">{{companyName}}</p>
+            <p class="address1">{{addressLine1}}</p>
+            {{#if addressLine2}}
+              <p class="address2">{{addressLine2}}</p>
+            {{/if}}
+            <p class="city-line">{{city}}{{#if postcode}} {{postcode}}{{/if}}</p>
+          </div>
+          <div class="label-meta">{{title}}{{add @index 1}}</div>
         </div>
         {{/each}}
       </div>

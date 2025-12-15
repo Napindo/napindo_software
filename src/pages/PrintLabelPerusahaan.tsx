@@ -318,6 +318,7 @@ export function PrintLabelTemplate({ title, onSubmit }: { title: string; onSubmi
   const [error, setError] = useState<string | null>(null)
   const [count, setCount] = useState(0)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [previewMime, setPreviewMime] = useState('application/pdf')
   const [options, setOptions] = useState<LabelOptions>({
     code1: [],
     code2: [],
@@ -381,31 +382,33 @@ export function PrintLabelTemplate({ title, onSubmit }: { title: string; onSubmi
     setChecks((prev) => ({ ...prev, [key]: !prev[key] }))
   }
 
-  const handleSubmit = async (action: 'preview') => {
+  const handlePreviewWord = async () => {
     setLoading(true)
     setError(null)
     try {
-      const result = await onSubmit({ ...payload, action })
+      const result = await onSubmit({ ...payload, action: 'preview' })
       const total = result.total ?? result.totalCount ?? result.count ?? 0
       setCount(total)
-      setMessage(`Laporan berhasil dimuat. Total data: ${total}. Memuat preview PDF...`)
+      setMessage(`Pratinjau Word disiapkan. Total data: ${total}. Memuat preview (PDF agar bisa dilihat)...`)
 
-      // Muat preview PDF (tidak memunculkan dialog simpan)
+      // Muat preview PDF (tampilan setara Word, lebih mudah dirender)
       const pdfResult = await onSubmit({ ...payload, action: 'preview-pdf' })
       const base64 = extractBase64(pdfResult?.data)
       if (base64) {
-        const url = base64ToBlobUrl(base64, (pdfResult?.data as any)?.contentType || 'application/pdf')
+        const mime = (pdfResult?.data as any)?.contentType || 'application/pdf'
+        const url = base64ToBlobUrl(base64, mime)
+        setPreviewMime(mime)
         setPreviewUrl((prev) => {
           if (prev) URL.revokeObjectURL(prev)
           return url
         })
-        setMessage(`Preview siap. Total data: ${total}.`)
+        setMessage(`Preview Word (tampilan setara) siap. Total data: ${total}.`)
       } else {
         setPreviewUrl((prev) => {
           if (prev) URL.revokeObjectURL(prev)
           return null
         })
-        setMessage(`Laporan berhasil dimuat (tanpa preview). Total data: ${total}.`)
+        setMessage(`Data berhasil dihitung. Total data: ${total}. Pratinjau tidak tersedia.`)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal memuat laporan')
@@ -428,7 +431,72 @@ export function PrintLabelTemplate({ title, onSubmit }: { title: string; onSubmi
       if (prev) URL.revokeObjectURL(prev)
       return null
     })
+    setPreviewMime('application/pdf')
     setMessage('Gunakan panel filter untuk menyesuaikan label. Ringkasan akan ditampilkan di sini.')
+  }
+
+  const handleExportSave = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const result = await onSubmit({ ...payload, action: 'export-save' })
+      const meta: any = result?.data ?? {}
+      if (meta?.canceled) {
+        setMessage('Export dibatalkan.')
+      } else {
+        setMessage('Export selesai. File disimpan sesuai pilihan Anda.')
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal mengekspor file')
+      setMessage('Export gagal, coba lagi.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handlePrint = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const result = await onSubmit({ ...payload, action: 'export-pdf' })
+      const meta: any = result?.data ?? {}
+      const base64 = extractBase64(meta)
+      const mime = meta?.contentType || 'application/pdf'
+      if (!base64) {
+        setMessage('Gagal membuat file untuk dicetak.')
+        return
+      }
+      const url = base64ToBlobUrl(base64, mime)
+      setPreviewMime(mime)
+      setPreviewUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev)
+        return url
+      })
+
+      const printWindow = window.open('', '_blank', 'noopener,noreferrer,width=900,height=700')
+      if (printWindow) {
+        printWindow.document.write(
+          `<html><head><title>Cetak Label</title></head><body style="margin:0">
+            <iframe src="${url}" style="border:0;width:100%;height:100vh;" id="print-frame"></iframe>
+          </body></html>`,
+        )
+        printWindow.document.close()
+        printWindow.onload = () => {
+          const iframe = printWindow.document.getElementById('print-frame') as HTMLIFrameElement | null
+          iframe?.contentWindow?.focus()
+          iframe?.contentWindow?.print()
+        }
+        setMessage('File siap dicetak.')
+      } else {
+        // Jika pop-up terblokir, minimal simpan pratinjau di panel kanan
+        setMessage('File siap dicetak. Izinkan pop-up untuk mencetak otomatis.')
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal mencetak')
+      setMessage('Print gagal, coba lagi.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const renderCheckboxGroup = (group: CheckboxGroup) => (
@@ -454,25 +522,6 @@ export function PrintLabelTemplate({ title, onSubmit }: { title: string; onSubmi
     </section>
   )
 
-  const handleExport = async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const result = await onSubmit({ ...payload, action: 'export-save' })
-      const canceled = (result?.data as any)?.canceled
-      if (canceled) {
-        setMessage('Export dibatalkan.')
-      } else {
-        setMessage('Export selesai. File disimpan sesuai pilihan Anda.')
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Gagal mengekspor file')
-      setMessage('Export gagal, coba lagi.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   return (
     <div className="space-y-5">
       <div className="flex flex-col gap-2">
@@ -483,7 +532,7 @@ export function PrintLabelTemplate({ title, onSubmit }: { title: string; onSubmi
       <div className="flex flex-wrap gap-3">
         <button
           type="button"
-          onClick={() => handleSubmit('preview')}
+          onClick={handlePreviewWord}
           disabled={loading}
           className="px-5 py-2 rounded-lg font-semibold text-white bg-sky-600 hover:bg-sky-700 disabled:opacity-60"
         >
@@ -491,11 +540,19 @@ export function PrintLabelTemplate({ title, onSubmit }: { title: string; onSubmi
         </button>
         <button
           type="button"
-          onClick={handleExport}
+          onClick={handleExportSave}
           disabled={loading}
           className="px-5 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60"
         >
           {loading ? 'Memuat...' : 'Export'}
+        </button>
+        <button
+          type="button"
+          onClick={handlePrint}
+          disabled={loading}
+          className="px-5 py-2 rounded-lg font-semibold text-white bg-slate-700 hover:bg-slate-800 disabled:opacity-60"
+        >
+          {loading ? 'Memuat...' : 'Print'}
         </button>
         <button
           type="button"
@@ -593,17 +650,27 @@ export function PrintLabelTemplate({ title, onSubmit }: { title: string; onSubmi
         <aside className="bg-white border border-slate-200 rounded-3xl shadow-sm p-5 flex flex-col gap-4">
           <div className="border border-slate-200 rounded-2xl bg-slate-50">
             <div className="px-4 py-3 flex items-center justify-between border-b border-slate-200">
-              <h3 className="text-base font-semibold text-slate-700">Preview</h3>
+              <h3 className="text-base font-semibold text-slate-700">Preview Word</h3>
               <span className="px-3 py-1 text-xs font-semibold text-sky-700 bg-sky-100 rounded-full border border-sky-200">
                 {count} data
               </span>
             </div>
             <div className="p-4 space-y-3">
-              <p className="text-sm text-slate-600 leading-relaxed">{message}</p>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                {message}
+                <br />
+                <span className="text-xs text-slate-500">
+                  Pratinjau ditampilkan sebagai PDF agar langsung terlihat, namun layout mengikuti Word utama.
+                </span>
+              </p>
               {error ? <p className="text-sm font-semibold text-rose-600">{error}</p> : null}
               <div className="relative h-[400px] rounded-xl border border-dashed border-slate-300 bg-white overflow-hidden">
                 {previewUrl ? (
-                  <iframe title="Preview Label PDF" src={previewUrl} className="w-full h-full border-0" />
+                  <object data={previewUrl} type={previewMime} className="w-full h-full" aria-label="Preview Word">
+                    <p className="w-full h-full flex items-center justify-center text-slate-400 text-sm">
+                      Preview tidak dapat ditampilkan di viewer ini.
+                    </p>
+                  </object>
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm">
                     Preview laporan akan tampil di sini.
@@ -679,4 +746,16 @@ function base64ToBlobUrl(base64: string, contentType = 'application/pdf') {
   for (let i = 0; i < len; i += 1) bytes[i] = byteString.charCodeAt(i)
   const blob = new Blob([bytes], { type: contentType })
   return URL.createObjectURL(blob)
+}
+
+function downloadBase64(base64: string, filename: string, contentType: string) {
+  const url = base64ToBlobUrl(base64, contentType)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.style.display = 'none'
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
 }

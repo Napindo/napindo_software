@@ -86,7 +86,48 @@ export async function requestLabelPerusahaan(filter: unknown): Promise<PrintLabe
     throw new Error('Bridge Electron untuk ekspor belum tersedia')
   }
 
-  // Preview PDF (base64 only, no save dialog)
+  // Preview Word (base64 docx, no save dialog)
+  if (payload?.action === 'preview-word') {
+    const bridge = getBridge()
+    if (bridge && typeof bridge.reportLabelVisitorWord === 'function') {
+      const resp = await bridge.reportLabelVisitorWord(filter)
+      const base64: string | undefined = resp?.base64 || resp?.buffer
+      return { data: { base64, contentType: resp?.contentType, filename: resp?.filename }, total: payload?.total }
+    }
+
+    const ipc = getIpc()
+    if (ipc?.invoke) {
+      const response = await ipc.invoke('report:labelvisitor:word', filter)
+      if (response?.success === false) throw new Error(response?.message ?? 'Gagal memuat preview Word')
+      const data = response?.data ?? response
+      const base64: string | undefined = data?.base64 || data?.buffer
+      return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
+    }
+
+    const res = await fetch(buildApiUrl('/report/labelvisitor/export/word'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(filter ?? {}),
+    })
+    if (!res.ok) {
+      const message = await res.text()
+      throw new Error(message || 'Gagal memuat preview Word')
+    }
+    const buffer = await res.arrayBuffer()
+    const base64 = arrayBufferToBase64(buffer)
+    return {
+      data: {
+        base64,
+        contentType:
+          res.headers.get('content-type') ||
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        filename: 'print-label-perusahaan.docx',
+      },
+      total: payload?.total,
+    }
+  }
+
+  // Preview PDF (base64 only, no save dialog) – dipakai sebagai fallback pratinjau yang bisa dirender browser.
   if (payload?.action === 'preview-pdf') {
     const bridge = getBridge()
     if (bridge && typeof bridge.reportLabelVisitorPdf === 'function') {

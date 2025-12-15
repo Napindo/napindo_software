@@ -1,17 +1,10 @@
 import ExcelJS from "exceljs"
 import {
   AlignmentType,
-  BorderStyle,
   Document,
-  HeightRule,
   Packer,
   Paragraph,
-  Table,
-  TableCell,
-  TableRow,
   TextRun,
-  VerticalAlign,
-  WidthType,
 } from "docx"
 import type { LabelRow } from "./labelRender"
 
@@ -20,26 +13,13 @@ const mmToTwip = (mm: number) => Math.round(mm * 56.7)
 const RUN_FONT = "Arial Narrow"
 const LABEL_WIDTH_MM = 75
 const LABEL_HEIGHT_MM = 38
-const COLUMN_GAP_MM = 2 // 0.2 cm
-const ROW_GAP_MM = 2 // 0.2 cm
-const BADGE_ROW_HEIGHT = mmToTwip(6)
-
-const BORDER_NONE = {
-  top: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-  bottom: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-  left: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-  right: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-  insideHorizontal: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-  insideVertical: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-}
-
-// Padding dalam label (selaras dengan HTML: padding 2mm, margin-top 5mm ditiru dengan margin atas sel)
-const LABEL_INNER_MARGINS = {
-  top: mmToTwip(4),
-  bottom: mmToTwip(4),
-  left: mmToTwip(4),
-  right: mmToTwip(4),
-}
+const COLUMN_GAP_MM = 2 
+const ROW_GAP_MM = 2 
+const LABEL_PADDING_TWIP = mmToTwip(2) 
+const LABEL_MARGIN_TOP_TWIP = mmToTwip(5) 
+const PARAGRAPH_MARGIN_TWIP = mmToTwip(1) 
+const LINE_GAP_TWIP = mmToTwip(0.6)
+const LINE_HEIGHT_TWIP = mmToTwip(3.6)
 
 export async function buildLabelExcel(rows: LabelRow[]) {
   const wb = new ExcelJS.Workbook()
@@ -77,7 +57,6 @@ export async function buildLabelDocx(rows: LabelRow[], title: string) {
   const labelHeightTwip = mmToTwip(LABEL_HEIGHT_MM)
   const gapColTwip = mmToTwip(COLUMN_GAP_MM)
   const gapRowTwip = mmToTwip(ROW_GAP_MM)
-  const tableWidthTwip = labelWidthTwip * 2 + gapColTwip
 
   // Margins mengikuti HTML (.page padding): Top 0.4 cm, Right 0.15 cm, Bottom 3 cm, Left 1.32 cm
   const pageMarginTop = mmToTwip(4)
@@ -85,159 +64,82 @@ export async function buildLabelDocx(rows: LabelRow[], title: string) {
   const pageMarginBottom = mmToTwip(30)
   const pageMarginLeft = mmToTwip(13.2)
 
-  const grouped: Array<[LabelRow | undefined, LabelRow | undefined]> = []
-  for (let i = 0; i < rows.length; i += 2) {
-    grouped.push([rows[i], rows[i + 1]])
-  }
+  const paragraphs: Paragraph[] = []
 
-  const makeLabelContent = (row: LabelRow | undefined, idx: number) => {
-    if (!row) return { body: [new Paragraph("")], badge: new Paragraph("") }
-    const body: Paragraph[] = []
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i]
+    const colIndex = i % 2
+    const rowIndex = Math.floor(i / 2)
 
-    body.push(
-      new Paragraph({
-        children: [new TextRun({ text: "Kepada Yth.", size: 18, bold: true, font: RUN_FONT })], // 9pt
-        spacing: { after: mmToTwip(0.6) },
-      }),
-    )
+    // Koordinat pojok kiri atas label (relatif margin halaman)
+    const baseX = pageMarginLeft + colIndex * (labelWidthTwip + gapColTwip)
+    const baseY = pageMarginTop + rowIndex * (labelHeightTwip + gapRowTwip)
 
-    const nameText = `${row.sex ? `${row.sex} ` : ""}${row.contactName ?? ""}`.trim()
-    body.push(
-      new Paragraph({
-        children: [new TextRun({ text: nameText, size: 18, bold: true, font: RUN_FONT })], // 9pt
-        spacing: { after: mmToTwip(0.6) },
-      }),
-    )
+    // Posisi awal teks di dalam label (ikut margin/padding HTML)
+    const startX = baseX + LABEL_PADDING_TWIP
+    let cursorY = baseY + LABEL_MARGIN_TOP_TWIP
 
-    if (row.position) {
-      body.push(
+    const pushLine = (text: string, size: number, bold = false, italics = false) => {
+      paragraphs.push(
         new Paragraph({
-          children: [new TextRun({ text: row.position, size: 18, bold: true, italics: true, font: RUN_FONT })],
-          spacing: { after: mmToTwip(0.6) },
+          children: [new TextRun({ text, size, font: RUN_FONT, bold, italics })],
+          spacing: { after: 0 },
+          frame: {
+            type: "absolute",
+            position: { x: startX, y: cursorY },
+            width: labelWidthTwip - LABEL_PADDING_TWIP * 2,
+            height: LINE_HEIGHT_TWIP,
+            anchor: { horizontal: "margin", vertical: "margin" },
+            wrap: "none",
+          } as any,
         }),
       )
+      cursorY += LINE_HEIGHT_TWIP + LINE_GAP_TWIP + PARAGRAPH_MARGIN_TWIP
+    }
+
+    pushLine("Kepada Yth.", 18, true)
+
+    const nameText = `${row.sex ? `${row.sex} ` : ""}${row.contactName ?? ""}`.trim()
+    pushLine(nameText, 18, true)
+
+    if (row.position) {
+      pushLine(row.position, 18, true, true)
     }
 
     if (row.companyName) {
-      body.push(
-        new Paragraph({
-          children: [new TextRun({ text: row.companyName, size: 16, font: RUN_FONT, bold: true })], // 8pt
-          spacing: { after: mmToTwip(0.6) },
-        }),
-      )
+      pushLine(row.companyName, 16, true)
     }
 
     if (row.addressLine1) {
-      body.push(
-        new Paragraph({
-          children: [new TextRun({ text: row.addressLine1, size: 18, font: RUN_FONT })],
-          spacing: { after: mmToTwip(0.6) },
-        }),
-      )
+      pushLine(row.addressLine1, 18)
     }
     if (row.addressLine2) {
-      body.push(
-        new Paragraph({
-          children: [new TextRun({ text: row.addressLine2, size: 18, font: RUN_FONT })],
-          spacing: { after: mmToTwip(0.6) },
-        }),
-      )
+      pushLine(row.addressLine2, 18)
     }
 
     const cityZip = `${row.city ?? ""}${row.postcode ? ` ${row.postcode}` : ""}`.trim()
     if (cityZip) {
-      body.push(
-        new Paragraph({
-          children: [new TextRun({ text: cityZip, size: 18, font: RUN_FONT })],
-          spacing: { after: mmToTwip(0.6) },
-        }),
-      )
+      pushLine(cityZip, 18)
     }
 
-    const badge = new Paragraph({
-      alignment: AlignmentType.RIGHT,
-      children: [new TextRun({ text: `${title}${idx + 1}`, size: 16, font: RUN_FONT })], // 8pt
-      spacing: { before: mmToTwip(2), after: mmToTwip(2) },
-    })
-
-    return { body, badge }
-  }
-
-  const buildLabelCell = (row: LabelRow | undefined, idx: number) => {
-    const { body, badge } = makeLabelContent(row, idx)
-
-    const innerTable = new Table({
-      width: { size: labelWidthTwip, type: WidthType.DXA },
-      columnWidths: [labelWidthTwip],
-      borders: BORDER_NONE,
-      rows: [
-        new TableRow({
-          children: [
-            new TableCell({
-              children: body,
-              margins: LABEL_INNER_MARGINS,
-              verticalAlign: VerticalAlign.TOP,
-            }),
-          ],
-        }),
-        new TableRow({
-          height: { value: BADGE_ROW_HEIGHT, rule: HeightRule.ATLEAST },
-          children: [
-            new TableCell({
-              children: [badge],
-              margins: LABEL_INNER_MARGINS,
-              verticalAlign: VerticalAlign.BOTTOM,
-            }),
-          ],
-        }),
-      ],
-      layout: "fixed",
-    })
-
-    return new TableCell({
-      width: { size: labelWidthTwip, type: WidthType.DXA },
-      children: [innerTable],
-      margins: { top: 0, bottom: 0, left: 0, right: 0 },
-      verticalAlign: VerticalAlign.TOP,
-    })
-  }
-
-  const makeSpacerCell = (widthTwip: number) =>
-    new TableCell({
-      width: { size: widthTwip, type: WidthType.DXA },
-      children: [new Paragraph("")],
-      margins: { top: 0, bottom: 0, left: 0, right: 0 },
-    })
-
-  const tableRows: TableRow[] = []
-  grouped.forEach((pair, pairIndex) => {
-    const [c1, c2] = pair
-    const baseIndex = pairIndex * 2
-    tableRows.push(
-      new TableRow({
-        height: { value: labelHeightTwip, rule: HeightRule.EXACT },
-        children: [buildLabelCell(c1, baseIndex), makeSpacerCell(gapColTwip), buildLabelCell(c2, baseIndex + 1)],
+    // Badge absolut di pojok kanan bawah label
+    const badgeY = baseY + labelHeightTwip - mmToTwip(6) // 1mm dari bawah, tinggi badge ~5mm
+    paragraphs.push(
+      new Paragraph({
+        alignment: AlignmentType.RIGHT,
+        children: [new TextRun({ text: `${title}.${i + 1}`, size: 16, font: RUN_FONT })],
+        spacing: { after: 0 },
+        frame: {
+          type: "absolute",
+          position: { x: startX, y: badgeY },
+          width: labelWidthTwip - LABEL_PADDING_TWIP * 2,
+          height: LINE_HEIGHT_TWIP,
+          anchor: { horizontal: "margin", vertical: "margin" },
+          wrap: "none",
+        } as any,
       }),
     )
-
-    if (pairIndex < grouped.length - 1) {
-      tableRows.push(
-        new TableRow({
-          height: { value: gapRowTwip, rule: HeightRule.EXACT },
-          children: [makeSpacerCell(labelWidthTwip), makeSpacerCell(gapColTwip), makeSpacerCell(labelWidthTwip)],
-        }),
-      )
-    }
-  })
-
-  const table = new Table({
-    width: { size: tableWidthTwip, type: WidthType.DXA },
-    columnWidths: [labelWidthTwip, gapColTwip, labelWidthTwip],
-    alignment: AlignmentType.CENTER,
-    borders: BORDER_NONE,
-    rows: tableRows,
-    layout: "fixed",
-  })
+  }
 
   const doc = new Document({
     sections: [
@@ -252,7 +154,7 @@ export async function buildLabelDocx(rows: LabelRow[], title: string) {
             },
           },
         },
-        children: [table],
+        children: paragraphs,
       },
     ],
   })

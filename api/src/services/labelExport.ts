@@ -13,12 +13,12 @@ const mmToTwip = (mm: number) => Math.round(mm * 56.7)
 const RUN_FONT = "Arial Narrow"
 const LABEL_WIDTH_MM = 75
 const LABEL_HEIGHT_MM = 38
-const COLUMN_GAP_MM = 2 
-const ROW_GAP_MM = 2 
+const COLUMN_GAP_MM = 7
+const ROW_GAP_MM = 5
 const LABEL_PADDING_TWIP = mmToTwip(2) 
 const LABEL_MARGIN_TOP_TWIP = mmToTwip(5) 
 const PARAGRAPH_MARGIN_TWIP = mmToTwip(1) 
-const LINE_GAP_TWIP = mmToTwip(0.6)
+const LINE_GAP_TWIP = mmToTwip(0.2)
 const LINE_HEIGHT_TWIP = mmToTwip(3.6)
 
 export async function buildLabelExcel(rows: LabelRow[]) {
@@ -62,7 +62,7 @@ export async function buildLabelDocx(rows: LabelRow[], title: string) {
   const pageMarginTop = mmToTwip(4)
   const pageMarginRight = mmToTwip(1.5)
   const pageMarginBottom = mmToTwip(30)
-  const pageMarginLeft = mmToTwip(13.2)
+  const pageMarginLeft = mmToTwip(11.2)
 
   const paragraphs: Paragraph[] = []
 

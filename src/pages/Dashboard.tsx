@@ -12,6 +12,10 @@ import AddUserPage from './AddUser'
 import ChangePasswordPage from './ChangePassword'
 import PrintLabelPerusahaan from './PrintLabelPerusahaan'
 import PrintLabelGovernment from './PrintLabelGovernment'
+import ReportPerusahaan from './ReportPerusahaan'
+import ReportGovernment from './ReportGovernment'
+import ReportJumlahPerusahaan from './ReportJumlahPerusahaan'
+import ReportJumlahGovernment from './ReportJumlahGovernment'
 
 type DashboardProps = {
   user?: AuthenticatedUser | null
@@ -48,13 +52,13 @@ const DashboardPage = ({ user, onLogout }: DashboardProps) => {
       case 'printGovernment':
         return <PrintLabelGovernment />
       case 'reportPerusahaan':
-        return <PlaceholderPanel title="Report - Perusahaan" />
+        return <ReportPerusahaan />
       case 'reportGovernment':
-        return <PlaceholderPanel title="Report - Government" />
+        return <ReportGovernment />
       case 'reportJumlahPerusahaan':
-        return <PlaceholderPanel title="Report - Jumlah Perusahaan" />
+        return <ReportJumlahPerusahaan />
       case 'reportJumlahGovernment':
-        return <PlaceholderPanel title="Report - Jumlah Government" />
+        return <ReportJumlahGovernment />
       case 'addUser':
         return <AddUserPage currentUser={user} />
       case 'changePassword':

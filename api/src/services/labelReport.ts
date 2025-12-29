@@ -226,8 +226,8 @@ const valueNotEquals: ValueDef[] = [
 
 const TRIM = (val: unknown) => (val == null ? "" : String(val).trim())
 
-export function buildLabelQuery(filter: LabelFilterPayload): BuildResult {
-  const conditions: Prisma.Sql[] = []
+export function buildLabelQuery(filter: LabelFilterPayload, extraConditions: Prisma.Sql[] = []): BuildResult {
+  const conditions: Prisma.Sql[] = [...extraConditions]
   const crystals: string[] = []
 
   const addCond = (field: string, op: "=" | "<>", value: string, crystalOp?: "=" | "<>") => {
@@ -241,9 +241,25 @@ export function buildLabelQuery(filter: LabelFilterPayload): BuildResult {
 
   const addLike = (field: string, value: string) => {
     const safeField = Prisma.raw(`"${field}"`)
-    conditions.push(Prisma.sql`${safeField} LIKE ${value}`)
+    conditions.push(Prisma.sql`${safeField} ILIKE ${value}`)
     const esc = value.replace(/%/g, "").replace(/'/g, "''").replace(/\*/g, "")
     crystals.push(`{vnongover.${field}} LIKE '*${esc.replace(/^%|%$/g, "")}*'`)
+  }
+
+  const addNotEqualsOrNull = (field: string, value: string) => {
+    const safeField = Prisma.raw(`"${field}"`)
+    const sqlOp = Prisma.raw("<>")
+    conditions.push(Prisma.sql`(${safeField} IS NULL OR ${safeField} ${sqlOp} ${value})`)
+
+    const esc = value.replace(/'/g, "''")
+    crystals.push(`({vnongover.${field}} <> '${esc}' OR IsNull({vnongover.${field}}))`)
+  }
+
+  const addNotLikeOrNull = (field: string, value: string) => {
+    const safeField = Prisma.raw(`"${field}"`)
+    conditions.push(Prisma.sql`(${safeField} IS NULL OR ${safeField} NOT ILIKE ${value})`)
+    const esc = value.replace(/%/g, "").replace(/'/g, "''").replace(/\*/g, "")
+    crystals.push(`({vnongover.${field}} NOT LIKE '*${esc.replace(/^%|%$/g, "")}*' OR IsNull({vnongover.${field}}))`)
   }
 
   const isOn = (key: string) => Boolean(filter?.[key])
@@ -291,7 +307,12 @@ export function buildLabelQuery(filter: LabelFilterPayload): BuildResult {
   valueNotEquals.forEach(({ toggle, valueKey, field }) => {
     if (!isOn(toggle)) return
     const value = TRIM(filter?.[valueKey])
-    if (value) addCond(field, "<>", value)
+    if (!value) return
+    if (toggle === "cknonsource" && field === "CODE4") {
+      addNotEqualsOrNull(field, value)
+      return
+    }
+    addCond(field, "<>", value)
   })
 
   // Business like / non business
@@ -301,7 +322,7 @@ export function buildLabelQuery(filter: LabelFilterPayload): BuildResult {
   }
   if (isOn("cnonbusiness")) {
     const value = TRIM(filter?.["tnonbusiness"])
-    if (value) addCond("BUSINESS", "<>", value)
+    if (value) addNotLikeOrNull("BUSINESS", `%${value}%`)
   }
 
   const separator = " AND "

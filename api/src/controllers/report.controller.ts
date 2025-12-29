@@ -7,21 +7,26 @@ import { code2Options, businessOptions, provinceOptions } from "../constants/lab
 import { renderLabelPerusahaanPdf } from "../services/labelRender"
 import { buildLabelDocx, buildLabelExcel } from "../services/labelExport"
 
-type ReportTarget = "vnongover" | "vgabung"
+type ReportTarget = "vnongover" | "vgabung" | "gabung"
 
 function clamp(num: number, min: number, max: number) {
   return Math.min(Math.max(num, min), max)
 }
 
-async function runLabelReport(target: ReportTarget, req: Request, res: Response) {
+async function runLabelReport(
+  target: ReportTarget,
+  req: Request,
+  res: Response,
+  baseConditions: Prisma.Sql[] = [],
+) {
   try {
     const payload = req.body ?? {}
-    const { where, selectionFormula } = buildLabelQuery(payload)
+    const { where, selectionFormula } = buildLabelQuery(payload, baseConditions)
 
     const limit = clamp(Number(payload.limit) || 500, 1, 2000)
     const offset = Math.max(Number(payload.offset) || 0, 0)
 
-    const tableSql = Prisma.raw(`"${target}"`)
+    const tableSql = target === "gabung" ? Prisma.raw(`"GABUNG"`) : Prisma.raw(`"${target}"`)
 
     const items = await prisma.$queryRaw<any[]>(
       Prisma.sql`SELECT * FROM ${tableSql} ${where} ORDER BY "COMPANY" LIMIT ${limit} OFFSET ${offset}`,
@@ -46,7 +51,9 @@ async function runLabelReport(target: ReportTarget, req: Request, res: Response)
 }
 
 export async function reportLabelPerusahaan(req: Request, res: Response) {
-  return runLabelReport("vnongover", req, res)
+  const goverField = Prisma.raw(`"GOVER"`)
+  const nonGoverCondition = Prisma.sql`(${goverField} IS NULL OR ${goverField} <> 'X')`
+  return runLabelReport("gabung", req, res, [nonGoverCondition])
 }
 
 export async function reportLabelGover(req: Request, res: Response) {
@@ -66,15 +73,22 @@ function mapDbRowToLabel(row: any) {
     country: row?.COUNTRY ?? "",
     postcode: row?.ZIP ?? row?.POSTCODE ?? "",
     sex: row?.SEX ?? "",
+    phone: row?.PHONE ?? "",
+    handphone: row?.HANDPHONE ?? "",
+    email: row?.EMAIL ?? "",
+    mainActivity: row?.MAIN_ACTIV ?? "",
+    business: row?.BUSINESS ?? "",
   }
 }
 
 export async function exportLabelPerusahaanPdf(req: Request, res: Response) {
   try {
     const payload = req.body ?? {}
-    const { where } = buildLabelQuery(payload)
+    const goverField = Prisma.raw(`"GOVER"`)
+    const nonGoverCondition = Prisma.sql`(${goverField} IS NULL OR ${goverField} <> 'X')`
+    const { where } = buildLabelQuery(payload, [nonGoverCondition])
 
-    const tableSql = Prisma.raw(`"vnongover"`)
+    const tableSql = Prisma.raw(`"GABUNG"`)
     const items = await prisma.$queryRaw<any[]>(Prisma.sql`SELECT * FROM ${tableSql} ${where} ORDER BY "COMPANY"`)
     const rows = (items ?? []).map(mapDbRowToLabel)
 
@@ -98,8 +112,10 @@ export async function exportLabelPerusahaanPdf(req: Request, res: Response) {
 export async function exportLabelPerusahaanExcel(req: Request, res: Response) {
   try {
     const payload = req.body ?? {}
-    const { where } = buildLabelQuery(payload)
-    const tableSql = Prisma.raw(`"vnongover"`)
+    const goverField = Prisma.raw(`"GOVER"`)
+    const nonGoverCondition = Prisma.sql`(${goverField} IS NULL OR ${goverField} <> 'X')`
+    const { where } = buildLabelQuery(payload, [nonGoverCondition])
+    const tableSql = Prisma.raw(`"GABUNG"`)
     const items = await prisma.$queryRaw<any[]>(Prisma.sql`SELECT * FROM ${tableSql} ${where} ORDER BY "COMPANY"`)
     const rows = (items ?? []).map(mapDbRowToLabel)
 
@@ -115,8 +131,10 @@ export async function exportLabelPerusahaanExcel(req: Request, res: Response) {
 export async function exportLabelPerusahaanWord(req: Request, res: Response) {
   try {
     const payload = req.body ?? {}
-    const { where } = buildLabelQuery(payload)
-    const tableSql = Prisma.raw(`"vnongover"`)
+    const goverField = Prisma.raw(`"GOVER"`)
+    const nonGoverCondition = Prisma.sql`(${goverField} IS NULL OR ${goverField} <> 'X')`
+    const { where } = buildLabelQuery(payload, [nonGoverCondition])
+    const tableSql = Prisma.raw(`"GABUNG"`)
     const items = await prisma.$queryRaw<any[]>(Prisma.sql`SELECT * FROM ${tableSql} ${where} ORDER BY "COMPANY"`)
     const rows = (items ?? []).map(mapDbRowToLabel)
 

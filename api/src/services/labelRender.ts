@@ -17,6 +17,11 @@ export type LabelRow = {
   postcode?: string
   sex?: string
   nourut?: string | number
+  phone?: string
+  handphone?: string
+  email?: string
+  mainActivity?: string
+  business?: string
 }
 
 export type LabelReportData = {

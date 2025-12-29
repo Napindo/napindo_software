@@ -20,6 +20,12 @@ const LABEL_MARGIN_TOP_TWIP = mmToTwip(5)
 const PARAGRAPH_MARGIN_TWIP = mmToTwip(1) 
 const LINE_GAP_TWIP = mmToTwip(0.2)
 const LINE_HEIGHT_TWIP = mmToTwip(3.6)
+const BADGE_SHIFT_LEFT_TWIP = mmToTwip(3)
+const resolveBadgeNumber = (nourut: string | number | undefined, fallback: number) => {
+  if (nourut == null) return fallback
+  const trimmed = String(nourut).trim()
+  return trimmed ? trimmed : fallback
+}
 
 export async function buildLabelExcel(rows: LabelRow[]) {
   const wb = new ExcelJS.Workbook()
@@ -28,7 +34,6 @@ export async function buildLabelExcel(rows: LabelRow[]) {
   sheet.columns = [
     { header: "No", key: "no", width: 6 },
     { header: "Name", key: "contactName", width: 28 },
-    { header: "Sex", key: "sex", width: 6 },
     { header: "Position", key: "position", width: 18 },
     { header: "Company", key: "companyName", width: 30 },
     { header: "Address 1", key: "addressLine1", width: 32 },
@@ -37,6 +42,11 @@ export async function buildLabelExcel(rows: LabelRow[]) {
     { header: "Province", key: "province", width: 16 },
     { header: "Country", key: "country", width: 16 },
     { header: "Postcode", key: "postcode", width: 12 },
+    { header: "Phone", key: "phone", width: 16 },
+    { header: "Handphone", key: "handphone", width: 16 },
+    { header: "Email", key: "email", width: 28 },
+    { header: "Main Activity", key: "mainActivity", width: 24 },
+    { header: "Business", key: "business", width: 24 },
   ]
 
   rows.forEach((row, idx) => {
@@ -124,15 +134,16 @@ export async function buildLabelDocx(rows: LabelRow[], title: string) {
 
     // Badge absolut di pojok kanan bawah label
     const badgeY = baseY + labelHeightTwip - mmToTwip(6) // 1mm dari bawah, tinggi badge ~5mm
+    const badgeNumber = resolveBadgeNumber(row.nourut, i + 1)
     paragraphs.push(
       new Paragraph({
         alignment: AlignmentType.RIGHT,
-        children: [new TextRun({ text: `${title}.${i + 1}`, size: 16, font: RUN_FONT })],
+        children: [new TextRun({ text: `${title}.${badgeNumber}`, size: 16, font: RUN_FONT })],
         spacing: { after: 0 },
         frame: {
           type: "absolute",
           position: { x: startX, y: badgeY },
-          width: labelWidthTwip - LABEL_PADDING_TWIP * 2,
+          width: labelWidthTwip - LABEL_PADDING_TWIP * 2 - BADGE_SHIFT_LEFT_TWIP,
           height: LINE_HEIGHT_TWIP,
           anchor: { horizontal: "margin", vertical: "margin" },
           wrap: "none",

@@ -100,6 +100,46 @@ export async function reportLabelGover(filter: unknown) {
   return pickData(body) ?? body.data
 }
 
+export async function reportPerusahaan(filter: unknown) {
+  const { body } = await apiFetch('/report/perusahaan', {
+    method: 'POST',
+    body: JSON.stringify(filter),
+  })
+
+  if (!isResponseOk(body)) throw new Error(body.message || 'Gagal memuat report perusahaan')
+  return pickData(body) ?? body.data
+}
+
+export async function reportGovernment(filter: unknown) {
+  const { body } = await apiFetch('/report/government', {
+    method: 'POST',
+    body: JSON.stringify(filter),
+  })
+
+  if (!isResponseOk(body)) throw new Error(body.message || 'Gagal memuat report government')
+  return pickData(body) ?? body.data
+}
+
+export async function reportJumlahPerusahaan(filter: unknown) {
+  const { body } = await apiFetch('/report/jumlah/perusahaan', {
+    method: 'POST',
+    body: JSON.stringify(filter),
+  })
+
+  if (!isResponseOk(body)) throw new Error(body.message || 'Gagal memuat report jumlah perusahaan')
+  return pickData(body) ?? body.data
+}
+
+export async function reportJumlahGovernment(filter: unknown) {
+  const { body } = await apiFetch('/report/jumlah/government', {
+    method: 'POST',
+    body: JSON.stringify(filter),
+  })
+
+  if (!isResponseOk(body)) throw new Error(body.message || 'Gagal memuat report jumlah government')
+  return pickData(body) ?? body.data
+}
+
 export async function reportBusinessVisitor(filter: unknown) {
   const { body } = await apiFetch('/report/businessvisitor', {
     method: 'POST',
@@ -269,6 +309,274 @@ export async function renderLabelGoverWord(filter: unknown) {
   return {
     contentType: response.headers.get('content-type') || 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     filename: 'print-label-government.docx',
+    buffer,
+    base64: buffer.toString('base64'),
+  }
+}
+
+export async function renderReportPerusahaanPdf(filter: unknown) {
+  const url = `${API_BASE_URL.replace(/\/$/, '')}${API_PREFIX}/report/perusahaan/print`
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(filter),
+  })
+
+  if (!response.ok) {
+    const message = await response.text()
+    throw new Error(message || 'Gagal mencetak report perusahaan')
+  }
+
+  const arrayBuffer = await response.arrayBuffer()
+  const buffer = Buffer.from(arrayBuffer)
+  return {
+    contentType: response.headers.get('content-type') || 'application/pdf',
+    filename: 'report-perusahaan.pdf',
+    buffer,
+    base64: buffer.toString('base64'),
+  }
+}
+
+export async function renderReportGovernmentPdf(filter: unknown) {
+  const url = `${API_BASE_URL.replace(/\/$/, '')}${API_PREFIX}/report/government/print`
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(filter),
+  })
+
+  if (!response.ok) {
+    const message = await response.text()
+    throw new Error(message || 'Gagal mencetak report government')
+  }
+
+  const arrayBuffer = await response.arrayBuffer()
+  const buffer = Buffer.from(arrayBuffer)
+  return {
+    contentType: response.headers.get('content-type') || 'application/pdf',
+    filename: 'report-government.pdf',
+    buffer,
+    base64: buffer.toString('base64'),
+  }
+}
+
+export async function renderReportJumlahPerusahaanPdf(filter: unknown) {
+  const url = `${API_BASE_URL.replace(/\/$/, '')}${API_PREFIX}/report/jumlah/perusahaan/print`
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(filter),
+  })
+
+  if (!response.ok) {
+    const message = await response.text()
+    throw new Error(message || 'Gagal mencetak report jumlah perusahaan')
+  }
+
+  const arrayBuffer = await response.arrayBuffer()
+  const buffer = Buffer.from(arrayBuffer)
+  return {
+    contentType: response.headers.get('content-type') || 'application/pdf',
+    filename: 'report-jumlah-perusahaan.pdf',
+    buffer,
+    base64: buffer.toString('base64'),
+  }
+}
+
+export async function renderReportJumlahGovernmentPdf(filter: unknown) {
+  const url = `${API_BASE_URL.replace(/\/$/, '')}${API_PREFIX}/report/jumlah/government/print`
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(filter),
+  })
+
+  if (!response.ok) {
+    const message = await response.text()
+    throw new Error(message || 'Gagal mencetak report jumlah government')
+  }
+
+  const arrayBuffer = await response.arrayBuffer()
+  const buffer = Buffer.from(arrayBuffer)
+  return {
+    contentType: response.headers.get('content-type') || 'application/pdf',
+    filename: 'report-jumlah-government.pdf',
+    buffer,
+    base64: buffer.toString('base64'),
+  }
+}
+
+export async function renderReportJumlahPerusahaanExcel(filter: unknown) {
+  const url = `${API_BASE_URL.replace(/\/$/, '')}${API_PREFIX}/report/jumlah/perusahaan/export/excel`
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(filter || {}),
+  })
+  if (!response.ok) {
+    const message = await response.text()
+    throw new Error(message || 'Gagal mengunduh Excel report jumlah perusahaan')
+  }
+  const arrayBuffer = await response.arrayBuffer()
+  const buffer = Buffer.from(arrayBuffer)
+  return {
+    contentType: response.headers.get('content-type') || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    filename: 'report-jumlah-perusahaan.xlsx',
+    buffer,
+    base64: buffer.toString('base64'),
+  }
+}
+
+export async function renderReportJumlahGovernmentExcel(filter: unknown) {
+  const url = `${API_BASE_URL.replace(/\/$/, '')}${API_PREFIX}/report/jumlah/government/export/excel`
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(filter || {}),
+  })
+  if (!response.ok) {
+    const message = await response.text()
+    throw new Error(message || 'Gagal mengunduh Excel report jumlah government')
+  }
+  const arrayBuffer = await response.arrayBuffer()
+  const buffer = Buffer.from(arrayBuffer)
+  return {
+    contentType: response.headers.get('content-type') || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    filename: 'report-jumlah-government.xlsx',
+    buffer,
+    base64: buffer.toString('base64'),
+  }
+}
+
+export async function renderReportPerusahaanExcel(filter: unknown) {
+  const url = `${API_BASE_URL.replace(/\/$/, '')}${API_PREFIX}/report/perusahaan/export/excel`
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(filter || {}),
+  })
+  if (!response.ok) {
+    const message = await response.text()
+    throw new Error(message || 'Gagal mengunduh Excel report perusahaan')
+  }
+  const arrayBuffer = await response.arrayBuffer()
+  const buffer = Buffer.from(arrayBuffer)
+  return {
+    contentType: response.headers.get('content-type') || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    filename: 'report-perusahaan.xlsx',
+    buffer,
+    base64: buffer.toString('base64'),
+  }
+}
+
+export async function renderReportGovernmentExcel(filter: unknown) {
+  const url = `${API_BASE_URL.replace(/\/$/, '')}${API_PREFIX}/report/government/export/excel`
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(filter || {}),
+  })
+  if (!response.ok) {
+    const message = await response.text()
+    throw new Error(message || 'Gagal mengunduh Excel report government')
+  }
+  const arrayBuffer = await response.arrayBuffer()
+  const buffer = Buffer.from(arrayBuffer)
+  return {
+    contentType: response.headers.get('content-type') || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    filename: 'report-government.xlsx',
+    buffer,
+    base64: buffer.toString('base64'),
+  }
+}
+
+export async function renderReportPerusahaanWord(filter: unknown) {
+  const url = `${API_BASE_URL.replace(/\/$/, '')}${API_PREFIX}/report/perusahaan/export/word`
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(filter || {}),
+  })
+  if (!response.ok) {
+    const message = await response.text()
+    throw new Error(message || 'Gagal mengunduh Word report perusahaan')
+  }
+  const arrayBuffer = await response.arrayBuffer()
+  const buffer = Buffer.from(arrayBuffer)
+  return {
+    contentType: response.headers.get('content-type') || 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    filename: 'report-perusahaan.docx',
+    buffer,
+    base64: buffer.toString('base64'),
+  }
+}
+
+export async function renderReportGovernmentWord(filter: unknown) {
+  const url = `${API_BASE_URL.replace(/\/$/, '')}${API_PREFIX}/report/government/export/word`
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(filter || {}),
+  })
+  if (!response.ok) {
+    const message = await response.text()
+    throw new Error(message || 'Gagal mengunduh Word report government')
+  }
+  const arrayBuffer = await response.arrayBuffer()
+  const buffer = Buffer.from(arrayBuffer)
+  return {
+    contentType: response.headers.get('content-type') || 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    filename: 'report-government.docx',
+    buffer,
+    base64: buffer.toString('base64'),
+  }
+}
+
+export async function renderReportJumlahPerusahaanWord(filter: unknown) {
+  const url = `${API_BASE_URL.replace(/\/$/, '')}${API_PREFIX}/report/jumlah/perusahaan/export/word`
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(filter || {}),
+  })
+  if (!response.ok) {
+    const message = await response.text()
+    throw new Error(message || 'Gagal mengunduh Word report jumlah perusahaan')
+  }
+  const arrayBuffer = await response.arrayBuffer()
+  const buffer = Buffer.from(arrayBuffer)
+  return {
+    contentType: response.headers.get('content-type') || 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    filename: 'report-jumlah-perusahaan.docx',
+    buffer,
+    base64: buffer.toString('base64'),
+  }
+}
+
+export async function renderReportJumlahGovernmentWord(filter: unknown) {
+  const url = `${API_BASE_URL.replace(/\/$/, '')}${API_PREFIX}/report/jumlah/government/export/word`
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(filter || {}),
+  })
+  if (!response.ok) {
+    const message = await response.text()
+    throw new Error(message || 'Gagal mengunduh Word report jumlah government')
+  }
+  const arrayBuffer = await response.arrayBuffer()
+  const buffer = Buffer.from(arrayBuffer)
+  return {
+    contentType: response.headers.get('content-type') || 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    filename: 'report-jumlah-government.docx',
     buffer,
     base64: buffer.toString('base64'),
   }

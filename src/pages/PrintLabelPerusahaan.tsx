@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { PrintLabelResult } from '../services/printLabel'
 import { requestLabelOptions, requestLabelPerusahaan } from '../services/printLabel'
 import { provinceOptions } from '../constants/provinces'
 
@@ -305,9 +304,37 @@ const checkboxSections: CheckboxGroup[] = [
   posterGroup,
 ]
 
-type SubmitHandler = (payload: Record<string, unknown>) => Promise<PrintLabelResult>
+type SubmitResult = {
+  data?: unknown
+  total?: number
+  totalCount?: number
+  count?: number
+  message?: string
+}
 
-export function PrintLabelTemplate({ title, onSubmit }: { title: string; onSubmit: SubmitHandler }) {
+type SubmitHandler = (payload: Record<string, unknown>) => Promise<SubmitResult>
+
+type TemplateProps = {
+  title: string
+  onSubmit: SubmitHandler
+  labelTitle?: string
+  labelPlaceholder?: string
+  previewTitle?: string
+  printTitle?: string
+  noun?: string
+  titleKey?: string
+}
+
+export function PrintLabelTemplate({
+  title,
+  onSubmit,
+  labelTitle = 'Judul Label',
+  labelPlaceholder = 'Label Perusahaan',
+  previewTitle = 'Preview Word',
+  printTitle = 'Cetak Label',
+  noun = 'label',
+  titleKey = 'judul_label',
+}: TemplateProps) {
   const [judulLabel, setJudulLabel] = useState('')
   const [selectValues, setSelectValues] = useState<Record<string, string>>({})
   const [selectActive, setSelectActive] = useState<Record<string, boolean>>({})
@@ -315,7 +342,9 @@ export function PrintLabelTemplate({ title, onSubmit }: { title: string; onSubmi
   const [textActive, setTextActive] = useState<Record<string, boolean>>({})
   const [checks, setChecks] = useState<Record<string, boolean>>({})
   const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState('Gunakan panel filter untuk menyesuaikan label. Ringkasan akan ditampilkan di sini.')
+  const nounText = noun.trim() || 'label'
+  const initialMessage = `Gunakan panel filter untuk menyesuaikan ${nounText}. Ringkasan akan ditampilkan di sini.`
+  const [message, setMessage] = useState(initialMessage)
   const [error, setError] = useState<string | null>(null)
   const [count, setCount] = useState(0)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -356,7 +385,7 @@ export function PrintLabelTemplate({ title, onSubmit }: { title: string; onSubmi
 
   const payload = useMemo(() => {
     const base: Record<string, unknown> = {
-      judul_label: judulLabel.trim(),
+      [titleKey]: judulLabel.trim(),
     }
 
     selectFilters.forEach((filter) => {
@@ -434,7 +463,7 @@ export function PrintLabelTemplate({ title, onSubmit }: { title: string; onSubmi
       return null
     })
     setPreviewMime('application/pdf')
-    setMessage('Gunakan panel filter untuk menyesuaikan label. Ringkasan akan ditampilkan di sini.')
+    setMessage(initialMessage)
   }
 
   const handleExportSave = async () => {
@@ -478,7 +507,7 @@ export function PrintLabelTemplate({ title, onSubmit }: { title: string; onSubmi
       const printWindow = window.open('', '_blank', 'noopener,noreferrer,width=900,height=700')
       if (printWindow) {
         printWindow.document.write(
-          `<html><head><title>Cetak Label</title></head><body style="margin:0">
+          `<html><head><title>${printTitle}</title></head><body style="margin:0">
             <iframe src="${url}" style="border:0;width:100%;height:100vh;" id="print-frame"></iframe>
           </body></html>`,
         )
@@ -573,12 +602,12 @@ export function PrintLabelTemplate({ title, onSubmit }: { title: string; onSubmi
             </div>
             <div className="px-5 py-4 space-y-3">
               <div className="grid grid-cols-1 md:grid-cols-[180px_1fr_auto] items-center gap-3">
-                <label className="text-sm font-semibold text-slate-700">Judul Label</label>
+                <label className="text-sm font-semibold text-slate-700">{labelTitle}</label>
                 <input
                   type="text"
                   value={judulLabel}
                   onChange={(e) => setJudulLabel(e.target.value)}
-                  placeholder="Label Perusahaan"
+                  placeholder={labelPlaceholder}
                   className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-200"
                 />
                 <div />
@@ -652,7 +681,7 @@ export function PrintLabelTemplate({ title, onSubmit }: { title: string; onSubmi
         <aside className="bg-white border border-slate-200 rounded-3xl shadow-sm p-5 flex flex-col gap-4">
           <div className="border border-slate-200 rounded-2xl bg-slate-50">
             <div className="px-4 py-3 flex items-center justify-between border-b border-slate-200">
-              <h3 className="text-base font-semibold text-slate-700">Preview Word</h3>
+              <h3 className="text-base font-semibold text-slate-700">{previewTitle}</h3>
               <span className="px-3 py-1 text-xs font-semibold text-sky-700 bg-sky-100 rounded-full border border-sky-200">
                 {count} data
               </span>

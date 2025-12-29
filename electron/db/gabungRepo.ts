@@ -141,6 +141,31 @@ export async function renderLabelVisitorPdf(filter: unknown) {
   }
 }
 
+export async function renderLabelGoverPdf(filter: unknown) {
+  const url = `${API_BASE_URL.replace(/\/$/, '')}${API_PREFIX}/report/labelgover/print`
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(filter),
+  })
+
+  if (!response.ok) {
+    const message = await response.text()
+    throw new Error(message || 'Gagal mencetak label government')
+  }
+
+  const arrayBuffer = await response.arrayBuffer()
+  const buffer = Buffer.from(arrayBuffer)
+  return {
+    contentType: response.headers.get('content-type') || 'application/pdf',
+    filename: 'print-label-government.pdf',
+    buffer,
+    base64: buffer.toString('base64'),
+  }
+}
+
 async function renderBinary(url: string, filename: string) {
   const response = await fetch(url, {
     method: 'POST',
@@ -186,6 +211,27 @@ export async function renderLabelVisitorExcel(filter: unknown) {
   }
 }
 
+export async function renderLabelGoverExcel(filter: unknown) {
+  const url = `${API_BASE_URL.replace(/\/$/, '')}${API_PREFIX}/report/labelgover/export/excel`
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(filter || {}),
+  })
+  if (!response.ok) {
+    const message = await response.text()
+    throw new Error(message || 'Gagal mengunduh Excel government')
+  }
+  const arrayBuffer = await response.arrayBuffer()
+  const buffer = Buffer.from(arrayBuffer)
+  return {
+    contentType: response.headers.get('content-type') || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    filename: 'print-label-government.xlsx',
+    buffer,
+    base64: buffer.toString('base64'),
+  }
+}
+
 export async function renderLabelVisitorWord(filter: unknown) {
   const url = `${API_BASE_URL.replace(/\/$/, '')}${API_PREFIX}/report/labelvisitor/export/word`
   const response = await fetch(url, {
@@ -202,6 +248,27 @@ export async function renderLabelVisitorWord(filter: unknown) {
   return {
     contentType: response.headers.get('content-type') || 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     filename: 'print-label-perusahaan.docx',
+    buffer,
+    base64: buffer.toString('base64'),
+  }
+}
+
+export async function renderLabelGoverWord(filter: unknown) {
+  const url = `${API_BASE_URL.replace(/\/$/, '')}${API_PREFIX}/report/labelgover/export/word`
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(filter || {}),
+  })
+  if (!response.ok) {
+    const message = await response.text()
+    throw new Error(message || 'Gagal mengunduh Word government')
+  }
+  const arrayBuffer = await response.arrayBuffer()
+  const buffer = Buffer.from(arrayBuffer)
+  return {
+    contentType: response.headers.get('content-type') || 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    filename: 'print-label-government.docx',
     buffer,
     base64: buffer.toString('base64'),
   }

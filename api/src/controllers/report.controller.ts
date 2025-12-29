@@ -57,7 +57,9 @@ export async function reportLabelPerusahaan(req: Request, res: Response) {
 }
 
 export async function reportLabelGover(req: Request, res: Response) {
-  return runLabelReport("vgabung", req, res)
+  const goverField = Prisma.raw(`"GOVER"`)
+  const goverCondition = Prisma.sql`${goverField} = 'X'`
+  return runLabelReport("vgabung", req, res, [goverCondition])
 }
 
 function mapDbRowToLabel(row: any) {
@@ -109,6 +111,34 @@ export async function exportLabelPerusahaanPdf(req: Request, res: Response) {
   }
 }
 
+export async function exportLabelGoverPdf(req: Request, res: Response) {
+  try {
+    const payload = req.body ?? {}
+    const goverField = Prisma.raw(`"GOVER"`)
+    const goverCondition = Prisma.sql`${goverField} = 'X'`
+    const { where } = buildLabelQuery(payload, [goverCondition])
+
+    const tableSql = Prisma.raw(`"vgabung"`)
+    const items = await prisma.$queryRaw<any[]>(Prisma.sql`SELECT * FROM ${tableSql} ${where} ORDER BY "COMPANY"`)
+    const rows = (items ?? []).map(mapDbRowToLabel)
+
+    const data = {
+      title: (payload?.judul_label as string) || "Print Label Government",
+      totalCount: rows.length,
+      rows,
+    }
+
+    const pdf = await renderLabelPerusahaanPdf(data)
+
+    res.setHeader("Content-Type", "application/pdf")
+    res.setHeader("Content-Disposition", 'inline; filename="print-label-government.pdf"')
+    const buffer = Buffer.from(await pdf.arrayBuffer())
+    return res.end(buffer)
+  } catch (err: any) {
+    return res.status(500).json(fail(err?.message || String(err)))
+  }
+}
+
 export async function exportLabelPerusahaanExcel(req: Request, res: Response) {
   try {
     const payload = req.body ?? {}
@@ -122,6 +152,25 @@ export async function exportLabelPerusahaanExcel(req: Request, res: Response) {
     const buffer = await buildLabelExcel(rows)
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     res.setHeader("Content-Disposition", 'attachment; filename="print-label-perusahaan.xlsx"')
+    return res.end(buffer)
+  } catch (err: any) {
+    return res.status(500).json(fail(err?.message || String(err)))
+  }
+}
+
+export async function exportLabelGoverExcel(req: Request, res: Response) {
+  try {
+    const payload = req.body ?? {}
+    const goverField = Prisma.raw(`"GOVER"`)
+    const goverCondition = Prisma.sql`${goverField} = 'X'`
+    const { where } = buildLabelQuery(payload, [goverCondition])
+    const tableSql = Prisma.raw(`"vgabung"`)
+    const items = await prisma.$queryRaw<any[]>(Prisma.sql`SELECT * FROM ${tableSql} ${where} ORDER BY "COMPANY"`)
+    const rows = (items ?? []).map(mapDbRowToLabel)
+
+    const buffer = await buildLabelExcel(rows)
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    res.setHeader("Content-Disposition", 'attachment; filename="print-label-government.xlsx"')
     return res.end(buffer)
   } catch (err: any) {
     return res.status(500).json(fail(err?.message || String(err)))
@@ -143,6 +192,27 @@ export async function exportLabelPerusahaanWord(req: Request, res: Response) {
 
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
     res.setHeader("Content-Disposition", 'attachment; filename="print-label-perusahaan.docx"')
+    return res.end(buffer)
+  } catch (err: any) {
+    return res.status(500).json(fail(err?.message || String(err)))
+  }
+}
+
+export async function exportLabelGoverWord(req: Request, res: Response) {
+  try {
+    const payload = req.body ?? {}
+    const goverField = Prisma.raw(`"GOVER"`)
+    const goverCondition = Prisma.sql`${goverField} = 'X'`
+    const { where } = buildLabelQuery(payload, [goverCondition])
+    const tableSql = Prisma.raw(`"vgabung"`)
+    const items = await prisma.$queryRaw<any[]>(Prisma.sql`SELECT * FROM ${tableSql} ${where} ORDER BY "COMPANY"`)
+    const rows = (items ?? []).map(mapDbRowToLabel)
+
+    const title = (payload?.judul_label as string) || "Print Label Government"
+    const buffer = await buildLabelDocx(rows, title)
+
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+    res.setHeader("Content-Disposition", 'attachment; filename="print-label-government.docx"')
     return res.end(buffer)
   } catch (err: any) {
     return res.status(500).json(fail(err?.message || String(err)))

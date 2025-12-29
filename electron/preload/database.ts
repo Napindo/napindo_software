@@ -32,4 +32,8 @@ contextBridge.exposeInMainWorld('database', {
   reportLabelVisitorExcel: (filter: unknown) => ipcRenderer.invoke('report:labelvisitor:excel', filter),
   reportLabelVisitorWord: (filter: unknown) => ipcRenderer.invoke('report:labelvisitor:word', filter),
   reportLabelVisitorExportSave: (filter: unknown) => ipcRenderer.invoke('report:labelvisitor:export-save', filter),
+  reportLabelGoverPdf: (filter: unknown) => ipcRenderer.invoke('report:labelgover:pdf', filter),
+  reportLabelGoverExcel: (filter: unknown) => ipcRenderer.invoke('report:labelgover:excel', filter),
+  reportLabelGoverWord: (filter: unknown) => ipcRenderer.invoke('report:labelgover:word', filter),
+  reportLabelGoverExportSave: (filter: unknown) => ipcRenderer.invoke('report:labelgover:export-save', filter),
 })

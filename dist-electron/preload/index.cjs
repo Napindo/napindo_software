@@ -16,5 +16,9 @@ electron.contextBridge.exposeInMainWorld("database", {
   reportLabelVisitorPdf: (filter) => electron.ipcRenderer.invoke("report:labelvisitor:pdf", filter),
   reportLabelVisitorExcel: (filter) => electron.ipcRenderer.invoke("report:labelvisitor:excel", filter),
   reportLabelVisitorWord: (filter) => electron.ipcRenderer.invoke("report:labelvisitor:word", filter),
-  reportLabelVisitorExportSave: (filter) => electron.ipcRenderer.invoke("report:labelvisitor:export-save", filter)
+  reportLabelVisitorExportSave: (filter) => electron.ipcRenderer.invoke("report:labelvisitor:export-save", filter),
+  reportLabelGoverPdf: (filter) => electron.ipcRenderer.invoke("report:labelgover:pdf", filter),
+  reportLabelGoverExcel: (filter) => electron.ipcRenderer.invoke("report:labelgover:excel", filter),
+  reportLabelGoverWord: (filter) => electron.ipcRenderer.invoke("report:labelgover:word", filter),
+  reportLabelGoverExportSave: (filter) => electron.ipcRenderer.invoke("report:labelgover:export-save", filter)
 });

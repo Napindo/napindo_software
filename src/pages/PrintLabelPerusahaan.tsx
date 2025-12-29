@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { PrintLabelResult } from '../services/printLabel'
 import { requestLabelOptions, requestLabelPerusahaan } from '../services/printLabel'
+import { provinceOptions } from '../constants/provinces'
 
 // TODO: integrate additional report/label endpoints here when backend is ready.
 
@@ -342,6 +343,7 @@ export function PrintLabelTemplate({ title, onSubmit }: { title: string; onSubmi
           ...prev,
           ...data,
           nonSource: data?.nonSource ?? data?.source ?? prev.nonSource,
+          province: [...new Set([...(data?.province ?? []), ...provinceOptions])],
         }))
       })
       .catch((err) => {
@@ -386,10 +388,10 @@ export function PrintLabelTemplate({ title, onSubmit }: { title: string; onSubmi
     setLoading(true)
     setError(null)
     try {
-      const result = await onSubmit({ ...payload, action: 'preview' })
-      const total = result.total ?? result.totalCount ?? result.count ?? 0
+      const countResult = await onSubmit(payload)
+      const total = countResult.total ?? countResult.totalCount ?? countResult.count ?? 0
       setCount(total)
-      setMessage(`Pratinjau Word disiapkan. Total data: ${total}. Memuat preview (PDF agar bisa dilihat)...`)
+      setMessage(`Data dihitung. Total data: ${total}. Memuat preview (PDF agar bisa dilihat)...`)
 
       // Muat preview PDF (tampilan setara Word, lebih mudah dirender)
       const pdfResult = await onSubmit({ ...payload, action: 'preview-pdf' })
@@ -402,7 +404,7 @@ export function PrintLabelTemplate({ title, onSubmit }: { title: string; onSubmi
           if (prev) URL.revokeObjectURL(prev)
           return url
         })
-        setMessage(`Preview Word (tampilan setara) siap. Total data: ${total}.`)
+        setMessage(`Preview (tampilan setara) siap. Total data: ${total}.`)
       } else {
         setPreviewUrl((prev) => {
           if (prev) URL.revokeObjectURL(prev)
@@ -748,14 +750,3 @@ function base64ToBlobUrl(base64: string, contentType = 'application/pdf') {
   return URL.createObjectURL(blob)
 }
 
-function downloadBase64(base64: string, filename: string, contentType: string) {
-  const url = base64ToBlobUrl(base64, contentType)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = filename
-  link.style.display = 'none'
-  document.body.appendChild(link)
-  link.click()
-  link.remove()
-  URL.revokeObjectURL(url)
-}

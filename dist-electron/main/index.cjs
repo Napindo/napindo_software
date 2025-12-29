@@ -160,6 +160,38 @@ async function reportLabelGover(filter) {
   if (!isResponseOk(body)) throw new Error(body.message || "Gagal memuat label gover");
   return pickData(body) ?? body.data;
 }
+async function reportPerusahaan(filter) {
+  const { body } = await apiFetch("/report/perusahaan", {
+    method: "POST",
+    body: JSON.stringify(filter)
+  });
+  if (!isResponseOk(body)) throw new Error(body.message || "Gagal memuat report perusahaan");
+  return pickData(body) ?? body.data;
+}
+async function reportGovernment(filter) {
+  const { body } = await apiFetch("/report/government", {
+    method: "POST",
+    body: JSON.stringify(filter)
+  });
+  if (!isResponseOk(body)) throw new Error(body.message || "Gagal memuat report government");
+  return pickData(body) ?? body.data;
+}
+async function reportJumlahPerusahaan(filter) {
+  const { body } = await apiFetch("/report/jumlah/perusahaan", {
+    method: "POST",
+    body: JSON.stringify(filter)
+  });
+  if (!isResponseOk(body)) throw new Error(body.message || "Gagal memuat report jumlah perusahaan");
+  return pickData(body) ?? body.data;
+}
+async function reportJumlahGovernment(filter) {
+  const { body } = await apiFetch("/report/jumlah/government", {
+    method: "POST",
+    body: JSON.stringify(filter)
+  });
+  if (!isResponseOk(body)) throw new Error(body.message || "Gagal memuat report jumlah government");
+  return pickData(body) ?? body.data;
+}
 async function reportBusinessVisitor(filter) {
   const { body } = await apiFetch("/report/businessvisitor", {
     method: "POST",
@@ -297,6 +329,254 @@ async function renderLabelGoverWord(filter) {
     base64: buffer.toString("base64")
   };
 }
+async function renderReportPerusahaanPdf(filter) {
+  const url = `${API_BASE_URL.replace(/\/$/, "")}${API_PREFIX}/report/perusahaan/print`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(filter)
+  });
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || "Gagal mencetak report perusahaan");
+  }
+  const arrayBuffer = await response.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  return {
+    contentType: response.headers.get("content-type") || "application/pdf",
+    filename: "report-perusahaan.pdf",
+    buffer,
+    base64: buffer.toString("base64")
+  };
+}
+async function renderReportGovernmentPdf(filter) {
+  const url = `${API_BASE_URL.replace(/\/$/, "")}${API_PREFIX}/report/government/print`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(filter)
+  });
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || "Gagal mencetak report government");
+  }
+  const arrayBuffer = await response.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  return {
+    contentType: response.headers.get("content-type") || "application/pdf",
+    filename: "report-government.pdf",
+    buffer,
+    base64: buffer.toString("base64")
+  };
+}
+async function renderReportJumlahPerusahaanPdf(filter) {
+  const url = `${API_BASE_URL.replace(/\/$/, "")}${API_PREFIX}/report/jumlah/perusahaan/print`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(filter)
+  });
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || "Gagal mencetak report jumlah perusahaan");
+  }
+  const arrayBuffer = await response.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  return {
+    contentType: response.headers.get("content-type") || "application/pdf",
+    filename: "report-jumlah-perusahaan.pdf",
+    buffer,
+    base64: buffer.toString("base64")
+  };
+}
+async function renderReportJumlahGovernmentPdf(filter) {
+  const url = `${API_BASE_URL.replace(/\/$/, "")}${API_PREFIX}/report/jumlah/government/print`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(filter)
+  });
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || "Gagal mencetak report jumlah government");
+  }
+  const arrayBuffer = await response.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  return {
+    contentType: response.headers.get("content-type") || "application/pdf",
+    filename: "report-jumlah-government.pdf",
+    buffer,
+    base64: buffer.toString("base64")
+  };
+}
+async function renderReportJumlahPerusahaanExcel(filter) {
+  const url = `${API_BASE_URL.replace(/\/$/, "")}${API_PREFIX}/report/jumlah/perusahaan/export/excel`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(filter || {})
+  });
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || "Gagal mengunduh Excel report jumlah perusahaan");
+  }
+  const arrayBuffer = await response.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  return {
+    contentType: response.headers.get("content-type") || "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    filename: "report-jumlah-perusahaan.xlsx",
+    buffer,
+    base64: buffer.toString("base64")
+  };
+}
+async function renderReportJumlahGovernmentExcel(filter) {
+  const url = `${API_BASE_URL.replace(/\/$/, "")}${API_PREFIX}/report/jumlah/government/export/excel`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(filter || {})
+  });
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || "Gagal mengunduh Excel report jumlah government");
+  }
+  const arrayBuffer = await response.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  return {
+    contentType: response.headers.get("content-type") || "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    filename: "report-jumlah-government.xlsx",
+    buffer,
+    base64: buffer.toString("base64")
+  };
+}
+async function renderReportPerusahaanExcel(filter) {
+  const url = `${API_BASE_URL.replace(/\/$/, "")}${API_PREFIX}/report/perusahaan/export/excel`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(filter || {})
+  });
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || "Gagal mengunduh Excel report perusahaan");
+  }
+  const arrayBuffer = await response.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  return {
+    contentType: response.headers.get("content-type") || "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    filename: "report-perusahaan.xlsx",
+    buffer,
+    base64: buffer.toString("base64")
+  };
+}
+async function renderReportGovernmentExcel(filter) {
+  const url = `${API_BASE_URL.replace(/\/$/, "")}${API_PREFIX}/report/government/export/excel`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(filter || {})
+  });
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || "Gagal mengunduh Excel report government");
+  }
+  const arrayBuffer = await response.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  return {
+    contentType: response.headers.get("content-type") || "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    filename: "report-government.xlsx",
+    buffer,
+    base64: buffer.toString("base64")
+  };
+}
+async function renderReportPerusahaanWord(filter) {
+  const url = `${API_BASE_URL.replace(/\/$/, "")}${API_PREFIX}/report/perusahaan/export/word`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(filter || {})
+  });
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || "Gagal mengunduh Word report perusahaan");
+  }
+  const arrayBuffer = await response.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  return {
+    contentType: response.headers.get("content-type") || "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    filename: "report-perusahaan.docx",
+    buffer,
+    base64: buffer.toString("base64")
+  };
+}
+async function renderReportGovernmentWord(filter) {
+  const url = `${API_BASE_URL.replace(/\/$/, "")}${API_PREFIX}/report/government/export/word`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(filter || {})
+  });
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || "Gagal mengunduh Word report government");
+  }
+  const arrayBuffer = await response.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  return {
+    contentType: response.headers.get("content-type") || "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    filename: "report-government.docx",
+    buffer,
+    base64: buffer.toString("base64")
+  };
+}
+async function renderReportJumlahPerusahaanWord(filter) {
+  const url = `${API_BASE_URL.replace(/\/$/, "")}${API_PREFIX}/report/jumlah/perusahaan/export/word`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(filter || {})
+  });
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || "Gagal mengunduh Word report jumlah perusahaan");
+  }
+  const arrayBuffer = await response.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  return {
+    contentType: response.headers.get("content-type") || "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    filename: "report-jumlah-perusahaan.docx",
+    buffer,
+    base64: buffer.toString("base64")
+  };
+}
+async function renderReportJumlahGovernmentWord(filter) {
+  const url = `${API_BASE_URL.replace(/\/$/, "")}${API_PREFIX}/report/jumlah/government/export/word`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(filter || {})
+  });
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || "Gagal mengunduh Word report jumlah government");
+  }
+  const arrayBuffer = await response.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  return {
+    contentType: response.headers.get("content-type") || "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    filename: "report-jumlah-government.docx",
+    buffer,
+    base64: buffer.toString("base64")
+  };
+}
 const errorResponse$2 = (error) => ({
   success: false,
   message: error instanceof Error ? error.message : String(error)
@@ -369,6 +649,38 @@ function registerGabungIpcHandlers() {
   electron.ipcMain.handle("report:labelgover", async (_event, filter) => {
     try {
       const data = await reportLabelGover(filter);
+      return { success: true, data };
+    } catch (error) {
+      return errorResponse$2(error);
+    }
+  });
+  electron.ipcMain.handle("report:perusahaan", async (_event, filter) => {
+    try {
+      const data = await reportPerusahaan(filter);
+      return { success: true, data };
+    } catch (error) {
+      return errorResponse$2(error);
+    }
+  });
+  electron.ipcMain.handle("report:government", async (_event, filter) => {
+    try {
+      const data = await reportGovernment(filter);
+      return { success: true, data };
+    } catch (error) {
+      return errorResponse$2(error);
+    }
+  });
+  electron.ipcMain.handle("report:jumlah-perusahaan", async (_event, filter) => {
+    try {
+      const data = await reportJumlahPerusahaan(filter);
+      return { success: true, data };
+    } catch (error) {
+      return errorResponse$2(error);
+    }
+  });
+  electron.ipcMain.handle("report:jumlah-government", async (_event, filter) => {
+    try {
+      const data = await reportJumlahGovernment(filter);
       return { success: true, data };
     } catch (error) {
       return errorResponse$2(error);
@@ -493,6 +805,102 @@ function registerReportsIpcHandlers() {
       return errorResponse(error);
     }
   });
+  electron.ipcMain.handle("report:perusahaan:pdf", async (_event, filter) => {
+    try {
+      const data = await renderReportPerusahaanPdf(filter);
+      return { success: true, data };
+    } catch (error) {
+      return errorResponse(error);
+    }
+  });
+  electron.ipcMain.handle("report:perusahaan:excel", async (_event, filter) => {
+    try {
+      const data = await renderReportPerusahaanExcel(filter);
+      return { success: true, data };
+    } catch (error) {
+      return errorResponse(error);
+    }
+  });
+  electron.ipcMain.handle("report:perusahaan:word", async (_event, filter) => {
+    try {
+      const data = await renderReportPerusahaanWord(filter);
+      return { success: true, data };
+    } catch (error) {
+      return errorResponse(error);
+    }
+  });
+  electron.ipcMain.handle("report:government:pdf", async (_event, filter) => {
+    try {
+      const data = await renderReportGovernmentPdf(filter);
+      return { success: true, data };
+    } catch (error) {
+      return errorResponse(error);
+    }
+  });
+  electron.ipcMain.handle("report:government:excel", async (_event, filter) => {
+    try {
+      const data = await renderReportGovernmentExcel(filter);
+      return { success: true, data };
+    } catch (error) {
+      return errorResponse(error);
+    }
+  });
+  electron.ipcMain.handle("report:government:word", async (_event, filter) => {
+    try {
+      const data = await renderReportGovernmentWord(filter);
+      return { success: true, data };
+    } catch (error) {
+      return errorResponse(error);
+    }
+  });
+  electron.ipcMain.handle("report:jumlah-perusahaan:pdf", async (_event, filter) => {
+    try {
+      const data = await renderReportJumlahPerusahaanPdf(filter);
+      return { success: true, data };
+    } catch (error) {
+      return errorResponse(error);
+    }
+  });
+  electron.ipcMain.handle("report:jumlah-perusahaan:excel", async (_event, filter) => {
+    try {
+      const data = await renderReportJumlahPerusahaanExcel(filter);
+      return { success: true, data };
+    } catch (error) {
+      return errorResponse(error);
+    }
+  });
+  electron.ipcMain.handle("report:jumlah-perusahaan:word", async (_event, filter) => {
+    try {
+      const data = await renderReportJumlahPerusahaanWord(filter);
+      return { success: true, data };
+    } catch (error) {
+      return errorResponse(error);
+    }
+  });
+  electron.ipcMain.handle("report:jumlah-government:pdf", async (_event, filter) => {
+    try {
+      const data = await renderReportJumlahGovernmentPdf(filter);
+      return { success: true, data };
+    } catch (error) {
+      return errorResponse(error);
+    }
+  });
+  electron.ipcMain.handle("report:jumlah-government:excel", async (_event, filter) => {
+    try {
+      const data = await renderReportJumlahGovernmentExcel(filter);
+      return { success: true, data };
+    } catch (error) {
+      return errorResponse(error);
+    }
+  });
+  electron.ipcMain.handle("report:jumlah-government:word", async (_event, filter) => {
+    try {
+      const data = await renderReportJumlahGovernmentWord(filter);
+      return { success: true, data };
+    } catch (error) {
+      return errorResponse(error);
+    }
+  });
   electron.ipcMain.handle("report:labelvisitor:export-save", async (_event, filter) => {
     try {
       const { canceled, filePath } = await electron.dialog.showSaveDialog({
@@ -547,6 +955,130 @@ function registerReportsIpcHandlers() {
         payload = await renderLabelGoverWord(filter);
       } else {
         payload = await renderLabelGoverPdf(filter);
+      }
+      const contentType = ext === ".doc" ? "application/msword" : ext === ".xls" ? "application/vnd.ms-excel" : payload.contentType;
+      await fs$1.writeFile(filePath, payload.buffer);
+      return { success: true, path: filePath, filename: path.basename(filePath), contentType };
+    } catch (error) {
+      return errorResponse(error);
+    }
+  });
+  electron.ipcMain.handle("report:perusahaan:export-save", async (_event, filter) => {
+    try {
+      const { canceled, filePath } = await electron.dialog.showSaveDialog({
+        title: "Simpan Report Perusahaan",
+        defaultPath: "report-perusahaan.docx",
+        filters: [
+          { name: "Microsoft Word (*.docx)", extensions: ["docx"] },
+          { name: "Microsoft Word 97-2003 (*.doc)", extensions: ["doc"] },
+          { name: "Microsoft Excel (*.xlsx)", extensions: ["xlsx"] },
+          { name: "Microsoft Excel 97-2003 (*.xls)", extensions: ["xls"] },
+          { name: "PDF", extensions: ["pdf"] }
+        ],
+        properties: ["createDirectory", "showOverwriteConfirmation"]
+      });
+      if (canceled || !filePath) return { success: false, canceled: true };
+      const ext = path.extname(filePath).toLowerCase();
+      let payload;
+      if (ext === ".xlsx" || ext === ".xls") {
+        payload = await renderReportPerusahaanExcel(filter);
+      } else if (ext === ".docx" || ext === ".doc") {
+        payload = await renderReportPerusahaanWord(filter);
+      } else {
+        payload = await renderReportPerusahaanPdf(filter);
+      }
+      const contentType = ext === ".doc" ? "application/msword" : ext === ".xls" ? "application/vnd.ms-excel" : payload.contentType;
+      await fs$1.writeFile(filePath, payload.buffer);
+      return { success: true, path: filePath, filename: path.basename(filePath), contentType };
+    } catch (error) {
+      return errorResponse(error);
+    }
+  });
+  electron.ipcMain.handle("report:government:export-save", async (_event, filter) => {
+    try {
+      const { canceled, filePath } = await electron.dialog.showSaveDialog({
+        title: "Simpan Report Government",
+        defaultPath: "report-government.docx",
+        filters: [
+          { name: "Microsoft Word (*.docx)", extensions: ["docx"] },
+          { name: "Microsoft Word 97-2003 (*.doc)", extensions: ["doc"] },
+          { name: "Microsoft Excel (*.xlsx)", extensions: ["xlsx"] },
+          { name: "Microsoft Excel 97-2003 (*.xls)", extensions: ["xls"] },
+          { name: "PDF", extensions: ["pdf"] }
+        ],
+        properties: ["createDirectory", "showOverwriteConfirmation"]
+      });
+      if (canceled || !filePath) return { success: false, canceled: true };
+      const ext = path.extname(filePath).toLowerCase();
+      let payload;
+      if (ext === ".xlsx" || ext === ".xls") {
+        payload = await renderReportGovernmentExcel(filter);
+      } else if (ext === ".docx" || ext === ".doc") {
+        payload = await renderReportGovernmentWord(filter);
+      } else {
+        payload = await renderReportGovernmentPdf(filter);
+      }
+      const contentType = ext === ".doc" ? "application/msword" : ext === ".xls" ? "application/vnd.ms-excel" : payload.contentType;
+      await fs$1.writeFile(filePath, payload.buffer);
+      return { success: true, path: filePath, filename: path.basename(filePath), contentType };
+    } catch (error) {
+      return errorResponse(error);
+    }
+  });
+  electron.ipcMain.handle("report:jumlah-perusahaan:export-save", async (_event, filter) => {
+    try {
+      const { canceled, filePath } = await electron.dialog.showSaveDialog({
+        title: "Simpan Report Jumlah Perusahaan",
+        defaultPath: "report-jumlah-perusahaan.docx",
+        filters: [
+          { name: "Microsoft Word (*.docx)", extensions: ["docx"] },
+          { name: "Microsoft Word 97-2003 (*.doc)", extensions: ["doc"] },
+          { name: "Microsoft Excel (*.xlsx)", extensions: ["xlsx"] },
+          { name: "Microsoft Excel 97-2003 (*.xls)", extensions: ["xls"] },
+          { name: "PDF", extensions: ["pdf"] }
+        ],
+        properties: ["createDirectory", "showOverwriteConfirmation"]
+      });
+      if (canceled || !filePath) return { success: false, canceled: true };
+      const ext = path.extname(filePath).toLowerCase();
+      let payload;
+      if (ext === ".xlsx" || ext === ".xls") {
+        payload = await renderReportJumlahPerusahaanExcel(filter);
+      } else if (ext === ".docx" || ext === ".doc") {
+        payload = await renderReportJumlahPerusahaanWord(filter);
+      } else {
+        payload = await renderReportJumlahPerusahaanPdf(filter);
+      }
+      const contentType = ext === ".doc" ? "application/msword" : ext === ".xls" ? "application/vnd.ms-excel" : payload.contentType;
+      await fs$1.writeFile(filePath, payload.buffer);
+      return { success: true, path: filePath, filename: path.basename(filePath), contentType };
+    } catch (error) {
+      return errorResponse(error);
+    }
+  });
+  electron.ipcMain.handle("report:jumlah-government:export-save", async (_event, filter) => {
+    try {
+      const { canceled, filePath } = await electron.dialog.showSaveDialog({
+        title: "Simpan Report Jumlah Government",
+        defaultPath: "report-jumlah-government.docx",
+        filters: [
+          { name: "Microsoft Word (*.docx)", extensions: ["docx"] },
+          { name: "Microsoft Word 97-2003 (*.doc)", extensions: ["doc"] },
+          { name: "Microsoft Excel (*.xlsx)", extensions: ["xlsx"] },
+          { name: "Microsoft Excel 97-2003 (*.xls)", extensions: ["xls"] },
+          { name: "PDF", extensions: ["pdf"] }
+        ],
+        properties: ["createDirectory", "showOverwriteConfirmation"]
+      });
+      if (canceled || !filePath) return { success: false, canceled: true };
+      const ext = path.extname(filePath).toLowerCase();
+      let payload;
+      if (ext === ".xlsx" || ext === ".xls") {
+        payload = await renderReportJumlahGovernmentExcel(filter);
+      } else if (ext === ".docx" || ext === ".doc") {
+        payload = await renderReportJumlahGovernmentWord(filter);
+      } else {
+        payload = await renderReportJumlahGovernmentPdf(filter);
       }
       const contentType = ext === ".doc" ? "application/msword" : ext === ".xls" ? "application/vnd.ms-excel" : payload.contentType;
       await fs$1.writeFile(filePath, payload.buffer);

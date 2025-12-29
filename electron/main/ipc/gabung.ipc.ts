@@ -9,6 +9,10 @@ import {
   reportLabelGover,
   reportLabelVisitor,
   reportLabelOptions,
+  reportPerusahaan,
+  reportGovernment,
+  reportJumlahPerusahaan,
+  reportJumlahGovernment,
 } from '../../db/gabungRepo.js'
 import { testConnection } from '../../db/index.js'
 
@@ -93,6 +97,42 @@ export function registerGabungIpcHandlers() {
   ipcMain.handle('report:labelgover', async (_event, filter) => {
     try {
       const data = await reportLabelGover(filter)
+      return { success: true, data }
+    } catch (error) {
+      return errorResponse(error)
+    }
+  })
+
+  ipcMain.handle('report:perusahaan', async (_event, filter) => {
+    try {
+      const data = await reportPerusahaan(filter)
+      return { success: true, data }
+    } catch (error) {
+      return errorResponse(error)
+    }
+  })
+
+  ipcMain.handle('report:government', async (_event, filter) => {
+    try {
+      const data = await reportGovernment(filter)
+      return { success: true, data }
+    } catch (error) {
+      return errorResponse(error)
+    }
+  })
+
+  ipcMain.handle('report:jumlah-perusahaan', async (_event, filter) => {
+    try {
+      const data = await reportJumlahPerusahaan(filter)
+      return { success: true, data }
+    } catch (error) {
+      return errorResponse(error)
+    }
+  })
+
+  ipcMain.handle('report:jumlah-government', async (_event, filter) => {
+    try {
+      const data = await reportJumlahGovernment(filter)
       return { success: true, data }
     } catch (error) {
       return errorResponse(error)

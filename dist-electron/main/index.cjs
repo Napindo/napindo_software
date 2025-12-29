@@ -195,6 +195,28 @@ async function renderLabelVisitorPdf(filter) {
     base64: buffer.toString("base64")
   };
 }
+async function renderLabelGoverPdf(filter) {
+  const url = `${API_BASE_URL.replace(/\/$/, "")}${API_PREFIX}/report/labelgover/print`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(filter)
+  });
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || "Gagal mencetak label government");
+  }
+  const arrayBuffer = await response.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  return {
+    contentType: response.headers.get("content-type") || "application/pdf",
+    filename: "print-label-government.pdf",
+    buffer,
+    base64: buffer.toString("base64")
+  };
+}
 async function renderLabelVisitorExcel(filter) {
   const url = `${API_BASE_URL.replace(/\/$/, "")}${API_PREFIX}/report/labelvisitor/export/excel`;
   const response = await fetch(url, {
@@ -215,6 +237,26 @@ async function renderLabelVisitorExcel(filter) {
     base64: buffer.toString("base64")
   };
 }
+async function renderLabelGoverExcel(filter) {
+  const url = `${API_BASE_URL.replace(/\/$/, "")}${API_PREFIX}/report/labelgover/export/excel`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(filter || {})
+  });
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || "Gagal mengunduh Excel government");
+  }
+  const arrayBuffer = await response.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  return {
+    contentType: response.headers.get("content-type") || "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    filename: "print-label-government.xlsx",
+    buffer,
+    base64: buffer.toString("base64")
+  };
+}
 async function renderLabelVisitorWord(filter) {
   const url = `${API_BASE_URL.replace(/\/$/, "")}${API_PREFIX}/report/labelvisitor/export/word`;
   const response = await fetch(url, {
@@ -231,6 +273,26 @@ async function renderLabelVisitorWord(filter) {
   return {
     contentType: response.headers.get("content-type") || "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     filename: "print-label-perusahaan.docx",
+    buffer,
+    base64: buffer.toString("base64")
+  };
+}
+async function renderLabelGoverWord(filter) {
+  const url = `${API_BASE_URL.replace(/\/$/, "")}${API_PREFIX}/report/labelgover/export/word`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(filter || {})
+  });
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || "Gagal mengunduh Word government");
+  }
+  const arrayBuffer = await response.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  return {
+    contentType: response.headers.get("content-type") || "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    filename: "print-label-government.docx",
     buffer,
     base64: buffer.toString("base64")
   };
@@ -407,6 +469,30 @@ function registerReportsIpcHandlers() {
       return errorResponse(error);
     }
   });
+  electron.ipcMain.handle("report:labelgover:pdf", async (_event, filter) => {
+    try {
+      const data = await renderLabelGoverPdf(filter);
+      return { success: true, data };
+    } catch (error) {
+      return errorResponse(error);
+    }
+  });
+  electron.ipcMain.handle("report:labelgover:excel", async (_event, filter) => {
+    try {
+      const data = await renderLabelGoverExcel(filter);
+      return { success: true, data };
+    } catch (error) {
+      return errorResponse(error);
+    }
+  });
+  electron.ipcMain.handle("report:labelgover:word", async (_event, filter) => {
+    try {
+      const data = await renderLabelGoverWord(filter);
+      return { success: true, data };
+    } catch (error) {
+      return errorResponse(error);
+    }
+  });
   electron.ipcMain.handle("report:labelvisitor:export-save", async (_event, filter) => {
     try {
       const { canceled, filePath } = await electron.dialog.showSaveDialog({
@@ -430,6 +516,37 @@ function registerReportsIpcHandlers() {
         payload = await renderLabelVisitorWord(filter);
       } else {
         payload = await renderLabelVisitorPdf(filter);
+      }
+      const contentType = ext === ".doc" ? "application/msword" : ext === ".xls" ? "application/vnd.ms-excel" : payload.contentType;
+      await fs$1.writeFile(filePath, payload.buffer);
+      return { success: true, path: filePath, filename: path.basename(filePath), contentType };
+    } catch (error) {
+      return errorResponse(error);
+    }
+  });
+  electron.ipcMain.handle("report:labelgover:export-save", async (_event, filter) => {
+    try {
+      const { canceled, filePath } = await electron.dialog.showSaveDialog({
+        title: "Simpan Label Government",
+        defaultPath: "print-label-government.docx",
+        filters: [
+          { name: "Microsoft Word (*.docx)", extensions: ["docx"] },
+          { name: "Microsoft Word 97-2003 (*.doc)", extensions: ["doc"] },
+          { name: "Microsoft Excel (*.xlsx)", extensions: ["xlsx"] },
+          { name: "Microsoft Excel 97-2003 (*.xls)", extensions: ["xls"] },
+          { name: "PDF", extensions: ["pdf"] }
+        ],
+        properties: ["createDirectory", "showOverwriteConfirmation"]
+      });
+      if (canceled || !filePath) return { success: false, canceled: true };
+      const ext = path.extname(filePath).toLowerCase();
+      let payload;
+      if (ext === ".xlsx" || ext === ".xls") {
+        payload = await renderLabelGoverExcel(filter);
+      } else if (ext === ".docx" || ext === ".doc") {
+        payload = await renderLabelGoverWord(filter);
+      } else {
+        payload = await renderLabelGoverPdf(filter);
       }
       const contentType = ext === ".doc" ? "application/msword" : ext === ".xls" ? "application/vnd.ms-excel" : payload.contentType;
       await fs$1.writeFile(filePath, payload.buffer);

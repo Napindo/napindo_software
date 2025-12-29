@@ -275,6 +275,178 @@ export async function requestLabelPerusahaan(filter: unknown): Promise<PrintLabe
 }
 
 export async function requestLabelGovernment(filter: unknown): Promise<PrintLabelResult> {
+  const payload: any = filter || {}
+
+  if (payload?.action === 'export-save') {
+    const bridge = getBridge()
+    if (bridge && typeof bridge.reportLabelGoverExportSave === 'function') {
+      const resp = await bridge.reportLabelGoverExportSave(filter)
+      if (resp?.success === false && !resp?.canceled) {
+        throw new Error(resp?.message || 'Gagal menyimpan file')
+      }
+      return { data: resp, total: payload?.total }
+    }
+
+    const ipc = getIpc()
+    if (ipc?.invoke) {
+      const response = await ipc.invoke('report:labelgover:export-save', filter)
+      if (response?.success === false && !response?.canceled) {
+        throw new Error(response?.message ?? 'Gagal menyimpan file')
+      }
+      return { data: response, total: payload?.total }
+    }
+
+    throw new Error('Bridge Electron untuk ekspor belum tersedia')
+  }
+
+  if (payload?.action === 'preview-word' || payload?.action === 'preview') {
+    const bridge = getBridge()
+    if (bridge && typeof bridge.reportLabelGoverWord === 'function') {
+      const resp = await bridge.reportLabelGoverWord(filter)
+      if (resp?.success === false) throw new Error(resp?.message ?? 'Gagal memuat preview Word')
+      const data = unwrapBridgeResponse(resp)
+      const base64 = normalizeBase64(data?.base64 ?? data?.buffer)
+      return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
+    }
+
+    const ipc = getIpc()
+    if (ipc?.invoke) {
+      const response = await ipc.invoke('report:labelgover:word', filter)
+      if (response?.success === false) throw new Error(response?.message ?? 'Gagal memuat preview Word')
+      const data = response?.data ?? response
+      const base64 = normalizeBase64(data?.base64 ?? data?.buffer)
+      return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
+    }
+
+    const res = await fetch(buildApiUrl('/report/labelgover/export/word'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(filter ?? {}),
+    })
+    if (!res.ok) {
+      const message = await res.text()
+      throw new Error(message || 'Gagal memuat preview Word')
+    }
+    const buffer = await res.arrayBuffer()
+    const base64 = arrayBufferToBase64(buffer)
+    return {
+      data: {
+        base64,
+        contentType:
+          res.headers.get('content-type') ||
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        filename: 'print-label-government.docx',
+      },
+      total: payload?.total,
+    }
+  }
+
+  if (payload?.action === 'preview-pdf') {
+    const bridge = getBridge()
+    if (bridge && typeof bridge.reportLabelGoverPdf === 'function') {
+      const resp = await bridge.reportLabelGoverPdf(filter)
+      if (resp?.success === false) throw new Error(resp?.message ?? 'Gagal memuat preview PDF')
+      const data = unwrapBridgeResponse(resp)
+      const base64 = normalizeBase64(data?.base64 ?? data?.buffer)
+      return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
+    }
+
+    const ipc = getIpc()
+    if (ipc?.invoke) {
+      const response = await ipc.invoke('report:labelgover:pdf', filter)
+      if (response?.success === false) throw new Error(response?.message ?? 'Gagal memuat preview PDF')
+      const data = response?.data ?? response
+      const base64 = normalizeBase64(data?.base64 ?? data?.buffer)
+      return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
+    }
+
+    const res = await fetch(buildApiUrl('/report/labelgover/print'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(filter ?? {}),
+    })
+    if (!res.ok) {
+      const message = await res.text()
+      throw new Error(message || 'Gagal memuat preview PDF')
+    }
+    const buffer = await res.arrayBuffer()
+    const base64 = arrayBufferToBase64(buffer)
+    return {
+      data: {
+        base64,
+        contentType: res.headers.get('content-type') || 'application/pdf',
+        filename: 'print-label-government.pdf',
+      },
+      total: payload?.total,
+    }
+  }
+
+  if (payload?.action === 'export' || payload?.action === 'export-pdf') {
+    const bridge = getBridge()
+    if (bridge && typeof bridge.reportLabelGoverPdf === 'function') {
+      const resp = await bridge.reportLabelGoverPdf(filter)
+      if (resp?.success === false) throw new Error(resp?.message ?? 'Gagal mencetak label')
+      const data = unwrapBridgeResponse(resp)
+      const base64 = normalizeBase64(data?.base64 ?? data?.buffer)
+      return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
+    }
+
+    const ipc = getIpc()
+    if (ipc?.invoke) {
+      const response = await ipc.invoke('report:labelgover:pdf', filter)
+      if (response?.success === false) throw new Error(response?.message ?? 'Gagal mencetak label')
+      const data = response?.data ?? response
+      const base64 = normalizeBase64(data?.base64 ?? data?.buffer)
+      return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
+    }
+
+    throw new Error('Bridge Electron untuk cetak label tidak tersedia')
+  }
+
+  if (payload?.action === 'export-excel') {
+    const bridge = getBridge()
+    if (bridge && typeof bridge.reportLabelGoverExcel === 'function') {
+      const resp = await bridge.reportLabelGoverExcel(filter)
+      if (resp?.success === false) throw new Error(resp?.message ?? 'Gagal mencetak label (Excel)')
+      const data = unwrapBridgeResponse(resp)
+      const base64 = normalizeBase64(data?.base64 ?? data?.buffer)
+      return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
+    }
+
+    const ipc = getIpc()
+    if (ipc?.invoke) {
+      const response = await ipc.invoke('report:labelgover:excel', filter)
+      if (response?.success === false) throw new Error(response?.message ?? 'Gagal mencetak label (Excel)')
+      const data = response?.data ?? response
+      const base64 = normalizeBase64(data?.base64 ?? data?.buffer)
+      return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
+    }
+
+    throw new Error('Bridge Electron untuk cetak label (Excel) tidak tersedia')
+  }
+
+  if (payload?.action === 'export-word') {
+    const bridge = getBridge()
+    if (bridge && typeof bridge.reportLabelGoverWord === 'function') {
+      const resp = await bridge.reportLabelGoverWord(filter)
+      if (resp?.success === false) throw new Error(resp?.message ?? 'Gagal mencetak label (Word)')
+      const data = unwrapBridgeResponse(resp)
+      const base64 = normalizeBase64(data?.base64 ?? data?.buffer)
+      return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
+    }
+
+    const ipc = getIpc()
+    if (ipc?.invoke) {
+      const response = await ipc.invoke('report:labelgover:word', filter)
+      if (response?.success === false) throw new Error(response?.message ?? 'Gagal mencetak label (Word)')
+      const data = response?.data ?? response
+      const base64 = normalizeBase64(data?.base64 ?? data?.buffer)
+      return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
+    }
+
+    throw new Error('Bridge Electron untuk cetak label (Word) tidak tersedia')
+  }
+
   return invokeReport('report:labelgover', filter)
 }
 

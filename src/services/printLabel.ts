@@ -25,13 +25,43 @@ const extractCount = (payload: any): number => {
 
 const pickApiData = (body: any) => body?.data ?? body?.items ?? body?.rows ?? body
 const isApiOk = (body: any) => body?.ok === true || body?.success === true
+const unwrapBridgeResponse = (payload: any) => (payload && typeof payload === 'object' && 'data' in payload ? payload.data : payload)
+const toBase64 = (bytes: Uint8Array) => {
+  let binary = ''
+  bytes.forEach((b) => {
+    binary += String.fromCharCode(b)
+  })
+  return btoa(binary)
+}
+
+const normalizeBase64 = (value: unknown): string | undefined => {
+  if (!value) return undefined
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    return trimmed ? trimmed : undefined
+  }
+  const bufferLike = value as any
+  if (bufferLike?.type === 'Buffer' && Array.isArray(bufferLike.data)) {
+    return toBase64(new Uint8Array(bufferLike.data))
+  }
+  if (typeof Buffer !== 'undefined' && Buffer.isBuffer(value)) {
+    return value.toString('base64')
+  }
+  if (value instanceof ArrayBuffer) return arrayBufferToBase64(value)
+  if (ArrayBuffer.isView(value) && value.buffer) return arrayBufferToBase64(value.buffer)
+  return undefined
+}
 
 async function invokeReport(channel: 'report:labelvisitor' | 'report:labelgover', filter: unknown): Promise<PrintLabelResult> {
   const bridge = getBridge()
   if (bridge) {
     const fnName = channel === 'report:labelvisitor' ? 'reportLabelVisitor' : 'reportLabelGover'
     if (typeof bridge[fnName] === 'function') {
-      const data = await bridge[fnName](filter)
+      const response = await bridge[fnName](filter)
+      if (response?.success === false) {
+        throw new Error(response?.message ?? 'Gagal memuat laporan')
+      }
+      const data = unwrapBridgeResponse(response)
       return { data, total: extractCount(data) }
     }
   }
@@ -87,12 +117,14 @@ export async function requestLabelPerusahaan(filter: unknown): Promise<PrintLabe
   }
 
   // Preview Word (base64 docx, no save dialog)
-  if (payload?.action === 'preview-word') {
+  if (payload?.action === 'preview-word' || payload?.action === 'preview') {
     const bridge = getBridge()
     if (bridge && typeof bridge.reportLabelVisitorWord === 'function') {
       const resp = await bridge.reportLabelVisitorWord(filter)
-      const base64: string | undefined = resp?.base64 || resp?.buffer
-      return { data: { base64, contentType: resp?.contentType, filename: resp?.filename }, total: payload?.total }
+      if (resp?.success === false) throw new Error(resp?.message ?? 'Gagal memuat preview Word')
+      const data = unwrapBridgeResponse(resp)
+      const base64 = normalizeBase64(data?.base64 ?? data?.buffer)
+      return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
     }
 
     const ipc = getIpc()
@@ -100,7 +132,7 @@ export async function requestLabelPerusahaan(filter: unknown): Promise<PrintLabe
       const response = await ipc.invoke('report:labelvisitor:word', filter)
       if (response?.success === false) throw new Error(response?.message ?? 'Gagal memuat preview Word')
       const data = response?.data ?? response
-      const base64: string | undefined = data?.base64 || data?.buffer
+      const base64 = normalizeBase64(data?.base64 ?? data?.buffer)
       return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
     }
 
@@ -132,8 +164,10 @@ export async function requestLabelPerusahaan(filter: unknown): Promise<PrintLabe
     const bridge = getBridge()
     if (bridge && typeof bridge.reportLabelVisitorPdf === 'function') {
       const resp = await bridge.reportLabelVisitorPdf(filter)
-      const base64: string | undefined = resp?.base64 || resp?.buffer
-      return { data: { base64, contentType: resp?.contentType, filename: resp?.filename }, total: payload?.total }
+      if (resp?.success === false) throw new Error(resp?.message ?? 'Gagal memuat preview PDF')
+      const data = unwrapBridgeResponse(resp)
+      const base64 = normalizeBase64(data?.base64 ?? data?.buffer)
+      return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
     }
 
     const ipc = getIpc()
@@ -141,7 +175,7 @@ export async function requestLabelPerusahaan(filter: unknown): Promise<PrintLabe
       const response = await ipc.invoke('report:labelvisitor:pdf', filter)
       if (response?.success === false) throw new Error(response?.message ?? 'Gagal memuat preview PDF')
       const data = response?.data ?? response
-      const base64: string | undefined = data?.base64 || data?.buffer
+      const base64 = normalizeBase64(data?.base64 ?? data?.buffer)
       return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
     }
 
@@ -173,8 +207,10 @@ export async function requestLabelPerusahaan(filter: unknown): Promise<PrintLabe
     const bridge = getBridge()
     if (bridge && typeof bridge.reportLabelVisitorPdf === 'function') {
       const resp = await bridge.reportLabelVisitorPdf(filter)
-      const base64: string | undefined = resp?.base64 || resp?.buffer
-      return { data: { base64, contentType: resp?.contentType, filename: resp?.filename }, total: payload?.total }
+      if (resp?.success === false) throw new Error(resp?.message ?? 'Gagal mencetak label')
+      const data = unwrapBridgeResponse(resp)
+      const base64 = normalizeBase64(data?.base64 ?? data?.buffer)
+      return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
     }
 
     const ipc = getIpc()
@@ -182,7 +218,7 @@ export async function requestLabelPerusahaan(filter: unknown): Promise<PrintLabe
       const response = await ipc.invoke('report:labelvisitor:pdf', filter)
       if (response?.success === false) throw new Error(response?.message ?? 'Gagal mencetak label')
       const data = response?.data ?? response
-      const base64: string | undefined = data?.base64 || data?.buffer
+      const base64 = normalizeBase64(data?.base64 ?? data?.buffer)
       return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
     }
 
@@ -194,8 +230,10 @@ export async function requestLabelPerusahaan(filter: unknown): Promise<PrintLabe
     const bridge = getBridge()
     if (bridge && typeof bridge.reportLabelVisitorExcel === 'function') {
       const resp = await bridge.reportLabelVisitorExcel(filter)
-      const base64: string | undefined = resp?.base64 || resp?.buffer
-      return { data: { base64, contentType: resp?.contentType, filename: resp?.filename }, total: payload?.total }
+      if (resp?.success === false) throw new Error(resp?.message ?? 'Gagal mencetak label (Excel)')
+      const data = unwrapBridgeResponse(resp)
+      const base64 = normalizeBase64(data?.base64 ?? data?.buffer)
+      return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
     }
 
     const ipc = getIpc()
@@ -203,7 +241,7 @@ export async function requestLabelPerusahaan(filter: unknown): Promise<PrintLabe
       const response = await ipc.invoke('report:labelvisitor:excel', filter)
       if (response?.success === false) throw new Error(response?.message ?? 'Gagal mencetak label (Excel)')
       const data = response?.data ?? response
-      const base64: string | undefined = data?.base64 || data?.buffer
+      const base64 = normalizeBase64(data?.base64 ?? data?.buffer)
       return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
     }
 
@@ -215,8 +253,10 @@ export async function requestLabelPerusahaan(filter: unknown): Promise<PrintLabe
     const bridge = getBridge()
     if (bridge && typeof bridge.reportLabelVisitorWord === 'function') {
       const resp = await bridge.reportLabelVisitorWord(filter)
-      const base64: string | undefined = resp?.base64 || resp?.buffer
-      return { data: { base64, contentType: resp?.contentType, filename: resp?.filename }, total: payload?.total }
+      if (resp?.success === false) throw new Error(resp?.message ?? 'Gagal mencetak label (Word)')
+      const data = unwrapBridgeResponse(resp)
+      const base64 = normalizeBase64(data?.base64 ?? data?.buffer)
+      return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
     }
 
     const ipc = getIpc()
@@ -224,7 +264,7 @@ export async function requestLabelPerusahaan(filter: unknown): Promise<PrintLabe
       const response = await ipc.invoke('report:labelvisitor:word', filter)
       if (response?.success === false) throw new Error(response?.message ?? 'Gagal mencetak label (Word)')
       const data = response?.data ?? response
-      const base64: string | undefined = data?.base64 || data?.buffer
+      const base64 = normalizeBase64(data?.base64 ?? data?.buffer)
       return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
     }
 

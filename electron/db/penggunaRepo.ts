@@ -40,6 +40,15 @@ export async function createUser(payload: { username: string; password: string; 
   return pickData(body)
 }
 
+export async function listUsers() {
+  const { body } = await apiFetch<Array<{ username?: string; division?: string | null; status?: string | null }>>('/pengguna')
+  if (!isResponseOk(body)) {
+    throw new Error(body.message || 'Gagal memuat daftar pengguna')
+  }
+
+  return (pickData(body) as Array<{ username?: string; division?: string | null; status?: string | null }> | undefined) ?? []
+}
+
 export async function changePassword(payload: {
   username: string
   currentPassword: string

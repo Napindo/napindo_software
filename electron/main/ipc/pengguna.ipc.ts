@@ -1,5 +1,5 @@
 import { ipcMain } from 'electron'
-import { changePassword, createUser, fetchUserHints, loginUser, logoutUser } from '../../db/penggunaRepo.js'
+import { changePassword, createUser, fetchUserHints, listUsers, loginUser, logoutUser } from '../../db/penggunaRepo.js'
 
 const errorResponse = (error: unknown) => ({
   success: false,
@@ -55,6 +55,15 @@ export function registerPenggunaIpcHandlers() {
     try {
       const user = await logoutUser(payload)
       return { success: true, data: user, message: 'Logout berhasil' }
+    } catch (error) {
+      return errorResponse(error)
+    }
+  })
+
+  ipcMain.handle('db:listPengguna', async () => {
+    try {
+      const users = await listUsers()
+      return { success: true, rows: users }
     } catch (error) {
       return errorResponse(error)
     }

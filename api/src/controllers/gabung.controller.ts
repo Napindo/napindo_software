@@ -596,3 +596,132 @@ export async function findGabungByCompany(req: Request, res: Response) {
     return res.status(500).json(fail(err.message || String(err)));
   }
 }
+
+/**
+ * GET /gabung/exhibitor-count
+ * Hitung jumlah exhibitor per pameran (Indo Defence, Indo Water, Indo Livestock).
+ */
+export async function countExhibitorsByExpo(_req: Request, res: Response) {
+  try {
+    const flagValues = ["X", "x", "1", "true", "yes", "Y", "y"];
+
+    const countByFlags = async (flags: string[]) => {
+      const or = flags.map((flag) => ({ [flag]: { in: flagValues } }));
+      return prisma.gabung.count({ where: { OR: or } });
+    };
+
+    const [indoDefence, indoWater, indoLivestock] = await Promise.all([
+      countByFlags(["exhdefence", "exhaero", "exhmarine"]),
+      countByFlags([
+        "exhwater",
+        "exhwaste",
+        "exhenergy",
+        "exhsmart",
+        "exhsecure",
+        "exhfire",
+      ]),
+      countByFlags([
+        "exhlives",
+        "exhagritech",
+        "exhfish",
+        "exhindovet",
+        "exhfeed",
+        "exhdairy",
+        "exhhorti",
+      ]),
+    ]);
+
+    return res.json(
+      ok({
+        indoDefence,
+        indoWater,
+        indoLivestock,
+      }),
+    );
+  } catch (err: any) {
+    return res.status(500).json(fail(err.message));
+  }
+}
+
+/**
+ * GET /gabung/expo-chart
+ * Data grafik exhibitor + visitor per tahun (>=2023) untuk Indo Defence/Water/Livestock.
+ */
+export async function getExpoChartData(_req: Request, res: Response) {
+  try {
+    const flagValues = ["X", "x", "1", "true", "yes", "Y", "y"];
+    const since = new Date("2023-01-01");
+
+    const rows = await prisma.$queryRaw<
+      Array<{ year: number; indoDefence: number; indoWater: number; indoLivestock: number }>
+    >`
+      SELECT
+        EXTRACT(YEAR FROM "LASTUPDATE")::int AS year,
+        SUM(
+          CASE WHEN
+            "EXHDEFENCE" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
+            "EXHAERO" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
+            "EXHMARINE" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
+            "VISDEFENCE" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
+            "VISAERO" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
+            "VISMARINE" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]})
+          THEN 1 ELSE 0 END
+        )::int AS "indoDefence",
+        SUM(
+          CASE WHEN
+            "EXHWATER" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
+            "EXHWASTE" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
+            "EXHENERGY" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
+            "EXHSMART" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
+            "EXHSECURE" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
+            "EXHFIRE" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
+            "VISWATER" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
+            "VISWASTE" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
+            "VISENERGY" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
+            "VISSMART" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
+            "VISSECURE" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
+            "VISFIRE" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]})
+          THEN 1 ELSE 0 END
+        )::int AS "indoWater",
+        SUM(
+          CASE WHEN
+            "EXHLIVES" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
+            "EXHAGRITECH" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
+            "EXHFISH" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
+            "EXHINDOVET" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
+            "EXHFEED" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
+            "EXHDAIRY" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
+            "EXHHORTI" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
+            "VISLIVES" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
+            "VISAGRITECH" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
+            "VISFISH" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
+            "VISINDOVET" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
+            "VISFEED" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
+            "VISDAIRY" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
+            "VISHORTI" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]})
+          THEN 1 ELSE 0 END
+        )::int AS "indoLivestock"
+      FROM "GABUNG"
+      WHERE "LASTUPDATE" >= ${since}
+      GROUP BY 1
+      ORDER BY 1
+    `;
+
+    const counts: Record<string, Record<number, number>> = {
+      indoDefence: {},
+      indoWater: {},
+      indoLivestock: {},
+    };
+
+    rows.forEach((row) => {
+      if (!row.year) return;
+      counts.indoDefence[row.year] = row.indoDefence ?? 0;
+      counts.indoWater[row.year] = row.indoWater ?? 0;
+      counts.indoLivestock[row.year] = row.indoLivestock ?? 0;
+    });
+
+    return res.json(ok(counts));
+  } catch (err: any) {
+    return res.status(500).json(fail(err.message));
+  }
+}

@@ -8,6 +8,11 @@ type AppState = {
   user: AppUser | null
   activePage: string | null
   globalMessage: GlobalMessage | null
+  addDataDraft: {
+    row: Record<string, unknown> | null
+    id: string | number | null
+    returnPage: 'exhibitor' | 'visitor'
+  } | null
 }
 
 type AppActions = {
@@ -16,6 +21,8 @@ type AppActions = {
   setActivePage: (page: string | null) => void
   setGlobalMessage: (message: GlobalMessage | null) => void
   clearGlobalMessage: () => void
+  setAddDataDraft: (draft: AppState['addDataDraft']) => void
+  clearAddDataDraft: () => void
 }
 
 type Listener = () => void
@@ -24,6 +31,7 @@ let state: AppState = {
   user: null,
   activePage: 'dashboard',
   globalMessage: null,
+  addDataDraft: null,
 }
 
 const listeners = new Set<Listener>()
@@ -34,6 +42,8 @@ const actions: AppActions = {
   setActivePage: (page) => setState({ activePage: page }),
   setGlobalMessage: (message) => setState({ globalMessage: message }),
   clearGlobalMessage: () => setState({ globalMessage: null }),
+  setAddDataDraft: (draft) => setState({ addDataDraft: draft }),
+  clearAddDataDraft: () => setState({ addDataDraft: null }),
 }
 
 let snapshot: AppState & AppActions = { ...state, ...actions }

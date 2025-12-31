@@ -16,6 +16,7 @@ import ReportGovernment from './ReportGovernment'
 import ReportJumlahPerusahaan from './ReportJumlahPerusahaan'
 import ReportJumlahGovernment from './ReportJumlahGovernment'
 import ImportDataPage from './ImportData'
+import AddDataHub from './AddDataHub'
 
 type DashboardProps = {
   user?: AuthenticatedUser | null
@@ -34,6 +35,8 @@ const DashboardPage = ({ user, onLogout }: DashboardProps) => {
     switch (activePage) {
       case 'dashboard':
         return <Home displayName={displayName} />
+      case 'addData':
+        return <AddDataHub />
       case 'exhibitor':
         return <ExhibitorPage />
       case 'visitor':

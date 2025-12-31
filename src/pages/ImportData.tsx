@@ -236,7 +236,7 @@ const ImportDataPage = () => {
             </div>
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-slate-700">Limit baris (dev, optional)</label>
+            <label className="text-sm font-semibold text-slate-700">Limit baris (optional)</label>
             <input
               type="number"
               min={1}
@@ -245,17 +245,8 @@ const ImportDataPage = () => {
               className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 focus:border-rose-400 focus:ring-4 focus:ring-rose-100 transition"
               placeholder="Kosongkan untuk semua baris"
             />
-            <p className="text-xs text-slate-500">Gunakan untuk mempercepat import saat development.</p>
+            <p className="text-xs text-slate-500">Batasi jumlah baris yang diimpor. Kosongkan untuk semua baris.</p>
           </div>
-          <label className="flex items-center gap-3 text-sm text-slate-700">
-            <input
-              type="checkbox"
-              checked={dryRun}
-              onChange={(event) => setDryRun(event.target.checked)}
-              className="w-4 h-4 accent-rose-600"
-            />
-            Uji saja (tanpa simpan ke database)
-          </label>
 
           <div className="flex flex-wrap items-center gap-3 pt-2">
             <button

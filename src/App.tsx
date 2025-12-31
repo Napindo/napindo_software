@@ -1,6 +1,7 @@
 import './App.css'
 import DashboardPage from './pages/Dashboard'
 import LoginPage, { type AuthenticatedUser } from './pages/Login'
+import { logoutPengguna } from './services/pengguna'
 import { useAppStore } from './store/appStore'
 import GlobalStatusBar from './components/GlobalStatusBar'
 
@@ -12,7 +13,15 @@ export default function App() {
     setGlobalMessage({ type: 'success', text: 'Login berhasil' })
   }
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    if (user?.username) {
+      try {
+        await logoutPengguna({ username: user.username })
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : 'Gagal mengubah status logout.'
+        setGlobalMessage({ type: 'error', text: msg })
+      }
+    }
     localStorage.removeItem('napindo-login')
     clearUser()
     setActivePage('dashboard')

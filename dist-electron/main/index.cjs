@@ -11,7 +11,7 @@ function createWindow(options) {
     icon: path.join(options.publicDir, "electron-vite.svg"),
     webPreferences: {
       preload: options.preload,
-      devTools: true
+      devTools: false
     }
   });
   window.webContents.on("did-finish-load", () => {
@@ -24,9 +24,6 @@ function createWindow(options) {
     window.loadURL(options.devServerUrl);
   } else {
     window.loadFile(path.join(options.rendererDist, "index.html"));
-  }
-  if (options.devServerUrl) {
-    window.webContents.openDevTools({ mode: "detach" });
   }
   return window;
 }
@@ -806,6 +803,54 @@ async function fetchUserHints() {
   const divisions = uniqueClean(users.map((user) => user == null ? void 0 : user.division));
   return { usernames, divisions };
 }
+async function createUser(payload) {
+  const { body } = await apiFetch("/pengguna", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+  if (!isResponseOk(body)) {
+    throw new Error(body.message || "Gagal membuat user");
+  }
+  return pickData(body);
+}
+async function changePassword(payload) {
+  const loginPayload = {
+    username: payload.username,
+    password: payload.currentPassword,
+    division: payload.division ?? null
+  };
+  const loginResult = await apiFetch("/pengguna/login", {
+    method: "POST",
+    body: JSON.stringify(loginPayload)
+  });
+  if (!isResponseOk(loginResult.body)) {
+    if (loginResult.status === 401) {
+      throw new Error("Password saat ini salah.");
+    }
+    throw new Error(loginResult.body.message || "Gagal memverifikasi password.");
+  }
+  const { body } = await apiFetch(`/pengguna/${encodeURIComponent(payload.username)}`, {
+    method: "PUT",
+    body: JSON.stringify({
+      password: payload.newPassword,
+      division: payload.division ?? null
+    })
+  });
+  if (!isResponseOk(body)) {
+    throw new Error(body.message || "Gagal memperbarui password.");
+  }
+  return pickData(body);
+}
+async function logoutUser(payload) {
+  const { body } = await apiFetch(`/pengguna/${encodeURIComponent(payload.username)}`, {
+    method: "PUT",
+    body: JSON.stringify({ status: "OFF" })
+  });
+  if (!isResponseOk(body)) {
+    throw new Error(body.message || "Gagal logout user");
+  }
+  return pickData(body);
+}
 const errorResponse$1 = (error) => ({
   success: false,
   message: error instanceof Error ? error.message : String(error)
@@ -829,6 +874,30 @@ function registerPenggunaIpcHandlers() {
     try {
       const hints = await fetchUserHints();
       return { success: true, hints };
+    } catch (error) {
+      return errorResponse$1(error);
+    }
+  });
+  electron.ipcMain.handle("db:createPengguna", async (_event, payload) => {
+    try {
+      const user = await createUser(payload);
+      return { success: true, data: user, message: "User berhasil dibuat" };
+    } catch (error) {
+      return errorResponse$1(error);
+    }
+  });
+  electron.ipcMain.handle("db:changePenggunaPassword", async (_event, payload) => {
+    try {
+      const user = await changePassword(payload);
+      return { success: true, data: user, message: "Password berhasil diubah" };
+    } catch (error) {
+      return errorResponse$1(error);
+    }
+  });
+  electron.ipcMain.handle("db:logoutPengguna", async (_event, payload) => {
+    try {
+      const user = await logoutUser(payload);
+      return { success: true, data: user, message: "Logout berhasil" };
     } catch (error) {
       return errorResponse$1(error);
     }

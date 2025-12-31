@@ -163,14 +163,25 @@ export async function loginPengguna(req: Request, res: Response) {
         .json(fail("Username atau password salah"));
     }
 
+    if (user.status === "ON") {
+      return res
+        .status(409)
+        .json(fail("User sedang digunakan. Silakan logout terlebih dahulu."));
+    }
+
+    const updated = await prisma.pengguna.update({
+      where: { username },
+      data: { status: "ON" },
+    });
+
     // Untuk sekarang cukup kembalikan data user,
     // nanti kalau perlu bisa ditambah token / session.
     return res.json(
       ok(
         {
-          username: user.username,
-          division: user.division,
-          status: user.status,
+          username: updated.username,
+          division: updated.division,
+          status: updated.status,
         },
         "Login berhasil",
       ),

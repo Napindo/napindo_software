@@ -10,6 +10,8 @@ contextBridge.exposeInMainWorld('database', {
     limit = 200,
     person: 'exhibitor' | 'visitor' = 'exhibitor',
   ) => ipcRenderer.invoke('db:fetchExhibitors', segment, limit, person),
+  fetchExhibitorCountByExpo: () => ipcRenderer.invoke('db:fetchExhibitorCountByExpo'),
+  fetchExpoChartData: () => ipcRenderer.invoke('db:fetchExpoChartData'),
 
   login: (payload: { username: string; password: string; division?: string | null }) =>
     ipcRenderer.invoke('db:login', payload),
@@ -27,6 +29,8 @@ contextBridge.exposeInMainWorld('database', {
   }) => ipcRenderer.invoke('db:changePenggunaPassword', payload),
 
   logoutPengguna: (payload: { username: string }) => ipcRenderer.invoke('db:logoutPengguna', payload),
+
+  listPengguna: () => ipcRenderer.invoke('db:listPengguna'),
 
   findCompany: (company: string) => ipcRenderer.invoke('db:findCompany', company),
 

@@ -2,6 +2,8 @@ import { ipcMain } from 'electron'
 import {
   deleteAddData,
   fetchExhibitorsBySegment,
+  fetchExhibitorCountByExpo,
+  fetchExpoChartData,
   fetchTopRows,
   findCompanyByName,
   saveAddData,
@@ -45,6 +47,24 @@ export function registerGabungIpcHandlers() {
     try {
       const rows = await fetchExhibitorsBySegment(segment, limit, person)
       return { success: true, rows }
+    } catch (error) {
+      return errorResponse(error)
+    }
+  })
+
+  ipcMain.handle('db:fetchExhibitorCountByExpo', async () => {
+    try {
+      const data = await fetchExhibitorCountByExpo()
+      return { success: true, data }
+    } catch (error) {
+      return errorResponse(error)
+    }
+  })
+
+  ipcMain.handle('db:fetchExpoChartData', async () => {
+    try {
+      const data = await fetchExpoChartData()
+      return { success: true, data }
     } catch (error) {
       return errorResponse(error)
     }

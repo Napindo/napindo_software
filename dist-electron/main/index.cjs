@@ -175,6 +175,20 @@ async function fetchExhibitorsBySegment(segment, limit = 200, person = "exhibito
   const data = pickData(body) ?? {};
   return data.items ?? data.rows ?? data ?? [];
 }
+async function fetchExhibitorCountByExpo() {
+  const { body } = await apiFetch("/gabung/exhibitor-count");
+  if (!isResponseOk(body)) {
+    throw new Error(body.message || "Gagal mengambil jumlah exhibitor per pameran");
+  }
+  return pickData(body);
+}
+async function fetchExpoChartData() {
+  const { body } = await apiFetch("/gabung/expo-chart");
+  if (!isResponseOk(body)) {
+    throw new Error(body.message || "Gagal mengambil data grafik pameran");
+  }
+  return pickData(body);
+}
 async function findCompanyByName(company) {
   const trimmed = company.trim();
   const encoded = encodeURIComponent(trimmed);
@@ -685,6 +699,22 @@ function registerGabungIpcHandlers() {
       return errorResponse$2(error);
     }
   });
+  electron.ipcMain.handle("db:fetchExhibitorCountByExpo", async () => {
+    try {
+      const data = await fetchExhibitorCountByExpo();
+      return { success: true, data };
+    } catch (error) {
+      return errorResponse$2(error);
+    }
+  });
+  electron.ipcMain.handle("db:fetchExpoChartData", async () => {
+    try {
+      const data = await fetchExpoChartData();
+      return { success: true, data };
+    } catch (error) {
+      return errorResponse$2(error);
+    }
+  });
   electron.ipcMain.handle("db:findCompany", async (_event, company) => {
     try {
       const rows = await findCompanyByName(company);
@@ -813,6 +843,13 @@ async function createUser(payload) {
   }
   return pickData(body);
 }
+async function listUsers() {
+  const { body } = await apiFetch("/pengguna");
+  if (!isResponseOk(body)) {
+    throw new Error(body.message || "Gagal memuat daftar pengguna");
+  }
+  return pickData(body) ?? [];
+}
 async function changePassword(payload) {
   const loginPayload = {
     username: payload.username,
@@ -898,6 +935,14 @@ function registerPenggunaIpcHandlers() {
     try {
       const user = await logoutUser(payload);
       return { success: true, data: user, message: "Logout berhasil" };
+    } catch (error) {
+      return errorResponse$1(error);
+    }
+  });
+  electron.ipcMain.handle("db:listPengguna", async () => {
+    try {
+      const users = await listUsers();
+      return { success: true, rows: users };
     } catch (error) {
       return errorResponse$1(error);
     }

@@ -13,6 +13,16 @@ interface Window {
       limit?: number,
       person?: "exhibitor" | "visitor",
     ) => Promise<RendererDatabaseResponse<T>>
+    fetchExhibitorCountByExpo: () => Promise<
+      RendererDatabaseResponse<{ indoDefence?: number; indoWater?: number; indoLivestock?: number }>
+    >
+    fetchExpoChartData: () => Promise<
+      RendererDatabaseResponse<{
+        indoDefence?: Record<number, number>
+        indoWater?: Record<number, number>
+        indoLivestock?: Record<number, number>
+      }>
+    >
     login: (
       payload: { username: string; password: string; division?: string | null },
     ) => Promise<RendererDatabaseResponse<{ username: string; division?: string | null; name?: string | null }>>
@@ -30,6 +40,7 @@ interface Window {
       division?: string | null
     }) => Promise<RendererDatabaseResponse<{ username: string; division?: string | null; status?: string | null }>>
     logoutPengguna: (payload: { username: string }) => Promise<RendererDatabaseResponse<{ username: string; status?: string | null }>>
+    listPengguna: () => Promise<RendererDatabaseResponse<{ username?: string; division?: string | null; status?: string | null }>>
     saveAddData: (payload: Record<string, unknown>) => Promise<RendererDatabaseResponse>
     importGabungExcel: (payload: {
       fileBase64: string

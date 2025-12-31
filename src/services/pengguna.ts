@@ -16,6 +16,12 @@ export type LogoutPenggunaPayload = {
   username: string
 }
 
+export type PenggunaRow = {
+  username?: string
+  division?: string | null
+  status?: string | null
+}
+
 export type DatabaseResponse<T = unknown> =
   | { success: true; data?: T; user?: T; message?: string }
   | { success: false; message: string }
@@ -95,4 +101,27 @@ export async function logoutPengguna(payload: LogoutPenggunaPayload): Promise<an
   }
 
   return response.data ?? response.user ?? response
+}
+
+async function invokeListPengguna(): Promise<DatabaseResponse> {
+  const db = getDatabaseBridge()
+  if (db && typeof db.listPengguna === 'function') {
+    return db.listPengguna() as Promise<DatabaseResponse>
+  }
+
+  const ipc = getIpcRenderer()
+  if (ipc && typeof ipc.invoke === 'function') {
+    return ipc.invoke('db:listPengguna') as Promise<DatabaseResponse>
+  }
+
+  throw new Error('Bridge Electron untuk listPengguna tidak tersedia')
+}
+
+export async function listPengguna(): Promise<PenggunaRow[]> {
+  const response = await invokeListPengguna()
+  if (!response || response.success === false) {
+    throw new Error(response?.message ?? 'Gagal memuat daftar pengguna')
+  }
+
+  return (response.rows ?? response.data ?? []) as PenggunaRow[]
 }

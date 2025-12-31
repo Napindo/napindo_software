@@ -66,6 +66,34 @@ function getIpcRenderer(): any {
   return (window as any).ipcRenderer ?? null
 }
 
+async function invokeFetchExhibitorCountByExpo(): Promise<DatabaseResponse> {
+  const db = getDatabaseBridge()
+  if (db && typeof db.fetchExhibitorCountByExpo === 'function') {
+    return db.fetchExhibitorCountByExpo() as Promise<DatabaseResponse>
+  }
+
+  const ipc = getIpcRenderer()
+  if (ipc && typeof ipc.invoke === 'function') {
+    return ipc.invoke('db:fetchExhibitorCountByExpo') as Promise<DatabaseResponse>
+  }
+
+  throw new Error('Bridge Electron untuk fetchExhibitorCountByExpo tidak tersedia')
+}
+
+async function invokeFetchExpoChartData(): Promise<DatabaseResponse> {
+  const db = getDatabaseBridge()
+  if (db && typeof db.fetchExpoChartData === 'function') {
+    return db.fetchExpoChartData() as Promise<DatabaseResponse>
+  }
+
+  const ipc = getIpcRenderer()
+  if (ipc && typeof ipc.invoke === 'function') {
+    return ipc.invoke('db:fetchExpoChartData') as Promise<DatabaseResponse>
+  }
+
+  throw new Error('Bridge Electron untuk fetchExpoChartData tidak tersedia')
+}
+
 /**
  * Ambil value dari beberapa candidate key (misal: ["COMPANY", "company"]).
  */
@@ -278,8 +306,44 @@ export async function getExhibitors(
   return fetchExhibitors(segment, limit)
 }
 
+export async function fetchExhibitorCountByExpo(): Promise<{
+  indoDefence?: number
+  indoWater?: number
+  indoLivestock?: number
+}> {
+  const response = await invokeFetchExhibitorCountByExpo()
+  if (!response || response.success === false) {
+    throw new Error(response?.message ?? 'Gagal mengambil jumlah exhibitor per pameran')
+  }
+
+  return (response.data ?? {}) as {
+    indoDefence?: number
+    indoWater?: number
+    indoLivestock?: number
+  }
+}
+
+export async function fetchExpoChartData(): Promise<{
+  indoDefence?: Record<number, number>
+  indoWater?: Record<number, number>
+  indoLivestock?: Record<number, number>
+}> {
+  const response = await invokeFetchExpoChartData()
+  if (!response || response.success === false) {
+    throw new Error(response?.message ?? 'Gagal mengambil data grafik pameran')
+  }
+
+  return (response.data ?? {}) as {
+    indoDefence?: Record<number, number>
+    indoWater?: Record<number, number>
+    indoLivestock?: Record<number, number>
+  }
+}
+
 export default {
   fetchExhibitors,
   getExhibitorsBySegment,
   getExhibitors,
+  fetchExhibitorCountByExpo,
+  fetchExpoChartData,
 }

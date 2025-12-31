@@ -60,6 +60,7 @@ type AddDataProps = {
   onBack?: () => void
   initialRow?: Record<string, unknown> | null
   initialId?: string | number | null
+  headerTitleOverride?: string
 }
 
 type FieldName = keyof AddDataForm
@@ -127,7 +128,7 @@ const labelMap: Record<FieldName, string> = {
   code3: 'Code 3',
   exhibitor: 'Exhibitor',
   visitor: 'Visitor',
-  typeOfVisitor: 'Type of Visitor',
+  typeOfVisitor: 'Type of VIP',
   specialInvitationIndoDefence: 'Special Invitation Indo Defence',
   openingCeremony: 'Opening Ceremony',
   kartuUcapan: 'Kartu Ucapan',
@@ -235,7 +236,7 @@ const helperText = (name: FieldName) => {
   return ''
 }
 
-const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null }: AddDataProps) => {
+const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, headerTitleOverride }: AddDataProps) => {
   const { user, setGlobalMessage } = useAppStore()
   const [form, setForm] = useState<AddDataForm>(defaultForm)
   const [selectedId, setSelectedId] = useState<string | number | null>(null)
@@ -1161,7 +1162,10 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null }: A
     )
   }
 
-  const headerTitle = useMemo(() => (variant === 'exhibitor' ? 'Add Data - Exhibitor' : 'Add Data - Visitor'), [variant])
+  const headerTitle = useMemo(() => {
+    if (headerTitleOverride) return headerTitleOverride
+    return variant === 'exhibitor' ? 'Add Data - Exhibitor' : 'Add Data - Visitor'
+  }, [headerTitleOverride, variant])
 
   return (
     <div className="space-y-6 lg:space-y-8">

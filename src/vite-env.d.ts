@@ -17,6 +17,19 @@ interface Window {
       payload: { username: string; password: string; division?: string | null },
     ) => Promise<RendererDatabaseResponse<{ username: string; division?: string | null; name?: string | null }>>
     userHints: () => Promise<RendererDatabaseResponse<{ usernames: string[]; divisions: string[] }>>
+    createPengguna: (payload: {
+      username: string
+      password: string
+      division?: string | null
+      status?: string | null
+    }) => Promise<RendererDatabaseResponse<{ username: string; division?: string | null; status?: string | null }>>
+    changePenggunaPassword: (payload: {
+      username: string
+      currentPassword: string
+      newPassword: string
+      division?: string | null
+    }) => Promise<RendererDatabaseResponse<{ username: string; division?: string | null; status?: string | null }>>
+    logoutPengguna: (payload: { username: string }) => Promise<RendererDatabaseResponse<{ username: string; status?: string | null }>>
     saveAddData: (payload: Record<string, unknown>) => Promise<RendererDatabaseResponse>
     importGabungExcel: (payload: {
       fileBase64: string

@@ -13,7 +13,7 @@ export function createWindow(options: CreateWindowOptions) {
     icon: path.join(options.publicDir, 'electron-vite.svg'),
     webPreferences: {
       preload: options.preload,
-      devTools: true,
+      devTools: false,
     },
   })
 
@@ -29,10 +29,6 @@ export function createWindow(options: CreateWindowOptions) {
     window.loadURL(options.devServerUrl)
   } else {
     window.loadFile(path.join(options.rendererDist, 'index.html'))
-  }
-
-  if (options.devServerUrl) {
-    window.webContents.openDevTools({ mode: 'detach' })
   }
 
   return window

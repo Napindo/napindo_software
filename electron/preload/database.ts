@@ -16,6 +16,18 @@ contextBridge.exposeInMainWorld('database', {
 
   userHints: () => ipcRenderer.invoke('db:userHints'),
 
+  createPengguna: (payload: { username: string; password: string; division?: string | null; status?: string | null }) =>
+    ipcRenderer.invoke('db:createPengguna', payload),
+
+  changePenggunaPassword: (payload: {
+    username: string
+    currentPassword: string
+    newPassword: string
+    division?: string | null
+  }) => ipcRenderer.invoke('db:changePenggunaPassword', payload),
+
+  logoutPengguna: (payload: { username: string }) => ipcRenderer.invoke('db:logoutPengguna', payload),
+
   findCompany: (company: string) => ipcRenderer.invoke('db:findCompany', company),
 
   saveAddData: (payload: any) => ipcRenderer.invoke('db:saveAddData', payload),

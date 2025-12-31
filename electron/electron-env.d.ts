@@ -52,6 +52,16 @@ interface Window {
       limit?: number,
       person?: 'exhibitor' | 'visitor',
     ) => Promise<DatabaseResponse<T>>
+    fetchExhibitorCountByExpo: () => Promise<
+      DatabaseResponse<{ indoDefence?: number; indoWater?: number; indoLivestock?: number }>
+    >
+    fetchExpoChartData: () => Promise<
+      DatabaseResponse<{
+        indoDefence?: Record<number, number>
+        indoWater?: Record<number, number>
+        indoLivestock?: Record<number, number>
+      }>
+    >
     login: (
       payload: { username: string; password: string; division?: string | null },
     ) => Promise<DatabaseResponse<{ username: string; division?: string | null; name?: string | null }>>
@@ -69,6 +79,7 @@ interface Window {
       division?: string | null
     }) => Promise<DatabaseResponse<{ username: string; division?: string | null; status?: string | null }>>
     logoutPengguna: (payload: { username: string }) => Promise<DatabaseResponse<{ username: string; status?: string | null }>>
+    listPengguna: () => Promise<DatabaseResponse<{ username?: string; division?: string | null; status?: string | null }>>
     findCompany: <T = Record<string, unknown>>(company: string) => Promise<DatabaseResponse<T>>
     saveAddData: (payload: Record<string, unknown>) => Promise<DatabaseResponse>
     importGabungExcel: (payload: {

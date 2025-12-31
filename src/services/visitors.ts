@@ -101,6 +101,7 @@ function mapExhibitorToVisitor(ex: {
   email: string
   raw: Record<string, any>
   type?: string
+  updatedAt?: string
   segment?: ExhibitorSegment
 }): VisitorRow {
   const type = ex.type || detectVisitorType(ex.raw, ex.segment)
@@ -115,6 +116,7 @@ function mapExhibitorToVisitor(ex: {
     phone: ex.phone,
     email: ex.email,
     type,
+    updatedAt: ex.updatedAt,
     raw: ex.raw,
   }
 }

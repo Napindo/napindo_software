@@ -5,6 +5,8 @@ import {
   getGabung,
   getTablePreview,
   findGabungByCompany,
+  countExhibitorsByExpo,
+  getExpoChartData,
   createGabung,
   updateGabung,
   deleteGabung,
@@ -15,6 +17,8 @@ const router = Router();
 
 router.get("/", listGabung);
 router.get("/segment/:segment", listGabungBySegment);
+router.get("/exhibitor-count", countExhibitorsByExpo);
+router.get("/expo-chart", getExpoChartData);
 
 router.get("/table-preview/:name", getTablePreview);
 router.get("/company/:company", findGabungByCompany);

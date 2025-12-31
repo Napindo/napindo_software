@@ -35,6 +35,28 @@ export async function fetchExhibitorsBySegment(
   return (data.items ?? data.rows ?? data ?? []) as Gabung[]
 }
 
+export async function fetchExhibitorCountByExpo() {
+  const { body } = await apiFetch('/gabung/exhibitor-count')
+  if (!isResponseOk(body)) {
+    throw new Error(body.message || 'Gagal mengambil jumlah exhibitor per pameran')
+  }
+
+  return pickData(body) as { indoDefence?: number; indoWater?: number; indoLivestock?: number }
+}
+
+export async function fetchExpoChartData() {
+  const { body } = await apiFetch('/gabung/expo-chart')
+  if (!isResponseOk(body)) {
+    throw new Error(body.message || 'Gagal mengambil data grafik pameran')
+  }
+
+  return pickData(body) as {
+    indoDefence?: Record<number, number>
+    indoWater?: Record<number, number>
+    indoLivestock?: Record<number, number>
+  }
+}
+
 export async function findCompanyByName(company: string) {
   const trimmed = company.trim()
   const encoded = encodeURIComponent(trimmed)

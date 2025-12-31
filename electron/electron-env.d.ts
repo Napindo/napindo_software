@@ -56,6 +56,19 @@ interface Window {
       payload: { username: string; password: string; division?: string | null },
     ) => Promise<DatabaseResponse<{ username: string; division?: string | null; name?: string | null }>>
     userHints: () => Promise<DatabaseResponse<{ usernames: string[]; divisions: string[] }>>
+    createPengguna: (payload: {
+      username: string
+      password: string
+      division?: string | null
+      status?: string | null
+    }) => Promise<DatabaseResponse<{ username: string; division?: string | null; status?: string | null }>>
+    changePenggunaPassword: (payload: {
+      username: string
+      currentPassword: string
+      newPassword: string
+      division?: string | null
+    }) => Promise<DatabaseResponse<{ username: string; division?: string | null; status?: string | null }>>
+    logoutPengguna: (payload: { username: string }) => Promise<DatabaseResponse<{ username: string; status?: string | null }>>
     findCompany: <T = Record<string, unknown>>(company: string) => Promise<DatabaseResponse<T>>
     saveAddData: (payload: Record<string, unknown>) => Promise<DatabaseResponse>
     importGabungExcel: (payload: {

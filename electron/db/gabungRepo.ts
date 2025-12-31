@@ -53,6 +53,23 @@ export async function saveAddData(payload: Record<string, unknown>) {
   return pickData(body) ?? body
 }
 
+export async function importGabungExcel(payload: {
+  fileBase64: string
+  fileName?: string
+  sheetName?: string
+  headerRow?: number
+  chunkSize?: number
+  maxRows?: number
+}) {
+  const { body } = await apiFetch('/gabung/import/excel', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+    timeoutMs: 7000,
+  })
+  if (!isResponseOk(body)) throw new Error(body.message || 'Gagal mengimpor data Excel')
+  return pickData(body) ?? body
+}
+
 export async function updateAddData(id: number | string, payload: Record<string, unknown>) {
   const safeId = encodeURIComponent(String(id))
   const { body } = await apiFetch(`/gabung/${safeId}`, {

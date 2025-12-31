@@ -5,6 +5,7 @@ import {
   fetchTopRows,
   findCompanyByName,
   saveAddData,
+  importGabungExcel,
   updateAddData,
   reportLabelGover,
   reportLabelVisitor,
@@ -61,6 +62,15 @@ export function registerGabungIpcHandlers() {
   ipcMain.handle('db:saveAddData', async (_event, payload) => {
     try {
       const result = await saveAddData(payload)
+      return { success: true, data: result }
+    } catch (error) {
+      return errorResponse(error)
+    }
+  })
+
+  ipcMain.handle('db:importGabungExcel', async (_event, payload) => {
+    try {
+      const result = await importGabungExcel(payload)
       return { success: true, data: result }
     } catch (error) {
       return errorResponse(error)

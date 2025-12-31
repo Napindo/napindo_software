@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react'
-import AddDataPage from './AddData'
 import { InputDeck } from './Exhibitor'
 import type { VisitorRow, VisitorSegment } from '../services/visitors'
 import { fetchVisitors } from '../services/visitors'
@@ -83,6 +82,17 @@ const rowMatchesSegment = (raw: Record<string, unknown>, segment: VisitorSegment
   const flagKey = visitorFlagKey[segment]
   if (!flagKey) return true
   return isFlagSet(lower, flagKey)
+}
+
+const formatDateOnly = (value?: string) => {
+  if (!value) return ''
+  const trimmed = value.trim()
+  if (!trimmed) return ''
+  const isoIndex = trimmed.indexOf('T')
+  if (isoIndex > 0) return trimmed.slice(0, isoIndex)
+  const spaceIndex = trimmed.indexOf(' ')
+  if (spaceIndex > 0) return trimmed.slice(0, spaceIndex)
+  return trimmed
 }
 
 type VisitorTableProps = {
@@ -189,7 +199,7 @@ const VisitorTable = ({ segment, rows, loading, error, onReload, onSegmentChange
                 <path d="m15 18-6-6 6-6" />
               </svg>
             </button>
-            <h1 className="text-2xl font-bold text-slate-800 leading-tight">Input Data - Visitor</h1>
+            <h1 className="text-2xl font-bold text-slate-800 leading-tight">Search - Visitor</h1>
           </div>
           <div className="flex items-center gap-4 mt-2">
             {tabOptions.map((item) => (
@@ -218,14 +228,6 @@ const VisitorTable = ({ segment, rows, loading, error, onReload, onSegmentChange
               <path d="M20 9A9 9 0 0 0 5 5.3L4 10M4 15a9 9 0 0 0 15 3.7L20 14" />
             </svg>
             Reload
-          </button>
-          <button
-            type="button"
-            onClick={() => onAdd(null, null)}
-            className="inline-flex items-center gap-2 bg-rose-500 hover:bg-rose-600 text-white px-4 py-2.5 rounded-lg text-sm font-semibold shadow-sm"
-          >
-            <span className="text-lg leading-none">+</span>
-            Add Visitor
           </button>
         </div>
       </div>
@@ -357,7 +359,7 @@ const VisitorTable = ({ segment, rows, loading, error, onReload, onSegmentChange
                       <td className="px-4 py-3 border-b border-slate-200">{row.email}</td>
                       <td className="px-4 py-3 border-b border-slate-200">{row.phone}</td>
                       <td className="px-4 py-3 border-b border-slate-200">{row.city}</td>
-                      <td className="px-4 py-3 border-b border-slate-200">{row.updatedAt ?? ''}</td>
+                      <td className="px-4 py-3 border-b border-slate-200">{formatDateOnly(row.updatedAt)}</td>
                     </tr>
                   ))
                 : null}
@@ -406,14 +408,12 @@ const VisitorTable = ({ segment, rows, loading, error, onReload, onSegmentChange
 }
 
 const VisitorPage = () => {
-  const { setGlobalMessage } = useAppStore()
-  const [mode, setMode] = useState<'cards' | 'table' | 'form'>('cards')
+  const { setActivePage, setAddDataDraft, setGlobalMessage } = useAppStore()
+  const [mode, setMode] = useState<'cards' | 'table'>('cards')
   const [segment, setSegment] = useState<VisitorSegment>('defence')
   const [rows, setRows] = useState<VisitorRow[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [editingRow, setEditingRow] = useState<Record<string, unknown> | null>(null)
-  const [editingId, setEditingId] = useState<string | number | null>(null)
   const [deleteIds, setDeleteIds] = useState<(string | number)[] | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [tableNonce, setTableNonce] = useState(0)
@@ -451,22 +451,6 @@ const VisitorPage = () => {
     )
   }
 
-  if (mode === 'form') {
-    return (
-      <AddDataPage
-        variant="visitor"
-        initialRow={editingRow}
-        initialId={editingId}
-        onBack={() => {
-          setMode('table')
-          setEditingRow(null)
-          setEditingId(null)
-          loadData(segment)
-        }}
-      />
-    )
-  }
-
   return (
     <>
       <VisitorTable
@@ -481,9 +465,8 @@ const VisitorPage = () => {
         }}
         onBack={() => setMode('cards')}
         onAdd={(row, id) => {
-          setEditingRow(row)
-          setEditingId(id)
-          setMode('form')
+          setAddDataDraft({ row, id, returnPage: 'visitor' })
+          setActivePage('addData')
         }}
         onConfirmDelete={(ids) => setDeleteIds(ids)}
       />

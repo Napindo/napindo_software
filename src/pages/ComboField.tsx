@@ -15,8 +15,8 @@ const ComboField = ({ label, name, value, placeholder, options, onChange }: Comb
 
   const filtered = useMemo(() => {
     const term = value.trim().toLowerCase()
-    if (!term) return options.slice(0, 8)
-    return options.filter((opt) => opt.toLowerCase().includes(term)).slice(0, 8)
+    if (!term) return options
+    return options.filter((opt) => opt.toLowerCase().includes(term))
   }, [options, value])
 
   return (

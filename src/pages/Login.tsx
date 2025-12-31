@@ -251,7 +251,7 @@ function LoginPage({ onSuccess }: LoginPageProps) {
         showShell ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
       }`}
     >
-      <div className="w-full max-w-5xl bg-white/90 backdrop-blur-md shadow-card rounded-3xl border border-white overflow-hidden grid md:grid-cols-2">
+      <div className="w-full max-w-5xl bg-white/90 backdrop-blur-md shadow-card rounded-3xl border border-white overflow-visible grid md:grid-cols-2">
         {/* Panel kiri (brand) */}
         <div className="bg-gradient-to-br from-white via-rose-50 to-slate-50 flex items-center justify-center p-8 md:p-10">
           <div className="flex items-center gap-6 float-soft">

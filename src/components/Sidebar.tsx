@@ -11,8 +11,10 @@ type IconName =
   | 'chart'
   | 'userPlus'
   | 'lock'
+  | 'search'
   | 'chevron'
   | 'logout'
+  
 
 type NavLeaf = { label: string; icon: IconName; page: PageKey }
 type NavParent = {
@@ -86,6 +88,13 @@ const NavIcon = ({ name }: { name: IconName }) => {
           <path d="M9 11V8a3 3 0 0 1 6 0v3" />
         </svg>
       )
+    case 'search':
+      return (
+        <svg viewBox="0 0 24 24" className={base} fill="none" stroke="currentColor" strokeWidth="1.6">
+          <circle cx="11" cy="11" r="7" />
+          <path d="m16.5 16.5 3 3" />
+        </svg>
+      )
     case 'chevron':
       return (
         <svg viewBox="0 0 24 24" className={`${base} transition-transform`} fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -136,9 +145,16 @@ const navStructure: { title?: string; items: NavItem[] }[] = [
         label: 'Input Data',
         icon: 'pencil',
         items: [
+          { label: 'Add Data', icon: 'userPlus', page: 'addData' },
+          { label: 'Import Data', icon: 'tag', page: 'importData' },
+        ],
+      },
+      {
+        label: 'Search',
+        icon: 'search',
+        items: [
           { label: 'Exhibitor', icon: 'tag', page: 'exhibitor' },
           { label: 'Visitor', icon: 'chart', page: 'visitor' },
-          { label: 'Import Data', icon: 'tag', page: 'importData' },
         ],
       },
       {

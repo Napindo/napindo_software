@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react'
-import AddDataPage from './AddData'
 import type { ExhibitorRow, ExhibitorSegment } from '../services/exhibitors'
 import { fetchExhibitors } from '../services/exhibitors'
 import { deleteAddData } from '../services/addData'
@@ -102,6 +101,17 @@ const rowMatchesSegment = (raw: Record<string, unknown>, segment: ExhibitorSegme
   return isFlagSet(lower, flagKey)
 }
 
+const formatDateOnly = (value?: string) => {
+  if (!value) return ''
+  const trimmed = value.trim()
+  if (!trimmed) return ''
+  const isoIndex = trimmed.indexOf('T')
+  if (isoIndex > 0) return trimmed.slice(0, isoIndex)
+  const spaceIndex = trimmed.indexOf(' ')
+  if (spaceIndex > 0) return trimmed.slice(0, spaceIndex)
+  return trimmed
+}
+
 export const InputDeck = ({ variant, onInput }: { variant: 'exhibitor' | 'visitor'; onInput?: (segment: ExhibitorSegment) => void }) => {
   const heading = variant === 'exhibitor' ? 'EXHIBITOR' : 'VISITOR'
   const segmentByCard: Record<string, ExhibitorSegment> = {
@@ -113,7 +123,7 @@ export const InputDeck = ({ variant, onInput }: { variant: 'exhibitor' | 'visito
   return (
     <div className="w-full space-y-10 lg:space-y-12 pt-4 pb-8">
       <div className="flex flex-col gap-1">
-        <p className="text-lg font-semibold text-slate-500">Input Data</p>
+        <p className="text-lg font-semibold text-slate-500">Search</p>
         <h1 className="text-3xl lg:text-4xl font-extrabold text-slate-900">{heading}</h1>
       </div>
 
@@ -136,7 +146,7 @@ export const InputDeck = ({ variant, onInput }: { variant: 'exhibitor' | 'visito
                 onClick={() => onInput?.(segmentByCard[card.id] ?? 'defence')}
                 className="mt-auto mx-auto px-10 py-3 rounded-xl bg-white text-slate-700 font-bold tracking-wide shadow-lg hover:-translate-y-0.5 hover:shadow-xl transition-transform duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
               >
-                INPUT
+                Search
               </button>
             </div>
           </article>
@@ -250,7 +260,7 @@ const ExhibitorTable = ({ segment, rows, loading, error, onReload, onSegmentChan
                 <path d="m15 18-6-6 6-6" />
               </svg>
             </button>
-            <h1 className="text-2xl font-bold text-slate-800 leading-tight">Input Data - Exhibitor</h1>
+            <h1 className="text-2xl font-bold text-slate-800 leading-tight">Search - Exhibitor</h1>
           </div>
           <div className="flex items-center gap-4 mt-2">
             {tabOptions.map((item) => (
@@ -279,14 +289,6 @@ const ExhibitorTable = ({ segment, rows, loading, error, onReload, onSegmentChan
               <path d="M20 9A9 9 0 0 0 5 5.3L4 10M4 15a9 9 0 0 0 15 3.7L20 14" />
             </svg>
             Reload
-          </button>
-          <button
-            type="button"
-            onClick={() => onForm(null, null)}
-            className="inline-flex items-center gap-2 bg-rose-500 hover:bg-rose-600 text-white px-4 py-2.5 rounded-lg text-sm font-semibold shadow-sm"
-          >
-            <span className="text-lg leading-none">+</span>
-            Add Exhibitor
           </button>
         </div>
       </div>
@@ -418,7 +420,7 @@ const ExhibitorTable = ({ segment, rows, loading, error, onReload, onSegmentChan
                       <td className="px-4 py-3 border-b border-slate-200">{row.email}</td>
                       <td className="px-4 py-3 border-b border-slate-200">{row.phone}</td>
                       <td className="px-4 py-3 border-b border-slate-200">{row.city}</td>
-                      <td className="px-4 py-3 border-b border-slate-200">{row.updatedAt ?? ''}</td>
+                      <td className="px-4 py-3 border-b border-slate-200">{formatDateOnly(row.updatedAt)}</td>
                     </tr>
                   ))
                 : null}
@@ -467,14 +469,12 @@ const ExhibitorTable = ({ segment, rows, loading, error, onReload, onSegmentChan
 }
 
 const ExhibitorPage = () => {
-  const { setGlobalMessage } = useAppStore()
-  const [mode, setMode] = useState<'cards' | 'table' | 'form'>('cards')
+  const { setActivePage, setAddDataDraft, setGlobalMessage } = useAppStore()
+  const [mode, setMode] = useState<'cards' | 'table'>('cards')
   const [segment, setSegment] = useState<ExhibitorSegment>('defence')
   const [rows, setRows] = useState<ExhibitorRow[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [editingRow, setEditingRow] = useState<Record<string, unknown> | null>(null)
-  const [editingId, setEditingId] = useState<string | number | null>(null)
   const [deleteIds, setDeleteIds] = useState<(string | number)[] | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [tableNonce, setTableNonce] = useState(0)
@@ -512,22 +512,6 @@ const ExhibitorPage = () => {
     )
   }
 
-  if (mode === 'form') {
-    return (
-      <AddDataPage
-        variant="exhibitor"
-        initialRow={editingRow}
-        initialId={editingId}
-        onBack={() => {
-          setMode('table')
-          setEditingRow(null)
-          setEditingId(null)
-          loadData(segment)
-        }}
-      />
-    )
-  }
-
   return (
     <>
       <ExhibitorTable
@@ -542,9 +526,8 @@ const ExhibitorPage = () => {
         }}
         onBack={() => setMode('cards')}
         onForm={(row, id) => {
-          setEditingRow(row)
-          setEditingId(id)
-          setMode('form')
+          setAddDataDraft({ row, id, returnPage: 'exhibitor' })
+          setActivePage('addData')
         }}
         onConfirmDelete={(ids) => setDeleteIds(ids)}
       />

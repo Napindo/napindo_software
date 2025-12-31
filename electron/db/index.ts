@@ -71,36 +71,119 @@ export function loadEnvFile(filePath: string) {
   }
 }
 
+const appRoot = process.env.APP_ROOT
+if (appRoot) {
+  loadEnvFile(path.resolve(appRoot, '.env'))
+}
 loadEnvFile(path.resolve(process.cwd(), '.env'))
+loadEnvFile(path.resolve(process.cwd(), '..', '.env'))
 
 export const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:3001'
 export const API_PREFIX = process.env.API_PREFIX || '/api'
 
-export async function apiFetch<T = unknown>(pathName: string, init: RequestInit = {}): Promise<ApiResult<T>> {
+const ensureNoProxyForLocal = () => {
+  const existing = process.env.NO_PROXY || process.env.no_proxy || ''
+  const entries = existing
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+  const required = ['localhost', '127.0.0.1']
+  let changed = false
+  required.forEach((host) => {
+    if (!entries.includes(host)) {
+      entries.push(host)
+      changed = true
+    }
+  })
+  if (changed) {
+    const value = entries.join(',')
+    process.env.NO_PROXY = value
+    process.env.no_proxy = value
+  }
+}
+
+type ApiFetchOptions = RequestInit & { timeoutMs?: number }
+
+export async function apiFetch<T = unknown>(pathName: string, init: ApiFetchOptions = {}): Promise<ApiResult<T>> {
   const url = `${API_BASE_URL.replace(/\/$/, '')}${API_PREFIX}${pathName}`
+  ensureNoProxyForLocal()
+
+  const attempt = async (targetUrl: string): Promise<ApiResult<T>> => {
+    const timeoutMs = typeof init.timeoutMs === 'number' ? init.timeoutMs : 0
+    const controller = timeoutMs > 0 ? new AbortController() : null
+    const timeoutId = controller
+      ? setTimeout(() => {
+          controller.abort()
+        }, timeoutMs)
+      : null
+
+    try {
+      const response = await fetch(targetUrl, {
+        ...init,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(init.headers || {}),
+        },
+        signal: controller?.signal,
+      })
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
+
+      const contentType = response.headers.get('content-type') || ''
+      let body: ApiResponse<T>
+
+      if (contentType.includes('application/json')) {
+        body = (await response.json()) as ApiResponse<T>
+      } else {
+        const text = await response.text()
+        body = { success: false, ok: false, message: text }
+      }
+
+      return { status: response.status, body }
+    } finally {
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
+    }
+  }
 
   try {
-    const response = await fetch(url, {
-      ...init,
-      headers: {
-        'Content-Type': 'application/json',
-        ...(init.headers || {}),
-      },
-    })
+    return await attempt(url)
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err)
+    const isTimeout = err instanceof Error && err.name === 'AbortError'
 
-    const contentType = response.headers.get('content-type') || ''
-    let body: ApiResponse<T>
-
-    if (contentType.includes('application/json')) {
-      body = (await response.json()) as ApiResponse<T>
-    } else {
-      const text = await response.text()
-      body = { success: false, ok: false, message: text }
+    if (isTimeout) {
+      return {
+        status: 408,
+        body: {
+          success: false,
+          message: `Request timeout saat menghubungi API (${url}). Coba lagi atau cek koneksi API/DB.`,
+        },
+      }
     }
 
-    return { status: response.status, body }
-  } catch (err) {
-    return { status: 500, body: { success: false, message: 'Tidak dapat terhubung ke API' } }
+    if (url.includes('localhost')) {
+      const fallbackUrl = url.replace('localhost', '127.0.0.1')
+      try {
+        return await attempt(fallbackUrl)
+      } catch (fallbackError) {
+        const fallbackDetail = fallbackError instanceof Error ? fallbackError.message : String(fallbackError)
+        return {
+          status: 500,
+          body: {
+            success: false,
+            message: `Tidak dapat terhubung ke API (${url}). ${detail}. Fallback ${fallbackUrl} gagal: ${fallbackDetail}`,
+          },
+        }
+      }
+    }
+
+    return {
+      status: 500,
+      body: { success: false, message: `Tidak dapat terhubung ke API (${url}). ${detail}` },
+    }
   }
 }
 

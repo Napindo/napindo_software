@@ -8,6 +8,7 @@ import {
   createGabung,
   updateGabung,
   deleteGabung,
+  importGabungExcel,
 } from "../controllers/gabung.controller";
 
 const router = Router();
@@ -20,6 +21,7 @@ router.get("/company/:company", findGabungByCompany);
 router.get("/:id", getGabung);
 
 router.post("/", createGabung);
+router.post("/import/excel", importGabungExcel);
 router.put("/:id", updateGabung);
 router.delete("/:id", deleteGabung);
 

@@ -1,7 +1,6 @@
 import { useMemo } from 'react'
 
 import { Sidebar } from '../components/Sidebar'
-import type { PageKey } from '../types/navigation'
 import type { AuthenticatedUser } from './Login'
 import { useAppStore } from '../store/appStore'
 
@@ -16,18 +15,12 @@ import ReportPerusahaan from './ReportPerusahaan'
 import ReportGovernment from './ReportGovernment'
 import ReportJumlahPerusahaan from './ReportJumlahPerusahaan'
 import ReportJumlahGovernment from './ReportJumlahGovernment'
+import ImportDataPage from './ImportData'
 
 type DashboardProps = {
   user?: AuthenticatedUser | null
   onLogout?: () => void
 }
-
-const PlaceholderPanel = ({ title }: { title: string }) => (
-  <div className="flex flex-col gap-4 items-start">
-    <h1 className="text-3xl lg:text-4xl font-extrabold text-slate-900">{title}</h1>
-    <p className="text-slate-600">Halaman ini akan segera tersedia.</p>
-  </div>
-)
 
 const DashboardPage = ({ user, onLogout }: DashboardProps) => {
   const displayName = useMemo(() => {
@@ -46,7 +39,7 @@ const DashboardPage = ({ user, onLogout }: DashboardProps) => {
       case 'visitor':
         return <VisitorPage />
       case 'importData':
-        return <PlaceholderPanel title="Import Data" />
+        return <ImportDataPage />
       case 'printPerusahaan':
         return <PrintLabelPerusahaan />
       case 'printGovernment':

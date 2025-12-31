@@ -18,6 +18,16 @@ interface Window {
     ) => Promise<RendererDatabaseResponse<{ username: string; division?: string | null; name?: string | null }>>
     userHints: () => Promise<RendererDatabaseResponse<{ usernames: string[]; divisions: string[] }>>
     saveAddData: (payload: Record<string, unknown>) => Promise<RendererDatabaseResponse>
+    importGabungExcel: (payload: {
+      fileBase64: string
+      fileName?: string
+      sheetName?: string
+      headerRow?: number
+      chunkSize?: number
+      maxRows?: number
+      dryRun?: boolean
+      currentUser?: string
+    }) => Promise<RendererDatabaseResponse>
     updateAddData: (id: string | number, payload: Record<string, unknown>) => Promise<RendererDatabaseResponse>
     deleteAddData: (ids: Array<string | number>) => Promise<RendererDatabaseResponse>
     findCompany: <T = Record<string, unknown>>(company: string) => Promise<RendererDatabaseResponse<T>>

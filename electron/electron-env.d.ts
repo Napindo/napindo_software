@@ -58,6 +58,16 @@ interface Window {
     userHints: () => Promise<DatabaseResponse<{ usernames: string[]; divisions: string[] }>>
     findCompany: <T = Record<string, unknown>>(company: string) => Promise<DatabaseResponse<T>>
     saveAddData: (payload: Record<string, unknown>) => Promise<DatabaseResponse>
+    importGabungExcel: (payload: {
+      fileBase64: string
+      fileName?: string
+      sheetName?: string
+      headerRow?: number
+      chunkSize?: number
+      maxRows?: number
+      dryRun?: boolean
+      currentUser?: string
+    }) => Promise<DatabaseResponse>
     updateAddData: (id: string | number, payload: Record<string, unknown>) => Promise<DatabaseResponse>
     deleteAddData: (ids: Array<string | number>) => Promise<DatabaseResponse>
   }

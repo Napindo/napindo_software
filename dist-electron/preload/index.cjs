@@ -8,6 +8,7 @@ electron.contextBridge.exposeInMainWorld("database", {
   userHints: () => electron.ipcRenderer.invoke("db:userHints"),
   findCompany: (company) => electron.ipcRenderer.invoke("db:findCompany", company),
   saveAddData: (payload) => electron.ipcRenderer.invoke("db:saveAddData", payload),
+  importGabungExcel: (payload) => electron.ipcRenderer.invoke("db:importGabungExcel", payload),
   updateAddData: (id, payload) => electron.ipcRenderer.invoke("db:updateAddData", id, payload),
   deleteAddData: (ids) => electron.ipcRenderer.invoke("db:deleteAddData", ids),
   reportLabelVisitor: (filter) => electron.ipcRenderer.invoke("report:labelvisitor", filter),

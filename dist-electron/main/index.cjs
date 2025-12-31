@@ -11,7 +11,7 @@ function createWindow(options) {
     icon: path.join(options.publicDir, "electron-vite.svg"),
     webPreferences: {
       preload: options.preload,
-      devTools: false
+      devTools: true
     }
   });
   window.webContents.on("did-finish-load", () => {
@@ -24,6 +24,9 @@ function createWindow(options) {
     window.loadURL(options.devServerUrl);
   } else {
     window.loadFile(path.join(options.rendererDist, "index.html"));
+  }
+  if (options.devServerUrl) {
+    window.webContents.openDevTools({ mode: "detach" });
   }
   return window;
 }
@@ -52,30 +55,100 @@ function loadEnvFile(filePath) {
     }
   }
 }
+const appRoot = process.env.APP_ROOT;
+if (appRoot) {
+  loadEnvFile(path.resolve(appRoot, ".env"));
+}
 loadEnvFile(path.resolve(process.cwd(), ".env"));
+loadEnvFile(path.resolve(process.cwd(), "..", ".env"));
 const API_BASE_URL = process.env.API_BASE_URL || "http://localhost:3001";
 const API_PREFIX = process.env.API_PREFIX || "/api";
+const ensureNoProxyForLocal = () => {
+  const existing = process.env.NO_PROXY || process.env.no_proxy || "";
+  const entries = existing.split(",").map((item) => item.trim()).filter(Boolean);
+  const required = ["localhost", "127.0.0.1"];
+  let changed = false;
+  required.forEach((host) => {
+    if (!entries.includes(host)) {
+      entries.push(host);
+      changed = true;
+    }
+  });
+  if (changed) {
+    const value = entries.join(",");
+    process.env.NO_PROXY = value;
+    process.env.no_proxy = value;
+  }
+};
 async function apiFetch(pathName, init = {}) {
   const url = `${API_BASE_URL.replace(/\/$/, "")}${API_PREFIX}${pathName}`;
-  try {
-    const response = await fetch(url, {
-      ...init,
-      headers: {
-        "Content-Type": "application/json",
-        ...init.headers || {}
+  ensureNoProxyForLocal();
+  const attempt = async (targetUrl) => {
+    const timeoutMs = typeof init.timeoutMs === "number" ? init.timeoutMs : 0;
+    const controller = timeoutMs > 0 ? new AbortController() : null;
+    const timeoutId = controller ? setTimeout(() => {
+      controller.abort();
+    }, timeoutMs) : null;
+    try {
+      const response = await fetch(targetUrl, {
+        ...init,
+        headers: {
+          "Content-Type": "application/json",
+          ...init.headers || {}
+        },
+        signal: controller == null ? void 0 : controller.signal
+      });
+      if (timeoutId) {
+        clearTimeout(timeoutId);
       }
-    });
-    const contentType = response.headers.get("content-type") || "";
-    let body;
-    if (contentType.includes("application/json")) {
-      body = await response.json();
-    } else {
-      const text = await response.text();
-      body = { success: false, ok: false, message: text };
+      const contentType = response.headers.get("content-type") || "";
+      let body;
+      if (contentType.includes("application/json")) {
+        body = await response.json();
+      } else {
+        const text = await response.text();
+        body = { success: false, ok: false, message: text };
+      }
+      return { status: response.status, body };
+    } finally {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
     }
-    return { status: response.status, body };
+  };
+  try {
+    return await attempt(url);
   } catch (err) {
-    return { status: 500, body: { success: false, message: "Tidak dapat terhubung ke API" } };
+    const detail = err instanceof Error ? err.message : String(err);
+    const isTimeout = err instanceof Error && err.name === "AbortError";
+    if (isTimeout) {
+      return {
+        status: 408,
+        body: {
+          success: false,
+          message: `Request timeout saat menghubungi API (${url}). Coba lagi atau cek koneksi API/DB.`
+        }
+      };
+    }
+    if (url.includes("localhost")) {
+      const fallbackUrl = url.replace("localhost", "127.0.0.1");
+      try {
+        return await attempt(fallbackUrl);
+      } catch (fallbackError) {
+        const fallbackDetail = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
+        return {
+          status: 500,
+          body: {
+            success: false,
+            message: `Tidak dapat terhubung ke API (${url}). ${detail}. Fallback ${fallbackUrl} gagal: ${fallbackDetail}`
+          }
+        };
+      }
+    }
+    return {
+      status: 500,
+      body: { success: false, message: `Tidak dapat terhubung ke API (${url}). ${detail}` }
+    };
   }
 }
 async function testConnection() {
@@ -119,6 +192,15 @@ async function saveAddData(payload) {
     body: JSON.stringify(payload)
   });
   if (!isResponseOk(body)) throw new Error(body.message || "Gagal menyimpan data");
+  return pickData(body) ?? body;
+}
+async function importGabungExcel(payload) {
+  const { body } = await apiFetch("/gabung/import/excel", {
+    method: "POST",
+    body: JSON.stringify(payload),
+    timeoutMs: 7e3
+  });
+  if (!isResponseOk(body)) throw new Error(body.message || "Gagal mengimpor data Excel");
   return pickData(body) ?? body;
 }
 async function updateAddData(id, payload) {
@@ -617,6 +699,14 @@ function registerGabungIpcHandlers() {
   electron.ipcMain.handle("db:saveAddData", async (_event, payload) => {
     try {
       const result = await saveAddData(payload);
+      return { success: true, data: result };
+    } catch (error) {
+      return errorResponse$2(error);
+    }
+  });
+  electron.ipcMain.handle("db:importGabungExcel", async (_event, payload) => {
+    try {
+      const result = await importGabungExcel(payload);
       return { success: true, data: result };
     } catch (error) {
       return errorResponse$2(error);

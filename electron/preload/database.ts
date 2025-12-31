@@ -20,6 +20,8 @@ contextBridge.exposeInMainWorld('database', {
 
   saveAddData: (payload: any) => ipcRenderer.invoke('db:saveAddData', payload),
 
+  importGabungExcel: (payload: any) => ipcRenderer.invoke('db:importGabungExcel', payload),
+
   updateAddData: (id: string | number, payload: any) =>
     ipcRenderer.invoke('db:updateAddData', id, payload),
 

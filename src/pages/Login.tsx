@@ -1,6 +1,6 @@
 import type { ChangeEvent, FormEvent } from "react";
 import { useEffect, useState } from "react";
-import ComboField from "./ComboField";
+import ComboField from "../components/ComboField";
 import { useAppStore, type AppUser } from "../store/appStore";
 
 type LoginStatus = "idle" | "loading" | "success" | "error";
@@ -9,6 +9,12 @@ type LoginForm = {
   username: string;
   password: string;
   division: string;
+};
+
+type RememberPayload = {
+  username?: string;
+  division?: string;
+  remember?: boolean;
 };
 
 type HintsCache = {
@@ -98,7 +104,7 @@ function LoginPage({ onSuccess }: LoginPageProps) {
     division: "",
   });
 
-  const [remember, setRemember] = useState(true);
+  const [remember, setRemember] = useState(false);
   const [status, setStatus] = useState<LoginStatus>("idle");
   const [message, setMessage] = useState("");
   const [welcomeName, setWelcomeName] = useState("");
@@ -111,15 +117,33 @@ function LoginPage({ onSuccess }: LoginPageProps) {
   const [hintsError, setHintsError] = useState<string | null>(null);
 
   // Load remember-me + animasi
+  const persistRemember = (nextRemember: boolean, payload: LoginForm) => {
+    if (nextRemember) {
+      localStorage.setItem(
+        REMEMBER_KEY,
+        JSON.stringify({
+          remember: true,
+          username: payload.username,
+          division: payload.division,
+        } as RememberPayload),
+      );
+    } else {
+      localStorage.removeItem(REMEMBER_KEY);
+    }
+  };
+
   useEffect(() => {
     const stored = localStorage.getItem(REMEMBER_KEY);
     if (stored) {
       try {
-        const parsed = JSON.parse(stored) as Partial<LoginForm>;
+        const parsed = JSON.parse(stored) as RememberPayload;
+        const shouldRemember = parsed.remember ?? true;
+        setRemember(Boolean(shouldRemember));
         setForm((prev) => ({
           ...prev,
-          username: parsed.username ?? "",
-          division: parsed.division ?? "",
+          username: shouldRemember ? parsed.username ?? "" : "",
+          division: shouldRemember ? parsed.division ?? "" : "",
+          password: "",
         }));
       } catch {
         //
@@ -172,17 +196,7 @@ function LoginPage({ onSuccess }: LoginPageProps) {
 
   // Sync remember-me
   useEffect(() => {
-    if (remember) {
-      localStorage.setItem(
-        REMEMBER_KEY,
-        JSON.stringify({
-          username: form.username,
-          division: form.division,
-        } as Partial<LoginForm>),
-      );
-    } else {
-      localStorage.removeItem(REMEMBER_KEY);
-    }
+    persistRemember(remember, form);
   }, [remember, form.username, form.division]);
 
   const isReady =
@@ -231,6 +245,11 @@ function LoginPage({ onSuccess }: LoginPageProps) {
 
         setUser(user);
         setGlobalMessage({ type: "success", text: "Login berhasil" });
+        persistRemember(remember, {
+          username: form.username,
+          password: "",
+          division: form.division,
+        });
         onSuccess?.(user);
       } else {
         setStatus("error");
@@ -251,7 +270,7 @@ function LoginPage({ onSuccess }: LoginPageProps) {
         showShell ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
       }`}
     >
-      <div className="w-full max-w-5xl bg-white/90 backdrop-blur-md shadow-card rounded-3xl border border-white overflow-visible grid md:grid-cols-2">
+      <div className="w-full max-w-5xl bg-white/90 backdrop-blur-md shadow-card rounded-3xl border border-white overflow-hidden grid md:grid-cols-2">
         {/* Panel kiri (brand) */}
         <div className="bg-gradient-to-br from-white via-rose-50 to-slate-50 flex items-center justify-center p-8 md:p-10">
           <div className="flex items-center gap-6 float-soft">

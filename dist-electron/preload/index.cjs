@@ -18,6 +18,7 @@ electron.contextBridge.exposeInMainWorld("database", {
   importGabungExcel: (payload) => electron.ipcRenderer.invoke("db:importGabungExcel", payload),
   updateAddData: (id, payload) => electron.ipcRenderer.invoke("db:updateAddData", id, payload),
   deleteAddData: (ids) => electron.ipcRenderer.invoke("db:deleteAddData", ids),
+  exportPersonalDatabasePdf: (payload) => electron.ipcRenderer.invoke("db:personalDatabasePdf", payload),
   reportLabelVisitor: (filter) => electron.ipcRenderer.invoke("report:labelvisitor", filter),
   reportLabelGover: (filter) => electron.ipcRenderer.invoke("report:labelgover", filter),
   reportLabelOptions: () => electron.ipcRenderer.invoke("report:labeloptions"),

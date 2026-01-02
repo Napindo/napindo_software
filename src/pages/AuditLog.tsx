@@ -4,9 +4,13 @@ import { listPengguna, type PenggunaRow } from '../services/pengguna'
 
 const formatTime = (value?: string | null) => {
   if (!value) return '-'
-  const parsed = new Date(value)
-  if (Number.isNaN(parsed.getTime())) return value
-  return parsed.toLocaleString('id-ID')
+  const raw = String(value).trim()
+  if (!raw) return '-'
+  const parsed = new Date(raw)
+  if (Number.isNaN(parsed.getTime())) return raw
+  const isUtc = raw.endsWith('Z')
+  const adjusted = isUtc ? new Date(parsed.getTime() + parsed.getTimezoneOffset() * 60000) : parsed
+  return adjusted.toLocaleString('id-ID')
 }
 
 const AuditLogPage = () => {

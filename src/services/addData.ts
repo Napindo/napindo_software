@@ -1,19 +1,11 @@
+import { buildApiUrl } from "../utils/api"
+import { getDatabaseBridge, getIpcRenderer } from "../utils/bridge"
+
 export type AddDataPayload = Record<string, string | number | boolean | null | undefined>
 
 export type DatabaseResponse<T = unknown> =
   | { success: true; data?: T; rows?: T[]; message?: string }
   | { success: false; message: string }
-
-/**
- * Helper kecil untuk akses bridge Electron dengan aman.
- */
-function getDatabaseBridge(): any {
-  return (window as any).database ?? null
-}
-
-function getIpcRenderer(): any {
-  return (window as any).ipcRenderer ?? null
-}
 
 /**
  * Panggil operasi saveAddData lewat window.database atau fallback ke ipcRenderer.invoke.
@@ -138,4 +130,67 @@ export async function deleteAddData(ids: Array<string | number>): Promise<any> {
   }
 
   return response.data ?? response
+}
+
+
+function parseFilename(contentDisposition: string | null, fallback: string) {
+  if (!contentDisposition) return fallback
+  const match = /filename="?([^"]+)"?/i.exec(contentDisposition)
+  if (!match) return fallback
+  return match[1] || fallback
+}
+
+export async function exportPersonalDatabasePdf(payload: Record<string, unknown>) {
+  const db = getDatabaseBridge()
+  if (db && typeof db.exportPersonalDatabasePdf === "function") {
+    const response = await db.exportPersonalDatabasePdf(payload)
+    if (!response || response.success === false) {
+      throw new Error(response?.message ?? "Gagal mengunduh PDF")
+    }
+    const data = response.data ?? response
+    const base64 = data?.base64 as string | undefined
+    if (!base64) throw new Error("PDF tidak tersedia")
+    const contentType = (data?.contentType as string) || "application/pdf"
+    const filename = (data?.filename as string) || "database-personal.pdf"
+    return { blob: base64ToBlob(base64, contentType), filename }
+  }
+
+  const ipc = getIpcRenderer()
+  if (ipc && typeof ipc.invoke === "function") {
+    const response = await ipc.invoke("db:personalDatabasePdf", payload)
+    if (!response || response.success === false) {
+      throw new Error(response?.message ?? "Gagal mengunduh PDF")
+    }
+    const data = response.data ?? response
+    const base64 = data?.base64 as string | undefined
+    if (!base64) throw new Error("PDF tidak tersedia")
+    const contentType = (data?.contentType as string) || "application/pdf"
+    const filename = (data?.filename as string) || "database-personal.pdf"
+    return { blob: base64ToBlob(base64, contentType), filename }
+  }
+
+  const res = await fetch(buildApiUrl("/gabung/personal-pdf"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload ?? {}),
+  })
+
+  if (!res.ok) {
+    const message = await res.text()
+    throw new Error(message || "Gagal mengunduh PDF")
+  }
+
+  const blob = await res.blob()
+  const filename = parseFilename(res.headers.get("content-disposition"), "database-personal.pdf")
+  return { blob, filename }
+}
+
+function base64ToBlob(base64: string, contentType: string) {
+  const binary = atob(base64)
+  const len = binary.length
+  const bytes = new Uint8Array(len)
+  for (let i = 0; i < len; i += 1) {
+    bytes[i] = binary.charCodeAt(i)
+  }
+  return new Blob([bytes], { type: contentType })
 }

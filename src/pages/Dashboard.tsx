@@ -1,8 +1,10 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 
 import { Sidebar } from '../components/Sidebar'
 import type { AuthenticatedUser } from './Login'
 import { useAppStore } from '../store/appStore'
+import { getUserAccess } from '../utils/access'
+import type { PageKey } from '../types/navigation'
 
 import Home from './Home'
 import ExhibitorPage from './Exhibitor'
@@ -30,7 +32,15 @@ const DashboardPage = ({ user, onLogout }: DashboardProps) => {
     return user.name?.trim() || user.username
   }, [user])
 
-  const { activePage } = useAppStore()
+  const { activePage, setActivePage } = useAppStore()
+  const access = useMemo(() => getUserAccess(user), [user])
+
+  useEffect(() => {
+    const page = activePage as PageKey | null
+    if (!page || !access.allowedPages.includes(page)) {
+      setActivePage(access.defaultPage)
+    }
+  }, [activePage, access.allowedPages, access.defaultPage, setActivePage])
 
   const renderContent = () => {
     switch (activePage) {

@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('database', {
   ) => ipcRenderer.invoke('db:fetchExhibitors', segment, limit, person),
   fetchExhibitorCountByExpo: () => ipcRenderer.invoke('db:fetchExhibitorCountByExpo'),
   fetchExpoChartData: () => ipcRenderer.invoke('db:fetchExpoChartData'),
+  fetchAuditLogs: (limit = 200) => ipcRenderer.invoke('db:fetchAuditLogs', limit),
 
   login: (payload: { username: string; password: string; division?: string | null }) =>
     ipcRenderer.invoke('db:login', payload),

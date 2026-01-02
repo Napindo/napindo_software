@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import ExcelJS from "exceljs";
 import prisma from "../prisma";
 import { ok, fail } from "../utils/apiResponse";
+import { writeAuditLog } from "../services/auditLog";
 import { buildSegmentWhere, SegmentCode } from "../services/gabungSegments";
 
 const GABUNG_FIELDS = [
@@ -301,6 +302,19 @@ export async function createGabung(req: Request, res: Response) {
     }
 
     const item = await prisma.gabung.create({ data });
+    await writeAuditLog({
+      username: data.namauser ?? null,
+      action: "add",
+      page: "Add Data",
+      summary: `Add data ${item.company ?? ""}`.trim(),
+      data: {
+        id: item.nourut,
+        company: item.company,
+        name: item.name,
+        city: item.city,
+        email: item.email,
+      },
+    });
     return res.status(201).json(ok(item));
   } catch (err: any) {
     return res.status(500).json(fail(err.message || String(err)));
@@ -327,6 +341,24 @@ export async function updateGabung(req: Request, res: Response) {
     const item = await prisma.gabung.update({
       where: { nourut: id },
       data,
+    });
+
+    const changedKeys = Object.keys(data).filter(
+      (key) => !["namauser", "tglJamEdit", "nourut", "NOURUT"].includes(key),
+    );
+    await writeAuditLog({
+      username: data.namauser ?? null,
+      action: "update",
+      page: "Add Data",
+      summary: `Update data ${item.company ?? ""} (NOURUT ${id})`.trim(),
+      data: {
+        id,
+        company: item.company,
+        name: item.name,
+        city: item.city,
+        email: item.email,
+        changedKeys,
+      },
     });
 
     return res.json(ok(item));
@@ -503,6 +535,22 @@ export async function importGabungExcel(req: Request, res: Response) {
         const result = await prisma.gabung.createMany({ data: batch });
         inserted += result?.count ?? batch.length;
       }
+
+      await writeAuditLog({
+        username: currentUser,
+        action: "import",
+        page: "Import Data",
+        summary: `Import Excel ${payload?.fileName || "file"}: ${inserted} masuk, ${Math.max(
+          effectiveScanned - rows.length,
+          0,
+        )} kosong`,
+        data: {
+          fileName: payload?.fileName || null,
+          inserted,
+          skipped: Math.max(effectiveScanned - rows.length, 0),
+          totalRows: rows.length,
+        },
+      });
     }
 
     return res.json(
@@ -647,65 +695,69 @@ export async function countExhibitorsByExpo(_req: Request, res: Response) {
  * GET /gabung/expo-chart
  * Data grafik exhibitor + visitor per tahun (>=2023) untuk Indo Defence/Water/Livestock.
  */
-export async function getExpoChartData(_req: Request, res: Response) {
+export async function getExpoChartData(req: Request, res: Response) {
   try {
     const flagValues = ["X", "x", "1", "true", "yes", "Y", "y"];
-    const since = new Date("2023-01-01");
+    const rows = await prisma.gabung.findMany({
+      where: {
+        lastupdate: { gte: new Date("2023-01-01") },
+      },
+      select: {
+        lastupdate: true,
+        exhdefence: true,
+        exhaero: true,
+        exhmarine: true,
+        exhwater: true,
+        exhwaste: true,
+        exhenergy: true,
+        exhsmart: true,
+        exhsecure: true,
+        exhfire: true,
+        exhlives: true,
+        exhagritech: true,
+        exhfish: true,
+        exhindovet: true,
+        exhfeed: true,
+        exhdairy: true,
+        exhhorti: true,
+        visdefence: true,
+        visaero: true,
+        vismarine: true,
+        viswater: true,
+        viswaste: true,
+        visenergy: true,
+        vissmart: true,
+        vissecure: true,
+        visfire: true,
+        vislives: true,
+        visagritech: true,
+        visfish: true,
+        visindovet: true,
+        visfeed: true,
+        visdairy: true,
+        vishorti: true,
+      },
+    });
 
-    const rows = await prisma.$queryRaw<
-      Array<{ year: number; indoDefence: number; indoWater: number; indoLivestock: number }>
-    >`
-      SELECT
-        EXTRACT(YEAR FROM "LASTUPDATE")::int AS year,
-        SUM(
-          CASE WHEN
-            "EXHDEFENCE" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
-            "EXHAERO" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
-            "EXHMARINE" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
-            "VISDEFENCE" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
-            "VISAERO" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
-            "VISMARINE" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]})
-          THEN 1 ELSE 0 END
-        )::int AS "indoDefence",
-        SUM(
-          CASE WHEN
-            "EXHWATER" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
-            "EXHWASTE" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
-            "EXHENERGY" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
-            "EXHSMART" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
-            "EXHSECURE" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
-            "EXHFIRE" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
-            "VISWATER" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
-            "VISWASTE" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
-            "VISENERGY" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
-            "VISSMART" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
-            "VISSECURE" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
-            "VISFIRE" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]})
-          THEN 1 ELSE 0 END
-        )::int AS "indoWater",
-        SUM(
-          CASE WHEN
-            "EXHLIVES" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
-            "EXHAGRITECH" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
-            "EXHFISH" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
-            "EXHINDOVET" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
-            "EXHFEED" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
-            "EXHDAIRY" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
-            "EXHHORTI" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
-            "VISLIVES" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
-            "VISAGRITECH" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
-            "VISFISH" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
-            "VISINDOVET" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
-            "VISFEED" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
-            "VISDAIRY" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]}) OR
-            "VISHORTI" IN (${flagValues[0]}, ${flagValues[1]}, ${flagValues[2]}, ${flagValues[3]}, ${flagValues[4]}, ${flagValues[5]}, ${flagValues[6]})
-          THEN 1 ELSE 0 END
-        )::int AS "indoLivestock"
-      FROM "GABUNG"
-      WHERE "LASTUPDATE" >= ${since}
-      GROUP BY 1
-      ORDER BY 1
-    `;
+    const extractYear = (row: typeof rows[number]) => {
+      if (row.lastupdate instanceof Date) {
+        const year = row.lastupdate.getFullYear();
+        return year >= 2023 ? year : null;
+      }
+      if (row.lastupdate) {
+        const parsed = new Date(String(row.lastupdate));
+        if (!Number.isNaN(parsed.getTime())) {
+          const year = parsed.getFullYear();
+          return year >= 2023 ? year : null;
+        }
+      }
+      return null;
+    };
+
+    const isFlagSet = (value: unknown) => {
+      if (value === undefined || value === null) return false;
+      return flagValues.includes(String(value).trim());
+    };
 
     const counts: Record<string, Record<number, number>> = {
       indoDefence: {},
@@ -714,11 +766,64 @@ export async function getExpoChartData(_req: Request, res: Response) {
     };
 
     rows.forEach((row) => {
-      if (!row.year) return;
-      counts.indoDefence[row.year] = row.indoDefence ?? 0;
-      counts.indoWater[row.year] = row.indoWater ?? 0;
-      counts.indoLivestock[row.year] = row.indoLivestock ?? 0;
+      const year = extractYear(row);
+      if (!year) return;
+
+      const defenceHit =
+        isFlagSet(row.exhdefence) ||
+        isFlagSet(row.exhaero) ||
+        isFlagSet(row.exhmarine) ||
+        isFlagSet(row.visdefence) ||
+        isFlagSet(row.visaero) ||
+        isFlagSet(row.vismarine);
+
+      const waterHit =
+        isFlagSet(row.exhwater) ||
+        isFlagSet(row.exhwaste) ||
+        isFlagSet(row.exhenergy) ||
+        isFlagSet(row.exhsmart) ||
+        isFlagSet(row.exhsecure) ||
+        isFlagSet(row.exhfire) ||
+        isFlagSet(row.viswater) ||
+        isFlagSet(row.viswaste) ||
+        isFlagSet(row.visenergy) ||
+        isFlagSet(row.vissmart) ||
+        isFlagSet(row.vissecure) ||
+        isFlagSet(row.visfire);
+
+      const livestockHit =
+        isFlagSet(row.exhlives) ||
+        isFlagSet(row.exhagritech) ||
+        isFlagSet(row.exhfish) ||
+        isFlagSet(row.exhindovet) ||
+        isFlagSet(row.exhfeed) ||
+        isFlagSet(row.exhdairy) ||
+        isFlagSet(row.exhhorti) ||
+        isFlagSet(row.vislives) ||
+        isFlagSet(row.visagritech) ||
+        isFlagSet(row.visfish) ||
+        isFlagSet(row.visindovet) ||
+        isFlagSet(row.visfeed) ||
+        isFlagSet(row.visdairy) ||
+        isFlagSet(row.vishorti);
+
+      if (defenceHit) counts.indoDefence[year] = (counts.indoDefence[year] ?? 0) + 1;
+      if (waterHit) counts.indoWater[year] = (counts.indoWater[year] ?? 0) + 1;
+      if (livestockHit) counts.indoLivestock[year] = (counts.indoLivestock[year] ?? 0) + 1;
     });
+
+    const debug = String(req.query.debug || "") === "1";
+    if (debug) {
+      return res.json(
+        ok({
+          counts,
+          meta: {
+            rowCount: rows.length,
+            sample: rows[0] ?? null,
+          },
+        }),
+      );
+    }
 
     return res.json(ok(counts));
   } catch (err: any) {

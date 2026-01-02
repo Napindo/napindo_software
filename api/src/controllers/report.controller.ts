@@ -2,6 +2,7 @@ import type { Request, Response } from "express"
 import { Prisma } from "@prisma/client"
 import prisma from "../prisma"
 import { buildLabelQuery } from "../services/labelReport"
+import { writeAuditLog } from "../services/auditLog"
 import { ok, fail } from "../utils/apiResponse"
 import { code2Options, businessOptions, provinceOptions } from "../constants/labelOptions"
 import { renderLabelPerusahaanPdf } from "../services/labelRender"
@@ -12,6 +13,14 @@ import { buildReportJumlahDocx, buildReportJumlahExcel } from "../services/repor
 import { renderReportJumlahPdf } from "../services/reportJumlahRender"
 
 type ReportTarget = "vnongover" | "vgabung" | "gabung"
+type AuditMeta = {
+  action: string
+  page: string
+  title?: string
+  format?: string
+  total?: number
+  extra?: Record<string, unknown>
+}
 
 function clamp(num: number, min: number, max: number) {
   return Math.min(Math.max(num, min), max)
@@ -63,11 +72,39 @@ function buildBusinessCounts(items: any[]) {
     .sort((a, b) => a.business.localeCompare(b.business))
 }
 
+function getCurrentUser(payload: any) {
+  const username = String(payload?.currentUser || "").trim()
+  return username || null
+}
+
+async function logAudit(payload: any, meta: AuditMeta) {
+  const username = getCurrentUser(payload)
+  if (!username) return
+
+  const summaryParts = [meta.title ?? meta.page]
+  if (meta.format) summaryParts.push(meta.format.toUpperCase())
+  if (typeof meta.total === "number") summaryParts.push(`${meta.total} data`)
+
+  await writeAuditLog({
+    username,
+    action: meta.action,
+    page: meta.page,
+    summary: summaryParts.join(" - "),
+    data: {
+      title: meta.title ?? null,
+      format: meta.format ?? null,
+      total: meta.total ?? null,
+      ...(meta.extra ?? {}),
+    },
+  })
+}
+
 async function runLabelReport(
   target: ReportTarget,
   req: Request,
   res: Response,
   baseConditions: Prisma.Sql[] = [],
+  auditMeta?: { action: string; page: string; titleKey: "judul_label" | "judul_report"; fallbackTitle: string },
 ) {
   try {
     const payload = req.body ?? {}
@@ -87,6 +124,10 @@ async function runLabelReport(
     )
 
     const total = countRows?.[0]?.count ? Number(countRows[0].count) : 0
+    if (auditMeta) {
+      const title = String(payload?.[auditMeta.titleKey] || "").trim() || auditMeta.fallbackTitle
+      await logAudit(payload, { action: auditMeta.action, page: auditMeta.page, title, total })
+    }
 
     return res.json(
       ok({
@@ -103,13 +144,23 @@ async function runLabelReport(
 export async function reportLabelPerusahaan(req: Request, res: Response) {
   const goverField = Prisma.raw(`"GOVER"`)
   const nonGoverCondition = Prisma.sql`(${goverField} IS NULL OR ${goverField} <> 'X')`
-  return runLabelReport("gabung", req, res, [nonGoverCondition])
+  return runLabelReport("gabung", req, res, [nonGoverCondition], {
+    action: "print_label",
+    page: "Print Label",
+    titleKey: "judul_label",
+    fallbackTitle: "Print Label Perusahaan",
+  })
 }
 
 export async function reportLabelGover(req: Request, res: Response) {
   const goverField = Prisma.raw(`"GOVER"`)
   const goverCondition = Prisma.sql`${goverField} = 'X'`
-  return runLabelReport("vgabung", req, res, [goverCondition])
+  return runLabelReport("vgabung", req, res, [goverCondition], {
+    action: "print_label",
+    page: "Print Label",
+    titleKey: "judul_label",
+    fallbackTitle: "Print Label Government",
+  })
 }
 
 function mapDbRowToLabel(row: any) {
@@ -118,8 +169,8 @@ function mapDbRowToLabel(row: any) {
     contactName: row?.NAME ?? "",
     position: row?.POSITION ?? row?.TITLE ?? "",
     nourut: row?.NOURUT ?? row?.NO_URUT ?? row?.NO ?? "",
-    addressLine1: row?.ALAMAT ?? row?.ADDRESS ?? "",
-    addressLine2: row?.ADDRESS2 ?? "",
+    addressLine1: row?.ADDRESS1 ?? row?.ALAMAT ?? row?.ADDRESS ?? "",
+    addressLine2: row?.ADDRESS2 ?? row?.ALAMAT2 ?? "",
     city: row?.CITY ?? "",
     province: row?.PROPINCE ?? "",
     country: row?.COUNTRY ?? "",
@@ -136,8 +187,8 @@ function mapDbRowToLabel(row: any) {
 function mapDbRowToReport(row: any) {
   return {
     company: row?.COMPANY ?? "",
-    address1: row?.ALAMAT ?? row?.ADDRESS ?? "",
-    address2: row?.ADDRESS2 ?? "",
+    address1: row?.ADDRESS1 ?? row?.ALAMAT ?? row?.ADDRESS ?? "",
+    address2: row?.ADDRESS2 ?? row?.ALAMAT2 ?? "",
     city: row?.CITY ?? "",
     zip: row?.ZIP ?? row?.POSTCODE ?? "",
     sex: row?.SEX ?? "",
@@ -171,6 +222,14 @@ export async function exportLabelPerusahaanPdf(req: Request, res: Response) {
 
     const pdf = await renderLabelPerusahaanPdf(data)
 
+    await logAudit(payload, {
+      action: "print_label",
+      page: "Print Label",
+      title: data.title,
+      total: rows.length,
+      format: "pdf",
+    })
+
     res.setHeader("Content-Type", "application/pdf")
     res.setHeader("Content-Disposition", 'inline; filename="print-label-perusahaan.pdf"')
     const buffer = Buffer.from(await pdf.arrayBuffer())
@@ -199,6 +258,14 @@ export async function exportLabelGoverPdf(req: Request, res: Response) {
 
     const pdf = await renderLabelPerusahaanPdf(data)
 
+    await logAudit(payload, {
+      action: "print_label",
+      page: "Print Label",
+      title: data.title,
+      total: rows.length,
+      format: "pdf",
+    })
+
     res.setHeader("Content-Type", "application/pdf")
     res.setHeader("Content-Disposition", 'inline; filename="print-label-government.pdf"')
     const buffer = Buffer.from(await pdf.arrayBuffer())
@@ -219,6 +286,13 @@ export async function exportLabelPerusahaanExcel(req: Request, res: Response) {
     const rows = (items ?? []).map(mapDbRowToLabel)
 
     const buffer = await buildLabelExcel(rows)
+    await logAudit(payload, {
+      action: "print_label",
+      page: "Print Label",
+      title: (payload?.judul_label as string) || "Print Label Perusahaan",
+      total: rows.length,
+      format: "excel",
+    })
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     res.setHeader("Content-Disposition", 'attachment; filename="print-label-perusahaan.xlsx"')
     return res.end(buffer)
@@ -238,6 +312,13 @@ export async function exportLabelGoverExcel(req: Request, res: Response) {
     const rows = (items ?? []).map(mapDbRowToLabel)
 
     const buffer = await buildLabelExcel(rows)
+    await logAudit(payload, {
+      action: "print_label",
+      page: "Print Label",
+      title: (payload?.judul_label as string) || "Print Label Government",
+      total: rows.length,
+      format: "excel",
+    })
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     res.setHeader("Content-Disposition", 'attachment; filename="print-label-government.xlsx"')
     return res.end(buffer)
@@ -258,6 +339,14 @@ export async function exportLabelPerusahaanWord(req: Request, res: Response) {
 
     const title = (payload?.judul_label as string) || "Print Label Perusahaan"
     const buffer = await buildLabelDocx(rows, title)
+
+    await logAudit(payload, {
+      action: "print_label",
+      page: "Print Label",
+      title,
+      total: rows.length,
+      format: "word",
+    })
 
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
     res.setHeader("Content-Disposition", 'attachment; filename="print-label-perusahaan.docx"')
@@ -280,6 +369,14 @@ export async function exportLabelGoverWord(req: Request, res: Response) {
     const title = (payload?.judul_label as string) || "Print Label Government"
     const buffer = await buildLabelDocx(rows, title)
 
+    await logAudit(payload, {
+      action: "print_label",
+      page: "Print Label",
+      title,
+      total: rows.length,
+      format: "word",
+    })
+
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
     res.setHeader("Content-Disposition", 'attachment; filename="print-label-government.docx"')
     return res.end(buffer)
@@ -291,13 +388,23 @@ export async function exportLabelGoverWord(req: Request, res: Response) {
 export async function reportPerusahaan(req: Request, res: Response) {
   const goverField = Prisma.raw(`"GOVER"`)
   const nonGoverCondition = Prisma.sql`(${goverField} IS NULL OR ${goverField} <> 'X')`
-  return runLabelReport("gabung", req, res, [nonGoverCondition])
+  return runLabelReport("gabung", req, res, [nonGoverCondition], {
+    action: "report",
+    page: "Report",
+    titleKey: "judul_report",
+    fallbackTitle: "Report Perusahaan",
+  })
 }
 
 export async function reportGovernment(req: Request, res: Response) {
   const goverField = Prisma.raw(`"GOVER"`)
   const goverCondition = Prisma.sql`${goverField} = 'X'`
-  return runLabelReport("vgabung", req, res, [goverCondition])
+  return runLabelReport("vgabung", req, res, [goverCondition], {
+    action: "report",
+    page: "Report",
+    titleKey: "judul_report",
+    fallbackTitle: "Report Government",
+  })
 }
 
 export async function exportReportPerusahaanPdf(req: Request, res: Response) {
@@ -321,6 +428,14 @@ export async function exportReportPerusahaanPdf(req: Request, res: Response) {
     }
 
     const pdf = await renderReportPdf(data)
+
+    await logAudit(payload, {
+      action: "report",
+      page: "Report",
+      title,
+      total: rows.length,
+      format: "pdf",
+    })
 
     res.setHeader("Content-Type", "application/pdf")
     res.setHeader("Content-Disposition", 'inline; filename="report-perusahaan.pdf"')
@@ -353,6 +468,14 @@ export async function exportReportGovernmentPdf(req: Request, res: Response) {
 
     const pdf = await renderReportPdf(data)
 
+    await logAudit(payload, {
+      action: "report",
+      page: "Report",
+      title,
+      total: rows.length,
+      format: "pdf",
+    })
+
     res.setHeader("Content-Type", "application/pdf")
     res.setHeader("Content-Disposition", 'inline; filename="report-government.pdf"')
     const buffer = Buffer.from(await pdf.arrayBuffer())
@@ -377,6 +500,14 @@ export async function exportReportPerusahaanWord(req: Request, res: Response) {
     const reportDate = formatReportDate(new Date())
     const buffer = await buildReportDocx(rows, title, reportDate)
 
+    await logAudit(payload, {
+      action: "report",
+      page: "Report",
+      title,
+      total: rows.length,
+      format: "word",
+    })
+
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
     res.setHeader("Content-Disposition", 'attachment; filename="report-perusahaan.docx"')
     return res.end(buffer)
@@ -400,6 +531,14 @@ export async function exportReportGovernmentWord(req: Request, res: Response) {
     const reportDate = formatReportDate(new Date())
     const buffer = await buildReportDocx(rows, title, reportDate)
 
+    await logAudit(payload, {
+      action: "report",
+      page: "Report",
+      title,
+      total: rows.length,
+      format: "word",
+    })
+
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
     res.setHeader("Content-Disposition", 'attachment; filename="report-government.docx"')
     return res.end(buffer)
@@ -419,6 +558,14 @@ export async function exportReportPerusahaanExcel(req: Request, res: Response) {
     const rows = (items ?? []).map(mapDbRowToLabel)
 
     const buffer = await buildLabelExcel(rows)
+    await logAudit(payload, {
+      action: "report",
+      page: "Report",
+      title:
+        (payload?.judul_report as string) || (payload?.judul_label as string) || "Report Perusahaan",
+      total: rows.length,
+      format: "excel",
+    })
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     res.setHeader("Content-Disposition", 'attachment; filename="report-perusahaan.xlsx"')
     return res.end(buffer)
@@ -438,6 +585,14 @@ export async function exportReportGovernmentExcel(req: Request, res: Response) {
     const rows = (items ?? []).map(mapDbRowToLabel)
 
     const buffer = await buildLabelExcel(rows)
+    await logAudit(payload, {
+      action: "report",
+      page: "Report",
+      title:
+        (payload?.judul_report as string) || (payload?.judul_label as string) || "Report Government",
+      total: rows.length,
+      format: "excel",
+    })
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     res.setHeader("Content-Disposition", 'attachment; filename="report-government.xlsx"')
     return res.end(buffer)
@@ -461,6 +616,18 @@ export async function reportJumlahPerusahaan(req: Request, res: Response) {
     const total = countRows?.[0]?.count ? Number(countRows[0].count) : 0
 
     const rows = buildBusinessCounts(items ?? [])
+
+    await logAudit(payload, {
+      action: "report_jumlah",
+      page: "Report Jumlah",
+      title:
+        (payload?.judul_jumlah_report as string) ||
+        (payload?.judul_report as string) ||
+        (payload?.judul_label as string) ||
+        "Report Jumlah Perusahaan",
+      total,
+      extra: { groups: rows.length },
+    })
 
     return res.json(
       ok({
@@ -489,6 +656,18 @@ export async function reportJumlahGovernment(req: Request, res: Response) {
     const total = countRows?.[0]?.count ? Number(countRows[0].count) : 0
 
     const rows = buildBusinessCounts(items ?? [])
+
+    await logAudit(payload, {
+      action: "report_jumlah",
+      page: "Report Jumlah",
+      title:
+        (payload?.judul_jumlah_report as string) ||
+        (payload?.judul_report as string) ||
+        (payload?.judul_label as string) ||
+        "Report Jumlah Government",
+      total,
+      extra: { groups: rows.length },
+    })
 
     return res.json(
       ok({
@@ -527,6 +706,14 @@ export async function exportReportJumlahPerusahaanPdf(req: Request, res: Respons
 
     const pdf = await renderReportJumlahPdf(data)
 
+    await logAudit(payload, {
+      action: "report_jumlah",
+      page: "Report Jumlah",
+      title,
+      total: rows.length,
+      format: "pdf",
+    })
+
     res.setHeader("Content-Type", "application/pdf")
     res.setHeader("Content-Disposition", 'inline; filename="report-jumlah-perusahaan.pdf"')
     const buffer = Buffer.from(await pdf.arrayBuffer())
@@ -561,6 +748,14 @@ export async function exportReportJumlahGovernmentPdf(req: Request, res: Respons
 
     const pdf = await renderReportJumlahPdf(data)
 
+    await logAudit(payload, {
+      action: "report_jumlah",
+      page: "Report Jumlah",
+      title,
+      total: rows.length,
+      format: "pdf",
+    })
+
     res.setHeader("Content-Type", "application/pdf")
     res.setHeader("Content-Disposition", 'inline; filename="report-jumlah-government.pdf"')
     const buffer = Buffer.from(await pdf.arrayBuffer())
@@ -588,6 +783,14 @@ export async function exportReportJumlahPerusahaanWord(req: Request, res: Respon
     const reportDate = formatReportDate(new Date())
     const buffer = await buildReportJumlahDocx(rows, title, reportDate)
 
+    await logAudit(payload, {
+      action: "report_jumlah",
+      page: "Report Jumlah",
+      title,
+      total: rows.length,
+      format: "word",
+    })
+
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
     res.setHeader("Content-Disposition", 'attachment; filename="report-jumlah-perusahaan.docx"')
     return res.end(buffer)
@@ -614,6 +817,14 @@ export async function exportReportJumlahGovernmentWord(req: Request, res: Respon
     const reportDate = formatReportDate(new Date())
     const buffer = await buildReportJumlahDocx(rows, title, reportDate)
 
+    await logAudit(payload, {
+      action: "report_jumlah",
+      page: "Report Jumlah",
+      title,
+      total: rows.length,
+      format: "word",
+    })
+
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
     res.setHeader("Content-Disposition", 'attachment; filename="report-jumlah-government.docx"')
     return res.end(buffer)
@@ -633,6 +844,17 @@ export async function exportReportJumlahPerusahaanExcel(req: Request, res: Respo
     const rows = buildBusinessCounts(items ?? [])
 
     const buffer = await buildReportJumlahExcel(rows)
+    await logAudit(payload, {
+      action: "report_jumlah",
+      page: "Report Jumlah",
+      title:
+        (payload?.judul_jumlah_report as string) ||
+        (payload?.judul_report as string) ||
+        (payload?.judul_label as string) ||
+        "Report Jumlah Perusahaan",
+      total: rows.length,
+      format: "excel",
+    })
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     res.setHeader("Content-Disposition", 'attachment; filename="report-jumlah-perusahaan.xlsx"')
     return res.end(buffer)
@@ -652,6 +874,17 @@ export async function exportReportJumlahGovernmentExcel(req: Request, res: Respo
     const rows = buildBusinessCounts(items ?? [])
 
     const buffer = await buildReportJumlahExcel(rows)
+    await logAudit(payload, {
+      action: "report_jumlah",
+      page: "Report Jumlah",
+      title:
+        (payload?.judul_jumlah_report as string) ||
+        (payload?.judul_report as string) ||
+        (payload?.judul_label as string) ||
+        "Report Jumlah Government",
+      total: rows.length,
+      format: "excel",
+    })
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     res.setHeader("Content-Disposition", 'attachment; filename="report-jumlah-government.xlsx"')
     return res.end(buffer)

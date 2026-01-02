@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import prisma from "../prisma";
 import { ok, fail } from "../utils/apiResponse";
+import { writeAuditLog } from "../services/auditLog";
 
 /**
  * GET /pengguna
@@ -172,6 +173,14 @@ export async function loginPengguna(req: Request, res: Response) {
     const updated = await prisma.pengguna.update({
       where: { username },
       data: { status: "ON" },
+    });
+
+    await writeAuditLog({
+      username,
+      action: "login",
+      page: "Login",
+      summary: "Login berhasil",
+      data: { division: updated.division, status: updated.status },
     });
 
     // Untuk sekarang cukup kembalikan data user,

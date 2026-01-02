@@ -4,6 +4,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createWindow } from './createWindow.js'
 import { registerGabungIpcHandlers } from './ipc/gabung.ipc.js'
+import { registerAuditIpcHandlers } from './ipc/audit.ipc.js'
 import { registerPenggunaIpcHandlers } from './ipc/pengguna.ipc.js'
 import { registerReportsIpcHandlers } from './ipc/reports.ipc.js'
 
@@ -62,6 +63,7 @@ function createMainWindow() {
 
 app.whenReady().then(() => {
   registerGabungIpcHandlers()
+  registerAuditIpcHandlers()
   registerPenggunaIpcHandlers()
   registerReportsIpcHandlers()
   createMainWindow()

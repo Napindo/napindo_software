@@ -670,7 +670,7 @@ async function renderReportJumlahGovernmentWord(filter) {
     base64: buffer.toString("base64")
   };
 }
-const errorResponse$2 = (error) => ({
+const errorResponse$3 = (error) => ({
   success: false,
   message: error instanceof Error ? error.message : String(error)
 });
@@ -680,7 +680,7 @@ function registerGabungIpcHandlers() {
       const result = await testConnection();
       return { ...result };
     } catch (error) {
-      return errorResponse$2(error);
+      return errorResponse$3(error);
     }
   });
   electron.ipcMain.handle("db:fetchTableData", async (_event, tableName) => {
@@ -688,7 +688,7 @@ function registerGabungIpcHandlers() {
       const rows = await fetchTopRows(tableName);
       return { success: true, rows };
     } catch (error) {
-      return errorResponse$2(error);
+      return errorResponse$3(error);
     }
   });
   electron.ipcMain.handle("db:fetchExhibitors", async (_event, segment, limit = 200, person = "exhibitor") => {
@@ -696,7 +696,7 @@ function registerGabungIpcHandlers() {
       const rows = await fetchExhibitorsBySegment(segment, limit, person);
       return { success: true, rows };
     } catch (error) {
-      return errorResponse$2(error);
+      return errorResponse$3(error);
     }
   });
   electron.ipcMain.handle("db:fetchExhibitorCountByExpo", async () => {
@@ -704,7 +704,7 @@ function registerGabungIpcHandlers() {
       const data = await fetchExhibitorCountByExpo();
       return { success: true, data };
     } catch (error) {
-      return errorResponse$2(error);
+      return errorResponse$3(error);
     }
   });
   electron.ipcMain.handle("db:fetchExpoChartData", async () => {
@@ -712,7 +712,7 @@ function registerGabungIpcHandlers() {
       const data = await fetchExpoChartData();
       return { success: true, data };
     } catch (error) {
-      return errorResponse$2(error);
+      return errorResponse$3(error);
     }
   });
   electron.ipcMain.handle("db:findCompany", async (_event, company) => {
@@ -720,7 +720,7 @@ function registerGabungIpcHandlers() {
       const rows = await findCompanyByName(company);
       return { success: true, rows };
     } catch (error) {
-      return errorResponse$2(error);
+      return errorResponse$3(error);
     }
   });
   electron.ipcMain.handle("db:saveAddData", async (_event, payload) => {
@@ -728,7 +728,7 @@ function registerGabungIpcHandlers() {
       const result = await saveAddData(payload);
       return { success: true, data: result };
     } catch (error) {
-      return errorResponse$2(error);
+      return errorResponse$3(error);
     }
   });
   electron.ipcMain.handle("db:importGabungExcel", async (_event, payload) => {
@@ -736,7 +736,7 @@ function registerGabungIpcHandlers() {
       const result = await importGabungExcel(payload);
       return { success: true, data: result };
     } catch (error) {
-      return errorResponse$2(error);
+      return errorResponse$3(error);
     }
   });
   electron.ipcMain.handle("db:updateAddData", async (_event, id, payload) => {
@@ -744,7 +744,7 @@ function registerGabungIpcHandlers() {
       const result = await updateAddData(id, payload);
       return { success: true, data: result };
     } catch (error) {
-      return errorResponse$2(error);
+      return errorResponse$3(error);
     }
   });
   electron.ipcMain.handle("db:deleteAddData", async (_event, ids) => {
@@ -752,7 +752,7 @@ function registerGabungIpcHandlers() {
       const result = await deleteAddData(ids);
       return { success: true, data: result };
     } catch (error) {
-      return errorResponse$2(error);
+      return errorResponse$3(error);
     }
   });
   electron.ipcMain.handle("report:labelvisitor", async (_event, filter) => {
@@ -760,7 +760,7 @@ function registerGabungIpcHandlers() {
       const data = await reportLabelVisitor(filter);
       return { success: true, data };
     } catch (error) {
-      return errorResponse$2(error);
+      return errorResponse$3(error);
     }
   });
   electron.ipcMain.handle("report:labelgover", async (_event, filter) => {
@@ -768,7 +768,7 @@ function registerGabungIpcHandlers() {
       const data = await reportLabelGover(filter);
       return { success: true, data };
     } catch (error) {
-      return errorResponse$2(error);
+      return errorResponse$3(error);
     }
   });
   electron.ipcMain.handle("report:perusahaan", async (_event, filter) => {
@@ -776,7 +776,7 @@ function registerGabungIpcHandlers() {
       const data = await reportPerusahaan(filter);
       return { success: true, data };
     } catch (error) {
-      return errorResponse$2(error);
+      return errorResponse$3(error);
     }
   });
   electron.ipcMain.handle("report:government", async (_event, filter) => {
@@ -784,7 +784,7 @@ function registerGabungIpcHandlers() {
       const data = await reportGovernment(filter);
       return { success: true, data };
     } catch (error) {
-      return errorResponse$2(error);
+      return errorResponse$3(error);
     }
   });
   electron.ipcMain.handle("report:jumlah-perusahaan", async (_event, filter) => {
@@ -792,7 +792,7 @@ function registerGabungIpcHandlers() {
       const data = await reportJumlahPerusahaan(filter);
       return { success: true, data };
     } catch (error) {
-      return errorResponse$2(error);
+      return errorResponse$3(error);
     }
   });
   electron.ipcMain.handle("report:jumlah-government", async (_event, filter) => {
@@ -800,13 +800,35 @@ function registerGabungIpcHandlers() {
       const data = await reportJumlahGovernment(filter);
       return { success: true, data };
     } catch (error) {
-      return errorResponse$2(error);
+      return errorResponse$3(error);
     }
   });
   electron.ipcMain.handle("report:labeloptions", async () => {
     try {
       const data = await reportLabelOptions();
       return { success: true, data };
+    } catch (error) {
+      return errorResponse$3(error);
+    }
+  });
+}
+async function fetchAuditLogs(limit = 200) {
+  const params = new URLSearchParams({ limit: String(limit) });
+  const { body } = await apiFetch(`/audit/logs?${params.toString()}`);
+  if (!isResponseOk(body)) {
+    throw new Error(body.message || "Gagal memuat audit log");
+  }
+  return pickData(body) ?? [];
+}
+const errorResponse$2 = (error) => ({
+  success: false,
+  message: error instanceof Error ? error.message : String(error)
+});
+function registerAuditIpcHandlers() {
+  electron.ipcMain.handle("db:fetchAuditLogs", async (_event, limit = 200) => {
+    try {
+      const rows = await fetchAuditLogs(Number(limit) || 200);
+      return { success: true, rows };
     } catch (error) {
       return errorResponse$2(error);
     }
@@ -1331,6 +1353,7 @@ function createMainWindow() {
 }
 electron.app.whenReady().then(() => {
   registerGabungIpcHandlers();
+  registerAuditIpcHandlers();
   registerPenggunaIpcHandlers();
   registerReportsIpcHandlers();
   createMainWindow();

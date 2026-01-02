@@ -4,6 +4,7 @@ import prisma from "../prisma";
 import { ok, fail } from "../utils/apiResponse";
 import { writeAuditLog } from "../services/auditLog";
 import { buildSegmentWhere, SegmentCode } from "../services/gabungSegments";
+import { renderPersonalDatabasePdf } from "../services/personalDatabaseRender";
 
 const GABUNG_FIELDS = [
   "ptCv",
@@ -563,6 +564,70 @@ export async function importGabungExcel(req: Request, res: Response) {
         dryRun,
       }),
     );
+  } catch (err: any) {
+    return res.status(500).json(fail(err.message || String(err)));
+  }
+}
+
+// ===================== EXPORT PERSONAL DATABASE PDF =====================
+
+export async function exportPersonalDatabasePdf(req: Request, res: Response) {
+  try {
+    const payload = req.body ?? {};
+    const title = String(payload?.title || "DATABASE PERSONAL").trim() || "DATABASE PERSONAL";
+
+    const joinParts = (parts: Array<string | null | undefined>) =>
+      parts
+        .map((part) => String(part ?? "").trim())
+        .filter(Boolean)
+        .join(" ");
+
+    const joinAddress = (parts: Array<string | null | undefined>) =>
+      parts
+        .map((part) => String(part ?? "").trim())
+        .filter(Boolean)
+        .join(", ");
+
+    const joinPhone = (code: unknown, number: unknown) => {
+      const codeText = String(code ?? "").trim();
+      const numberText = String(number ?? "").trim();
+      if (!codeText && !numberText) return "";
+      if (!codeText) return numberText;
+      if (!numberText) return `${codeText}-`;
+      return `${codeText}-${numberText}`;
+    };
+
+    const rows = [
+      { label: "Company", value: joinParts([payload?.typeOfBusiness, payload?.company]) },
+      { label: "Address", value: joinAddress([payload?.address1, payload?.address2, payload?.city, payload?.zip]) },
+      { label: "Name", value: joinParts([payload?.sex, payload?.name]) },
+      { label: "Position", value: String(payload?.position ?? "").trim() },
+      { label: "Phone", value: joinPhone(payload?.codePhone, payload?.phoneNumber) },
+      { label: "Handphone", value: String(payload?.handphone ?? "").trim() },
+      { label: "Email", value: String(payload?.email ?? "").trim() },
+    ].filter((row) => row.value);
+
+    if (rows.length === 0) {
+      return res.status(400).json(fail("Tidak ada field terisi untuk diexport"));
+    }
+
+    const pdf = await renderPersonalDatabasePdf({ title, rows });
+
+    await writeAuditLog({
+      username: String(payload?.currentUser || "").trim() || null,
+      action: "export_pdf",
+      page: "Add Data",
+      summary: `${title} - PDF`,
+      data: {
+        title,
+        fields: rows.map((row) => row.label),
+      },
+    });
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", 'attachment; filename="database-personal.pdf"');
+    const buffer = Buffer.from(await pdf.arrayBuffer());
+    return res.end(buffer);
   } catch (err: any) {
     return res.status(500).json(fail(err.message || String(err)));
   }

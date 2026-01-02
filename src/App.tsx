@@ -8,6 +8,33 @@ import GlobalStatusBar from './components/GlobalStatusBar'
 export default function App() {
   const { user, setUser, clearUser, setActivePage, setGlobalMessage } = useAppStore()
 
+  const persistRememberOnLogout = () => {
+    const key = 'napindo-login'
+    const raw = localStorage.getItem(key)
+    if (!raw) {
+      localStorage.removeItem(key)
+      return
+    }
+
+    try {
+      const parsed = JSON.parse(raw) as { remember?: boolean; username?: string; division?: string }
+      if (parsed?.remember) {
+        localStorage.setItem(
+          key,
+          JSON.stringify({
+            remember: true,
+            username: user?.username ?? parsed.username ?? '',
+            division: user?.division ?? parsed.division ?? '',
+          }),
+        )
+      } else {
+        localStorage.removeItem(key)
+      }
+    } catch {
+      localStorage.removeItem(key)
+    }
+  }
+
   const handleLoginSuccess = (profile: AuthenticatedUser) => {
     setUser(profile)
     setGlobalMessage({ type: 'success', text: 'Login berhasil' })
@@ -22,7 +49,7 @@ export default function App() {
         setGlobalMessage({ type: 'error', text: msg })
       }
     }
-    localStorage.removeItem('napindo-login')
+    persistRememberOnLogout()
     clearUser()
     setActivePage('dashboard')
     setGlobalMessage({ type: 'info', text: 'Anda telah logout' })

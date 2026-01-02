@@ -1,3 +1,5 @@
+import { getDatabaseBridge, getIpcRenderer } from '../utils/bridge'
+
 export type AuditLogRow = {
   id: number
   username?: string | null
@@ -11,14 +13,6 @@ export type AuditLogRow = {
 type DatabaseResponse<T = unknown> =
   | { success: true; rows?: T[]; data?: T; message?: string }
   | { success: false; message: string }
-
-function getDatabaseBridge(): any {
-  return (window as any).database ?? null
-}
-
-function getIpcRenderer(): any {
-  return (window as any).ipcRenderer ?? null
-}
 
 async function invokeFetchAuditLogs(limit = 200): Promise<DatabaseResponse> {
   const db = getDatabaseBridge()

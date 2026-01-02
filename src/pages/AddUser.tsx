@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent, type ChangeEvent } from '
 import type { AuthenticatedUser } from './Login'
 import { createPengguna } from '../services/pengguna'
 import { useAppStore } from '../store/appStore'
+import { toTitleCase } from '../utils/text'
 
 type AddUserForm = {
   username: string
@@ -24,15 +25,6 @@ async function invokeUserHints() {
   if (w.ipcRenderer?.invoke) return w.ipcRenderer.invoke('db:userHints')
   throw new Error('Fungsi userHints tidak tersedia, restart aplikasi atau rebuild preload.')
 }
-
-const toTitleCase = (value: string) =>
-  value
-    .replace(/\s+/g, ' ')
-    .trimStart()
-    .toLowerCase()
-    .split(' ')
-    .map((word) => (word ? word.charAt(0).toUpperCase() + word.slice(1) : ''))
-    .join(' ')
 
 const AddUserPage = (_props: AddUserPageProps) => {
   const { user, setGlobalMessage } = useAppStore()

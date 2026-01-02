@@ -146,7 +146,7 @@ model Gabung {
 
 model Pengguna {
   username String  @id @db.VarChar(50) @map("USERNAME")
-  password String? @db.VarChar(50)     @map("PASSWORD")
+  password String? @db.Text            @map("PASSWORD")
   division String? @db.VarChar(50)     @map("DIVISION")
   status   String? @db.VarChar(50)     @map("STATUS")
 

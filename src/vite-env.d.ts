@@ -68,5 +68,8 @@ interface Window {
     updateAddData: (id: string | number, payload: Record<string, unknown>) => Promise<RendererDatabaseResponse>
     deleteAddData: (ids: Array<string | number>) => Promise<RendererDatabaseResponse>
     findCompany: <T = Record<string, unknown>>(company: string) => Promise<RendererDatabaseResponse<T>>
+    exportPersonalDatabasePdf: (
+      payload: Record<string, unknown>,
+    ) => Promise<RendererDatabaseResponse<{ base64?: string; contentType?: string; filename?: string }>>
   }
 }

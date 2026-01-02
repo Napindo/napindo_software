@@ -245,6 +245,34 @@ export async function renderLabelGoverPdf(filter: unknown) {
   }
 }
 
+export async function renderPersonalDatabasePdf(payload: Record<string, unknown>) {
+  const url = `${API_BASE_URL.replace(/\/$/, '')}${API_PREFIX}/gabung/personal-pdf`
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload || {}),
+  })
+
+  if (!response.ok) {
+    const message = await response.text()
+    throw new Error(message || 'Gagal mengunduh PDF')
+  }
+
+  const arrayBuffer = await response.arrayBuffer()
+  const buffer = Buffer.from(arrayBuffer)
+  const contentDisposition = response.headers.get('content-disposition') || ''
+  const match = /filename="?([^"]+)"?/i.exec(contentDisposition)
+  const filename = match?.[1] || 'database-personal.pdf'
+  return {
+    contentType: response.headers.get('content-type') || 'application/pdf',
+    filename,
+    buffer,
+    base64: buffer.toString('base64'),
+  }
+}
+
 async function renderBinary(url: string, filename: string) {
   const response = await fetch(url, {
     method: 'POST',

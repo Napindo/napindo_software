@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { PageKey } from '../types/navigation'
 import { useAppStore } from '../store/appStore'
+import { getUserAccess, type UserAccess } from '../utils/access'
 
 type IconName =
   | 'grid'
@@ -192,12 +193,36 @@ const navStructure: { title?: string; items: NavItem[] }[] = [
 ]
 
 export const Sidebar = ({ onLogout }: SidebarProps) => {
-  const { activePage, setActivePage } = useAppStore()
+  const { activePage, setActivePage, user } = useAppStore()
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
     'Input Data': true,
     'Print Label': true,
     Report: true,
   })
+
+  const access = useMemo<UserAccess>(() => getUserAccess(user), [user])
+
+  const filteredNav = useMemo(() => {
+    const filterItems = (items: NavItem[]): NavItem[] =>
+      items
+        .map((item) => {
+          if ('items' in item) {
+            const children = item.items.filter((child) => access.allowedPages.includes(child.page))
+            if (children.length === 0) return null
+            return { ...item, items: children }
+          }
+          return access.allowedPages.includes(item.page) ? item : null
+        })
+        .filter((item): item is NavItem => Boolean(item))
+
+    return navStructure
+      .map((group) => {
+        const items = filterItems(group.items)
+        if (items.length === 0) return null
+        return { ...group, items }
+      })
+      .filter((group): group is { title?: string; items: NavItem[] } => Boolean(group))
+  }, [access.allowedPages])
 
   const toggleGroup = (label: string) => {
     setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }))
@@ -222,7 +247,7 @@ export const Sidebar = ({ onLogout }: SidebarProps) => {
       </div>
 
       <nav className="mt-4 h-[calc(100vh-170px)] overflow-y-auto px-3 pb-4">
-        {navStructure.map((group, index) => (
+        {filteredNav.map((group, index) => (
           <div key={index} className="mb-4">
             {group.title ? (
               <p className="px-3 text-[11px] font-bold text-slate-500 tracking-wide uppercase mb-2">{group.title}</p>

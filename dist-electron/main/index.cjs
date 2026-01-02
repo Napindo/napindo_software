@@ -342,6 +342,31 @@ async function renderLabelGoverPdf(filter) {
     base64: buffer.toString("base64")
   };
 }
+async function renderPersonalDatabasePdf(payload) {
+  const url = `${API_BASE_URL.replace(/\/$/, "")}${API_PREFIX}/gabung/personal-pdf`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload || {})
+  });
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || "Gagal mengunduh PDF");
+  }
+  const arrayBuffer = await response.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  const contentDisposition = response.headers.get("content-disposition") || "";
+  const match = /filename="?([^"]+)"?/i.exec(contentDisposition);
+  const filename = (match == null ? void 0 : match[1]) || "database-personal.pdf";
+  return {
+    contentType: response.headers.get("content-type") || "application/pdf",
+    filename,
+    buffer,
+    base64: buffer.toString("base64")
+  };
+}
 async function renderLabelVisitorExcel(filter) {
   const url = `${API_BASE_URL.replace(/\/$/, "")}${API_PREFIX}/report/labelvisitor/export/excel`;
   const response = await fetch(url, {
@@ -806,6 +831,14 @@ function registerGabungIpcHandlers() {
   electron.ipcMain.handle("report:labeloptions", async () => {
     try {
       const data = await reportLabelOptions();
+      return { success: true, data };
+    } catch (error) {
+      return errorResponse$3(error);
+    }
+  });
+  electron.ipcMain.handle("db:personalDatabasePdf", async (_event, payload) => {
+    try {
+      const data = await renderPersonalDatabasePdf(payload);
       return { success: true, data };
     } catch (error) {
       return errorResponse$3(error);

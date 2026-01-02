@@ -23,6 +23,19 @@ interface Window {
         indoLivestock?: Record<number, number>
       }>
     >
+    fetchAuditLogs: (limit?: number) => Promise<
+      RendererDatabaseResponse<
+        {
+          id: number
+          username?: string | null
+          action: string
+          page?: string | null
+          summary?: string | null
+          data?: unknown
+          createdAt: string
+        }[]
+      >
+    >
     login: (
       payload: { username: string; password: string; division?: string | null },
     ) => Promise<RendererDatabaseResponse<{ username: string; division?: string | null; name?: string | null }>>

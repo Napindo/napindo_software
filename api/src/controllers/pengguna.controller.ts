@@ -2,6 +2,8 @@ import type { Request, Response } from "express";
 import prisma from "../prisma";
 import { ok, fail } from "../utils/apiResponse";
 import { writeAuditLog } from "../services/auditLog";
+import { hashPassword, isHashed, verifyPassword } from "../services/password";
+import { validateDivision, validatePassword, validateUsername } from "../utils/validation";
 
 /**
  * GET /pengguna
@@ -24,6 +26,7 @@ export async function listPengguna(req: Request, res: Response) {
     const users = await prisma.pengguna.findMany({
       where,
       orderBy: { username: "asc" },
+      select: { username: true, division: true, status: true },
     });
 
     return res.json(ok(users));
@@ -41,6 +44,7 @@ export async function getPenggunaByUsername(req: Request, res: Response) {
 
     const user = await prisma.pengguna.findUnique({
       where: { username },
+      select: { username: true, division: true, status: true },
     });
 
     if (!user) {
@@ -61,14 +65,15 @@ export async function createPengguna(req: Request, res: Response) {
   try {
     const { username, password, division, status } = req.body;
 
-    if (!username || !password) {
-      return res
-        .status(400)
-        .json(fail("username dan password wajib diisi"));
-    }
+    const usernameError = validateUsername(username);
+    if (usernameError) return res.status(400).json(fail(usernameError));
+    const passwordError = validatePassword(password, { min: 4 });
+    if (passwordError) return res.status(400).json(fail(passwordError));
+    const divisionError = validateDivision(division);
+    if (divisionError) return res.status(400).json(fail(divisionError));
 
     const existing = await prisma.pengguna.findUnique({
-      where: { username },
+      where: { username: String(username) },
     });
 
     if (existing) {
@@ -77,9 +82,9 @@ export async function createPengguna(req: Request, res: Response) {
 
     const user = await prisma.pengguna.create({
       data: {
-        username,
-        password,
-        division: division ?? null,
+        username: String(username),
+        password: hashPassword(String(password)),
+        division: division ? String(division) : null,
         status: status ?? null,
       },
     });
@@ -104,10 +109,19 @@ export async function updatePengguna(req: Request, res: Response) {
       return res.status(404).json(fail("User tidak ditemukan"));
     }
 
+    const divisionError = validateDivision(division);
+    if (divisionError) return res.status(400).json(fail(divisionError));
+
+    const shouldUpdatePassword = password !== undefined && password !== null && String(password).trim() !== "";
+    if (shouldUpdatePassword) {
+      const passwordError = validatePassword(password, { min: 4 });
+      if (passwordError) return res.status(400).json(fail(passwordError));
+    }
+
     const updated = await prisma.pengguna.update({
       where: { username },
       data: {
-        password: password ?? user.password,
+        password: shouldUpdatePassword ? hashPassword(String(password)) : user.password,
         division: division ?? user.division,
         status: status ?? user.status,
       },
@@ -148,20 +162,28 @@ export async function loginPengguna(req: Request, res: Response) {
   try {
     const { username, password } = req.body;
 
-    if (!username || !password) {
-      return res
-        .status(400)
-        .json(fail("username dan password wajib diisi"));
+    const usernameError = validateUsername(username);
+    if (usernameError) return res.status(400).json(fail(usernameError));
+    if (String(password ?? "").trim() === "") {
+      return res.status(400).json(fail("password wajib diisi"));
     }
 
     const user = await prisma.pengguna.findUnique({
       where: { username },
     });
 
-    if (!user || user.password !== password) {
+    if (!user || !verifyPassword(String(password), user.password)) {
       return res
         .status(401)
         .json(fail("Username atau password salah"));
+    }
+
+    const plainPassword = String(password);
+    if (user.password && !isHashed(user.password)) {
+      await prisma.pengguna.update({
+        where: { username: user.username },
+        data: { password: hashPassword(plainPassword) },
+      });
     }
 
     if (user.status === "ON") {

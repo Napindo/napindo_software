@@ -1,5 +1,6 @@
 import { useMemo, useState, type ChangeEvent, type DragEvent } from 'react'
-import { importGabungExcel, arrayBufferToBase64, type ImportResult } from '../services/importData'
+import { importGabungExcel, type ImportResult } from '../services/importData'
+import { arrayBufferToBase64 } from '../utils/base64'
 import { useAppStore } from '../store/appStore'
 
 const MAX_FILE_MB = 25

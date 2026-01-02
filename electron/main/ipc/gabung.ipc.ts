@@ -16,6 +16,7 @@ import {
   reportGovernment,
   reportJumlahPerusahaan,
   reportJumlahGovernment,
+  renderPersonalDatabasePdf,
 } from '../../db/gabungRepo.js'
 import { testConnection } from '../../db/index.js'
 
@@ -172,6 +173,15 @@ export function registerGabungIpcHandlers() {
   ipcMain.handle('report:labeloptions', async () => {
     try {
       const data = await reportLabelOptions()
+      return { success: true, data }
+    } catch (error) {
+      return errorResponse(error)
+    }
+  })
+
+  ipcMain.handle('db:personalDatabasePdf', async (_event, payload) => {
+    try {
+      const data = await renderPersonalDatabasePdf(payload)
       return { success: true, data }
     } catch (error) {
       return errorResponse(error)

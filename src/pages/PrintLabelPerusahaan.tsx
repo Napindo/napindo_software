@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { requestLabelOptions, requestLabelPerusahaan } from '../services/printLabel'
 import { provinceOptions } from '../constants/provinces'
 import { useAppStore } from '../store/appStore'
+import { toBase64 } from '../utils/base64'
 
-// TODO: integrate additional report/label endpoints here when backend is ready.
 
 type SelectFilter = { key: string; activeKey: string; label: string; placeholder?: string }
 type TextFilter = { key: string; activeKey: string; label: string; placeholder?: string }
@@ -763,14 +763,6 @@ function extractBase64(data: unknown): string | null {
     return toBase64(new Uint8Array(payload.data.data))
   }
   return null
-}
-
-function toBase64(bytes: Uint8Array): string {
-  let binary = ''
-  bytes.forEach((b) => {
-    binary += String.fromCharCode(b)
-  })
-  return btoa(binary)
 }
 
 function base64ToBlobUrl(base64: string, contentType = 'application/pdf') {

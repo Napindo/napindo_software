@@ -16,6 +16,8 @@ export type ExhibitorSegment =
   | "dairy"
   | "horticulture"
 
+import { getDatabaseBridge, getIpcRenderer } from '../utils/bridge'
+
 export type DatabaseResponse<T = unknown> =
   | { success: true; rows?: T[]; data?: T; message?: string }
   | { success: false; message: string }
@@ -56,14 +58,6 @@ const SEGMENT_TO_BACKEND: Record<ExhibitorSegment, string> = {
   feed: "feed",
   dairy: "dairy",
   horticulture: "horticulture",
-}
-
-function getDatabaseBridge(): any {
-  return (window as any).database ?? null
-}
-
-function getIpcRenderer(): any {
-  return (window as any).ipcRenderer ?? null
 }
 
 async function invokeFetchExhibitorCountByExpo(): Promise<DatabaseResponse> {

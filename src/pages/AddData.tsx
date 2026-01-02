@@ -12,8 +12,15 @@ import {
   posterFlagMap,
   tidakKirimFlagMap,
 } from '../constants/flagMaps'
-import { saveAddData, updateAddData, findCompanyRecords, type AddDataPayload } from '../services/addData'
+import {
+  saveAddData,
+  updateAddData,
+  findCompanyRecords,
+  exportPersonalDatabasePdf,
+  type AddDataPayload,
+} from '../services/addData'
 import { useAppStore } from '../store/appStore'
+import { normalizeSpaces, toTitleCaseLoose } from '../utils/text'
 
 type AddDataVariant = 'exhibitor' | 'visitor'
 
@@ -309,19 +316,6 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [companyLookup.open])
 
-  const normalizeSpaces = (value: string) => value.replace(/\s{2,}/g, ' ')
-
-  const toTitleCase = (value: string) => {
-    const text = normalizeSpaces(value)
-    if (!text) return ''
-    const titled = text
-      .toLowerCase()
-      .split(' ')
-      .map((word) => (word ? word.charAt(0).toUpperCase() + word.slice(1) : ''))
-      .join(' ')
-    return titled
-  }
-
   const sanitizeText = (value: string, field?: FieldName) => {
     if (field === 'email' || field === 'website') {
       return normalizeSpaces(value)
@@ -336,18 +330,13 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
       const text = normalizeSpaces(value)
       if (!text) return ''
       const isAllCaps = text === text.toUpperCase()
-      const result = isAllCaps ? text : toTitleCase(text)
+      const result = isAllCaps ? text : toTitleCaseLoose(text)
       return result
     }
 
     const text = normalizeSpaces(value)
     if (!text) return ''
-    const titled = text
-      .toLowerCase()
-      .split(' ')
-      .map((word) => (word ? word.charAt(0).toUpperCase() + word.slice(1) : ''))
-      .join(' ')
-    return titled
+    return toTitleCaseLoose(text)
   }
 
   const sanitizeNumeric = (value: string) => value.replace(/\D+/g, '')
@@ -551,6 +540,44 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
       .split(',')
       .map((item) => sanitizeText(item, 'business'))
       .filter(Boolean)
+
+  const exportPdf = async () => {
+    const payload = {
+      typeOfBusiness: form.typeOfBusiness,
+      company: form.company,
+      address1: form.address1,
+      address2: form.address2,
+      city: form.city,
+      zip: form.zip,
+      sex: form.sex,
+      name: form.name,
+      position: form.position,
+      codePhone: form.codePhone,
+      phoneNumber: form.phoneNumber,
+      handphone: form.handphone,
+      email: form.email,
+      currentUser: user?.username || user?.name || undefined,
+    }
+
+    setFeedback(null)
+    try {
+      const { blob, filename } = await exportPersonalDatabasePdf(payload)
+      const url = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = filename || 'database-personal.pdf'
+      document.body.appendChild(anchor)
+      anchor.click()
+      anchor.remove()
+      URL.revokeObjectURL(url)
+      setFeedback({ type: 'success', message: `PDF tersimpan: ${anchor.download}` })
+    } catch (error) {
+      setFeedback({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Gagal mengunduh PDF.',
+      })
+    }
+  }
 
   const applyCompanyRow = (row: Record<string, unknown>, options?: { keepPopup?: boolean }) => {
     const lower: Record<string, unknown> = {}
@@ -1158,6 +1185,9 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
           {helperText(name)}
           {isCombo ? ' Pilih lebih dari satu bila diperlukan.' : ''}
         </p>
+        {name === 'business' ? (
+          <p className="text-xs text-slate-500">Jika ada bisnis yang tidak ada, silahkan hubungi Admin.</p>
+        ) : null}
       </div>
     )
   }
@@ -1169,22 +1199,37 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
 
   return (
     <div className="space-y-6 lg:space-y-8">
-      <div className="flex items-start gap-4">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-4">
+          <button
+            type="button"
+            onClick={onBack}
+            className="inline-flex items-center justify-center w-10 h-10 rounded-full hover:bg-slate-100 text-slate-600 border border-slate-200"
+            aria-label="Back to list"
+          >
+            <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="m14 18-6-6 6-6" />
+            </svg>
+          </button>
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-rose-600">Form Input</p>
+            <h1 className="text-3xl font-extrabold text-slate-900 leading-tight">{headerTitle}</h1>
+            <p className="text-sm text-slate-600">Lengkapi seluruh field sesuai kebutuhan minimal karakter.</p>
+          </div>
+        </div>
         <button
           type="button"
-          onClick={onBack}
-          className="inline-flex items-center justify-center w-10 h-10 rounded-full hover:bg-slate-100 text-slate-600 border border-slate-200"
-          aria-label="Back to list"
+          onClick={exportPdf}
+          className="inline-flex items-center justify-center w-9 h-9 rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50"
+          aria-label="Export PDF"
         >
-          <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="m14 18-6-6 6-6" />
+          <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M6 9V4h12v5" />
+            <path d="M6 18h12" />
+            <path d="M6 14h12v7H6z" />
+            <path d="M6 13H5a3 3 0 0 1 0-6h14a3 3 0 0 1 0 6h-1" />
           </svg>
         </button>
-        <div className="space-y-1">
-          <p className="text-sm font-semibold text-rose-600">Form Input</p>
-          <h1 className="text-3xl font-extrabold text-slate-900 leading-tight">{headerTitle}</h1>
-          <p className="text-sm text-slate-600">Lengkapi seluruh field sesuai kebutuhan minimal karakter.</p>
-        </div>
       </div>
 
       {feedback ? (

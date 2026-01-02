@@ -3,6 +3,9 @@ import type { ExhibitorRow, ExhibitorSegment } from '../services/exhibitors'
 import { fetchExhibitors } from '../services/exhibitors'
 import { deleteAddData } from '../services/addData'
 import { useAppStore } from '../store/appStore'
+import { getUserAccess } from '../utils/access'
+import { formatDateOnly } from '../utils/date'
+import { rowMatchesSegment } from '../utils/flags'
 
 const eventCards = [
   {
@@ -83,35 +86,6 @@ const segmentFlagKey: Record<ExhibitorSegment, string> = {
   horticulture: 'exhhorti',
 }
 
-const isFlagSet = (raw: Record<string, unknown>, key: string) => {
-  const value = raw[key.toLowerCase()]
-  if (value === undefined || value === null) return false
-  const normalized = String(value).trim().toLowerCase()
-  return normalized === 'x' || normalized === '1' || normalized === 'true' || normalized === 'yes'
-}
-
-const rowMatchesSegment = (raw: Record<string, unknown>, segment: ExhibitorSegment) => {
-  const lower = Object.keys(raw).reduce<Record<string, unknown>>((acc, key) => {
-    acc[key.toLowerCase()] = raw[key]
-    return acc
-  }, {})
-
-  const flagKey = segmentFlagKey[segment]
-  if (!flagKey) return true
-  return isFlagSet(lower, flagKey)
-}
-
-const formatDateOnly = (value?: string) => {
-  if (!value) return ''
-  const trimmed = value.trim()
-  if (!trimmed) return ''
-  const isoIndex = trimmed.indexOf('T')
-  if (isoIndex > 0) return trimmed.slice(0, isoIndex)
-  const spaceIndex = trimmed.indexOf(' ')
-  if (spaceIndex > 0) return trimmed.slice(0, spaceIndex)
-  return trimmed
-}
-
 export const InputDeck = ({ variant, onInput }: { variant: 'exhibitor' | 'visitor'; onInput?: (segment: ExhibitorSegment) => void }) => {
   const heading = variant === 'exhibitor' ? 'EXHIBITOR' : 'VISITOR'
   const segmentByCard: Record<string, ExhibitorSegment> = {
@@ -166,9 +140,21 @@ type ExhibitorTableProps = {
   onBack: () => void
   onForm: (row: Record<string, unknown> | null, id: string | number | null) => void
   onConfirmDelete: (ids: (string | number)[]) => void
+  canDelete: boolean
 }
 
-const ExhibitorTable = ({ segment, rows, loading, error, onReload, onSegmentChange, onBack, onForm, onConfirmDelete }: ExhibitorTableProps) => {
+const ExhibitorTable = ({
+  segment,
+  rows,
+  loading,
+  error,
+  onReload,
+  onSegmentChange,
+  onBack,
+  onForm,
+  onConfirmDelete,
+  canDelete,
+}: ExhibitorTableProps) => {
   const [search, setSearch] = useState('')
   const [rowsPerPage, setRowsPerPage] = useState(25)
   const [page, setPage] = useState(1)
@@ -182,7 +168,7 @@ const ExhibitorTable = ({ segment, rows, loading, error, onReload, onSegmentChan
 
   const filteredRows = useMemo(() => {
     const lower = search.trim().toLowerCase()
-    const bySegment = rows.filter((row) => rowMatchesSegment(row.raw, segment))
+    const bySegment = rows.filter((row) => rowMatchesSegment(row.raw, segment, segmentFlagKey))
 
     if (!lower) return bySegment
 
@@ -328,18 +314,20 @@ const ExhibitorTable = ({ segment, rows, loading, error, onReload, onSegmentChan
                 <path d="M12 19h6" />
               </svg>
             </button>
-            <button
-              type="button"
-              onClick={handleDelete}
-              className="w-9 h-9 inline-flex items-center justify-center rounded-md bg-rose-500 text-white"
-              aria-label="Delete selected"
-            >
-              <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M3 6h18" />
-                <path d="M8 6v14h8V6" />
-                <path d="M10 10v6m4-6v6M9 6l1-2h4l1 2" />
-              </svg>
-            </button>
+            {canDelete ? (
+              <button
+                type="button"
+                onClick={handleDelete}
+                className="w-9 h-9 inline-flex items-center justify-center rounded-md bg-rose-500 text-white"
+                aria-label="Delete selected"
+              >
+                <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 6h18" />
+                  <path d="M8 6v14h8V6" />
+                  <path d="M10 10v6m4-6v6M9 6l1-2h4l1 2" />
+                </svg>
+              </button>
+            ) : null}
           </div>
 
           <div className="ml-auto flex items-center gap-3">
@@ -469,7 +457,8 @@ const ExhibitorTable = ({ segment, rows, loading, error, onReload, onSegmentChan
 }
 
 const ExhibitorPage = () => {
-  const { setActivePage, setAddDataDraft, setGlobalMessage } = useAppStore()
+  const { setActivePage, setAddDataDraft, setGlobalMessage, user } = useAppStore()
+  const access = useMemo(() => getUserAccess(user), [user])
   const [mode, setMode] = useState<'cards' | 'table'>('cards')
   const [segment, setSegment] = useState<ExhibitorSegment>('defence')
   const [rows, setRows] = useState<ExhibitorRow[]>([])
@@ -530,6 +519,7 @@ const ExhibitorPage = () => {
           setActivePage('addData')
         }}
         onConfirmDelete={(ids) => setDeleteIds(ids)}
+        canDelete={access.canDelete}
       />
 
       {deleteIds ? (

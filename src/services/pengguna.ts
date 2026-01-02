@@ -1,3 +1,5 @@
+import { getDatabaseBridge, getIpcRenderer } from '../utils/bridge'
+
 export type CreatePenggunaPayload = {
   username: string
   password: string
@@ -25,14 +27,6 @@ export type PenggunaRow = {
 export type DatabaseResponse<T = unknown> =
   | { success: true; data?: T; user?: T; message?: string }
   | { success: false; message: string }
-
-function getDatabaseBridge(): any {
-  return (window as any).database ?? null
-}
-
-function getIpcRenderer(): any {
-  return (window as any).ipcRenderer ?? null
-}
 
 async function invokeCreatePengguna(payload: CreatePenggunaPayload): Promise<DatabaseResponse> {
   const db = getDatabaseBridge()

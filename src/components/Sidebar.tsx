@@ -184,6 +184,7 @@ const navStructure: { title?: string; items: NavItem[] }[] = [
   {
     title: 'USER MANAGEMENT',
     items: [
+      { label: 'Log', icon: 'chart', page: 'auditLog' },
       { label: 'Add User', icon: 'userPlus', page: 'addUser' },
       { label: 'Change Password', icon: 'lock', page: 'changePassword' },
     ],

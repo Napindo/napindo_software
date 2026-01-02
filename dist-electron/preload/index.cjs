@@ -6,6 +6,7 @@ electron.contextBridge.exposeInMainWorld("database", {
   fetchExhibitors: (segment, limit = 200, person = "exhibitor") => electron.ipcRenderer.invoke("db:fetchExhibitors", segment, limit, person),
   fetchExhibitorCountByExpo: () => electron.ipcRenderer.invoke("db:fetchExhibitorCountByExpo"),
   fetchExpoChartData: () => electron.ipcRenderer.invoke("db:fetchExpoChartData"),
+  fetchAuditLogs: (limit = 200) => electron.ipcRenderer.invoke("db:fetchAuditLogs", limit),
   login: (payload) => electron.ipcRenderer.invoke("db:login", payload),
   userHints: () => electron.ipcRenderer.invoke("db:userHints"),
   createPengguna: (payload) => electron.ipcRenderer.invoke("db:createPengguna", payload),

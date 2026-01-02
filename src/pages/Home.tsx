@@ -24,7 +24,8 @@ const Home = ({ displayName }: HomeProps) => {
   const [users, setUsers] = useState<PenggunaRow[]>([])
 
   const MIN_YEAR = 2023
-  const MAX_Y = 250000
+  const MIN_Y_STEP = 50000
+  const MAX_Y_CAP = 250000
 
   useEffect(() => {
     let active = true
@@ -83,6 +84,14 @@ const Home = ({ displayName }: HomeProps) => {
     const padding = { top: 24, right: 18, bottom: 40, left: 52 }
     const chartWidth = width - padding.left - padding.right
     const chartHeight = height - padding.top - padding.bottom
+    const maxValue = Math.max(
+      0,
+      ...chartSeries.flatMap((series) => Object.values(series.values ?? {})),
+    )
+    const useDynamicScale = maxValue > 0 && maxValue < MIN_Y_STEP
+    const scaledMax = Math.ceil(Math.max(maxValue, MIN_Y_STEP) / MIN_Y_STEP) * MIN_Y_STEP
+    const maxY = useDynamicScale ? Math.max(maxValue, 1) : Math.min(MAX_Y_CAP, scaledMax)
+    const tickStep = useDynamicScale ? Math.max(1, Math.ceil(maxY / 4)) : MIN_Y_STEP
 
     const years = chartYears.length > 0 ? chartYears : [MIN_YEAR]
     const getX = (index: number) => {
@@ -90,22 +99,22 @@ const Home = ({ displayName }: HomeProps) => {
       return padding.left + (chartWidth * index) / (years.length - 1)
     }
     const getY = (value: number) => {
-      const safe = Math.max(0, Math.min(value, MAX_Y))
-      return padding.top + chartHeight - (chartHeight * safe) / MAX_Y
+      const safe = Math.max(0, Math.min(value, maxY))
+      return padding.top + chartHeight - (chartHeight * safe) / maxY
     }
 
     const paths = chartSeries.map((series) => {
       const points = years.map((year, index) => {
         const value = series.values[year] ?? 0
-        return [getX(index), getY(value)]
+        return { x: getX(index), y: getY(value), value }
       })
       const path = points
-        .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point[0].toFixed(1)} ${point[1].toFixed(1)}`)
+        .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`)
         .join(' ')
       return { ...series, points, path }
     })
 
-    return { width, height, padding, chartWidth, chartHeight, years, getX, getY, paths }
+    return { width, height, padding, chartWidth, chartHeight, years, getX, getY, paths, maxY, tickStep }
   }, [chartSeries, chartYears])
 
   const sortedUsers = useMemo(() => {
@@ -157,7 +166,10 @@ const Home = ({ displayName }: HomeProps) => {
               className={`rounded-2xl border border-slate-200 bg-gradient-to-br ${card.tint} p-5 shadow-sm`}
             >
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{card.label}</p>
-              <p className="text-3xl font-extrabold text-slate-900 mt-2">{loading ? '...' : card.value.toLocaleString('id-ID')}</p>
+              <p className="text-3xl font-extrabold text-slate-900 mt-2">
+                {loading ? '...' : card.value.toLocaleString('id-ID')}
+                {!loading ? <span className="text-sm font-semibold text-slate-500 ml-2">Exhibitor</span> : null}
+              </p>
               <p className="text-xs text-slate-500 mt-2">{card.segments}</p>
             </div>
           ))}
@@ -205,7 +217,8 @@ const Home = ({ displayName }: HomeProps) => {
                   strokeWidth="1"
                 />
 
-                {[0, 50000, 100000, 150000, 200000, 250000].map((value) => {
+                {Array.from({ length: Math.floor(chartLayout.maxY / chartLayout.tickStep) + 1 }, (_, index) => index * chartLayout.tickStep).map(
+                  (value) => {
                   const y = chartLayout.getY(value)
                   return (
                     <g key={value}>
@@ -228,7 +241,8 @@ const Home = ({ displayName }: HomeProps) => {
                       </text>
                     </g>
                   )
-                })}
+                },
+                )}
 
                 {chartLayout.years.map((year, index) => (
                   <text
@@ -254,7 +268,14 @@ const Home = ({ displayName }: HomeProps) => {
                       strokeLinecap="round"
                     />
                     {series.points.map((point, index) => (
-                      <circle key={`${series.label}-${index}`} cx={point[0]} cy={point[1]} r="3" fill={series.color} />
+                      <g key={`${series.label}-${index}`}>
+                        <circle cx={point.x} cy={point.y} r="4" fill={series.color} />
+                        {point.value > 0 ? (
+                          <text x={point.x} y={point.y - 8} fontSize="10" textAnchor="middle" fill={series.color}>
+                            {point.value.toLocaleString('id-ID')}
+                          </text>
+                        ) : null}
+                      </g>
                     ))}
                   </g>
                 ))}

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { requestLabelOptions, requestLabelPerusahaan } from '../services/printLabel'
 import { provinceOptions } from '../constants/provinces'
+import { useAppStore } from '../store/appStore'
 
 // TODO: integrate additional report/label endpoints here when backend is ready.
 
@@ -362,6 +363,7 @@ export function PrintLabelTemplate({
     business: [],
     nonBusiness: [],
   })
+  const { user } = useAppStore()
 
   useEffect(() => {
     let cancelled = false
@@ -386,6 +388,7 @@ export function PrintLabelTemplate({
   const payload = useMemo(() => {
     const base: Record<string, unknown> = {
       [titleKey]: judulLabel.trim(),
+      currentUser: user?.username || user?.name || undefined,
     }
 
     selectFilters.forEach((filter) => {
@@ -407,7 +410,7 @@ export function PrintLabelTemplate({
     })
 
     return base
-  }, [judulLabel, selectValues, selectActive, textValues, textActive, checks])
+  }, [judulLabel, selectValues, selectActive, textValues, textActive, checks, titleKey, user?.name, user?.username])
 
   const handleToggleCheck = (key: string) => {
     setChecks((prev) => ({ ...prev, [key]: !prev[key] }))

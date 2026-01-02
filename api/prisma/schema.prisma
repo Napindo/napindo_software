@@ -152,6 +152,18 @@ model Pengguna {
 
   @@map("PENGGUNA")
 }
+
+model AuditLog {
+  id        Int      @id @default(autoincrement()) @map("ID")
+  username  String?  @db.VarChar(50) @map("USERNAME")
+  action    String   @db.VarChar(20) @map("ACTION")
+  page      String?  @db.VarChar(100) @map("PAGE")
+  summary   String?  @db.VarChar(255) @map("SUMMARY")
+  data      Json?    @map("DATA")
+  createdAt DateTime @default(now()) @map("CREATED_AT")
+
+  @@map("AUDIT_LOG")
+}
 view Vnongover {
   nourut       Int       @map("NOURUT")
 

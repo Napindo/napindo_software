@@ -9,6 +9,7 @@ import ExhibitorPage from './Exhibitor'
 import VisitorPage from './Visitor'
 import AddUserPage from './AddUser'
 import ChangePasswordPage from './ChangePassword'
+import AuditLogPage from './AuditLog'
 import PrintLabelPerusahaan from './PrintLabelPerusahaan'
 import PrintLabelGovernment from './PrintLabelGovernment'
 import ReportPerusahaan from './ReportPerusahaan'
@@ -57,6 +58,8 @@ const DashboardPage = ({ user, onLogout }: DashboardProps) => {
         return <ReportJumlahGovernment />
       case 'addUser':
         return <AddUserPage currentUser={user} />
+      case 'auditLog':
+        return <AuditLogPage />
       case 'changePassword':
         return <ChangePasswordPage currentUser={user} />
       default:

@@ -1,5 +1,6 @@
 export type PageKey =
   | "dashboard"
+  | "auditLog"
   | "addData"
   | "exhibitor"
   | "visitor"

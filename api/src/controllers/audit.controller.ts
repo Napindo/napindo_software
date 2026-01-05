@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import prisma from "../prisma";
 import { ok, fail } from "../utils/apiResponse";
+import { writeAuditLog } from "../services/auditLog";
 
 export async function listAuditLogs(req: Request, res: Response) {
   try {
@@ -42,6 +43,28 @@ export async function listAuditLogs(req: Request, res: Response) {
     }
 
     return res.json(ok(logs));
+  } catch (err: any) {
+    return res.status(500).json(fail(err.message));
+  }
+}
+
+export async function createAuditLog(req: Request, res: Response) {
+  try {
+    const payload = req.body ?? {};
+    const action = String(payload?.action || "").trim();
+    if (!action) {
+      return res.status(400).json(fail("Action wajib diisi"));
+    }
+
+    await writeAuditLog({
+      username: payload?.username ? String(payload.username).trim() : null,
+      action,
+      page: payload?.page ? String(payload.page).trim() : null,
+      summary: payload?.summary ? String(payload.summary).trim() : null,
+      data: payload?.data ?? null,
+    });
+
+    return res.json(ok(true));
   } catch (err: any) {
     return res.status(500).json(fail(err.message));
   }

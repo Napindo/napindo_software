@@ -36,3 +36,31 @@ export async function fetchAuditLogs(limit = 200): Promise<AuditLogRow[]> {
 
   return (response.rows ?? response.data ?? []) as AuditLogRow[]
 }
+
+export async function createAuditLog(payload: {
+  username?: string | null
+  action: string
+  page?: string | null
+  summary?: string | null
+  data?: unknown
+}) {
+  const db = getDatabaseBridge()
+  if (db && typeof db.createAuditLog === 'function') {
+    const response = await db.createAuditLog(payload)
+    if (!response || response.success === false) {
+      throw new Error(response?.message ?? 'Gagal menyimpan audit log')
+    }
+    return response.data ?? response
+  }
+
+  const ipc = getIpcRenderer()
+  if (ipc && typeof ipc.invoke === 'function') {
+    const response = await ipc.invoke('db:createAuditLog', payload)
+    if (!response || response.success === false) {
+      throw new Error(response?.message ?? 'Gagal menyimpan audit log')
+    }
+    return response.data ?? response
+  }
+
+  throw new Error('Bridge Electron untuk createAuditLog tidak tersedia')
+}

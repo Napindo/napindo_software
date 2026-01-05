@@ -36,6 +36,13 @@ interface Window {
         }[]
       >
     >
+    createAuditLog: (payload: {
+      username?: string | null
+      action: string
+      page?: string | null
+      summary?: string | null
+      data?: unknown
+    }) => Promise<RendererDatabaseResponse>
     login: (
       payload: { username: string; password: string; division?: string | null },
     ) => Promise<RendererDatabaseResponse<{ username: string; division?: string | null; name?: string | null }>>
@@ -54,6 +61,7 @@ interface Window {
     }) => Promise<RendererDatabaseResponse<{ username: string; division?: string | null; status?: string | null }>>
     logoutPengguna: (payload: { username: string }) => Promise<RendererDatabaseResponse<{ username: string; status?: string | null }>>
     listPengguna: () => Promise<RendererDatabaseResponse<{ username?: string; division?: string | null; status?: string | null }>>
+    listGabung: (params?: { page?: number; pageSize?: number; q?: string }) => Promise<RendererDatabaseResponse>
     saveAddData: (payload: Record<string, unknown>) => Promise<RendererDatabaseResponse>
     importGabungExcel: (payload: {
       fileBase64: string

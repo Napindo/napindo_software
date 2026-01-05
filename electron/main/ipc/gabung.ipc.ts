@@ -5,6 +5,7 @@ import {
   fetchExhibitorCountByExpo,
   fetchExpoChartData,
   fetchTopRows,
+  listGabungRecords,
   findCompanyByName,
   saveAddData,
   importGabungExcel,
@@ -75,6 +76,15 @@ export function registerGabungIpcHandlers() {
     try {
       const rows = await findCompanyByName(company)
       return { success: true, rows }
+    } catch (error) {
+      return errorResponse(error)
+    }
+  })
+
+  ipcMain.handle('db:listGabung', async (_event, params) => {
+    try {
+      const data = await listGabungRecords(params)
+      return { success: true, data }
     } catch (error) {
       return errorResponse(error)
     }

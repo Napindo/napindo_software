@@ -57,6 +57,25 @@ export async function fetchExpoChartData() {
   }
 }
 
+export async function listGabungRecords(params?: { page?: number; pageSize?: number; q?: string }) {
+  const page = params?.page ?? 1
+  const pageSize = params?.pageSize ?? 200
+  const search = params?.q?.trim()
+  const query = new URLSearchParams({
+    page: String(page),
+    pageSize: String(pageSize),
+  })
+  if (search) {
+    query.set('q', search)
+  }
+
+  const { body } = await apiFetch(`/gabung?${query.toString()}`)
+  if (!isResponseOk(body)) {
+    throw new Error(body.message || 'Gagal memuat data gabung')
+  }
+  return pickData(body) ?? body
+}
+
 export async function findCompanyByName(company: string) {
   const trimmed = company.trim()
   const encoded = encodeURIComponent(trimmed)

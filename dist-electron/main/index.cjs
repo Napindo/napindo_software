@@ -58,12 +58,12 @@ if (appRoot) {
 }
 loadEnvFile(path.resolve(process.cwd(), ".env"));
 loadEnvFile(path.resolve(process.cwd(), "..", ".env"));
-const API_BASE_URL = process.env.API_BASE_URL || "http://localhost:3001";
+const API_BASE_URL = process.env.API_BASE_URL || "http://192.168.1.86:8133";
 const API_PREFIX = process.env.API_PREFIX || "/api";
 const ensureNoProxyForLocal = () => {
   const existing = process.env.NO_PROXY || process.env.no_proxy || "";
   const entries = existing.split(",").map((item) => item.trim()).filter(Boolean);
-  const required = ["localhost", "127.0.0.1"];
+  const required = ["192.168.1.86", "127.0.0.1"];
   let changed = false;
   required.forEach((host) => {
     if (!entries.includes(host)) {
@@ -127,8 +127,8 @@ async function apiFetch(pathName, init = {}) {
         }
       };
     }
-    if (url.includes("localhost")) {
-      const fallbackUrl = url.replace("localhost", "127.0.0.1");
+    if (url.includes("192.168.1.86")) {
+      const fallbackUrl = url.replace("192.168.1.86", "127.0.0.1");
       try {
         return await attempt(fallbackUrl);
       } catch (fallbackError) {

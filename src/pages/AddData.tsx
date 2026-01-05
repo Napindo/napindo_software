@@ -17,10 +17,12 @@ import {
   updateAddData,
   findCompanyRecords,
   exportPersonalDatabasePdf,
+  listGabungRecords,
   type AddDataPayload,
 } from '../services/addData'
 import { useAppStore } from '../store/appStore'
 import { normalizeSpaces, toTitleCaseLoose } from '../utils/text'
+import { createAuditLog } from '../services/audit'
 
 type AddDataVariant = 'exhibitor' | 'visitor'
 
@@ -245,6 +247,10 @@ const helperText = (name: FieldName) => {
 
 const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, headerTitleOverride }: AddDataProps) => {
   const { user, setGlobalMessage } = useAppStore()
+  const searchAllowedUsers = useMemo(() => new Set(['anton', 'sandi', 'zidan', 'fajrin']), [])
+  const displayUsername = String(user?.username ?? '').trim()
+  const normalizedUsername = displayUsername.toLowerCase()
+  const canOpenSearch = searchAllowedUsers.has(normalizedUsername)
   const [form, setForm] = useState<AddDataForm>(defaultForm)
   const [selectedId, setSelectedId] = useState<string | number | null>(null)
   const [highlightIndex, setHighlightIndex] = useState(0)
@@ -267,6 +273,26 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
     rows: [],
     query: '',
   })
+  const [dataSearchOpen, setDataSearchOpen] = useState(false)
+  const [dataSearchLoading, setDataSearchLoading] = useState(false)
+  const [dataSearchRows, setDataSearchRows] = useState<Record<string, unknown>[]>([])
+  const [dataSearchError, setDataSearchError] = useState<string | null>(null)
+  const [dataSearchNotice, setDataSearchNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(
+    null,
+  )
+  const [dataSearchPage, setDataSearchPage] = useState(1)
+  const [dataSearchPageSize, setDataSearchPageSize] = useState(200)
+  const [dataSearchTotal, setDataSearchTotal] = useState(0)
+  const [dataSearchFilters, setDataSearchFilters] = useState({
+    hp: '',
+    company: '',
+    email: '',
+    name: '',
+    business: '',
+    userName: '',
+  })
+  const [dataSearchEdits, setDataSearchEdits] = useState<Record<string, Record<string, string>>>({})
+  const [dataSearchSavingId, setDataSearchSavingId] = useState<string | number | null>(null)
   const [comboSearch, setComboSearch] = useState<Record<ComboFieldName, string>>({
     mainActive: '',
     business: '',
@@ -456,6 +482,83 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
     return columns
   }, [companyLookup.rows])
 
+  const dataSearchColumns = useMemo(() => {
+    const preferred = [
+      'nourut',
+      'ptCv',
+      'company',
+      'address1',
+      'address2',
+      'city',
+      'zip',
+      'propince',
+      'code',
+      'phone',
+      'handphone',
+      'email',
+      'name',
+      'position',
+      'business',
+      'source',
+      'namauser',
+      'lastupdate',
+      'tglJamEdit',
+    ]
+    const seen = new Set<string>()
+    const columns: string[] = []
+    const push = (key: string) => {
+      const normalized = key.toLowerCase()
+      if (seen.has(normalized)) return
+      seen.add(normalized)
+      columns.push(key)
+    }
+
+    preferred.forEach(push)
+    dataSearchRows.forEach((row) => {
+      Object.keys(row || {}).forEach(push)
+    })
+    return columns
+  }, [dataSearchRows])
+
+  const normalizedFilter = (value: string) => value.trim().toLowerCase()
+
+  const filteredDataSearchRows = useMemo(() => {
+    const filters = {
+      hp: normalizedFilter(dataSearchFilters.hp),
+      company: normalizedFilter(dataSearchFilters.company),
+      email: normalizedFilter(dataSearchFilters.email),
+      name: normalizedFilter(dataSearchFilters.name),
+      business: normalizedFilter(dataSearchFilters.business),
+      userName: normalizedFilter(dataSearchFilters.userName),
+    }
+
+    if (Object.values(filters).every((value) => value === '')) {
+      return dataSearchRows
+    }
+
+    return dataSearchRows.filter((row) => {
+      const hpText = `${row.phone ?? ''} ${row.handphone ?? ''}`.toLowerCase()
+      const companyText = String(row.company ?? '').toLowerCase()
+      const emailText = String(row.email ?? '').toLowerCase()
+      const nameText = String(row.name ?? '').toLowerCase()
+      const businessText = String(row.business ?? '').toLowerCase()
+      const userNameText = String(row.source ?? '').toLowerCase()
+
+      if (filters.hp && !hpText.includes(filters.hp)) return false
+      if (filters.company && !companyText.includes(filters.company)) return false
+      if (filters.email && !emailText.includes(filters.email)) return false
+      if (filters.name && !nameText.includes(filters.name)) return false
+      if (filters.business && !businessText.includes(filters.business)) return false
+      if (filters.userName && !userNameText.includes(filters.userName)) return false
+      return true
+    })
+  }, [dataSearchFilters, dataSearchRows])
+
+  const dataSearchTotalPages = useMemo(() => {
+    const total = Math.ceil(dataSearchTotal / dataSearchPageSize)
+    return total > 0 ? total : 1
+  }, [dataSearchPageSize, dataSearchTotal])
+
   const handleCitySelect = (name: string) => {
     const sanitized = sanitizeText(name, 'city')
     const dial = countryDial[sanitized] ?? ''
@@ -474,6 +577,161 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
     if (typeof value === 'object') return JSON.stringify(value)
     const text = String(value)
     return text.trim() === '' ? '-' : text
+  }
+
+  const getRowId = (row: Record<string, unknown>) => {
+    const rawId = row.nourut ?? row.NOURUT ?? row.id ?? row.ID ?? row.pk ?? row.PK
+    if (rawId === undefined || rawId === null) return null
+    if (typeof rawId === 'number') return rawId
+    const text = String(rawId).trim()
+    return text === '' ? null : text
+  }
+
+  const toDateValue = (value: unknown) => {
+    if (!value) return ''
+    const parsed = new Date(String(value))
+    if (Number.isNaN(parsed.getTime())) return ''
+    return parsed.toISOString().slice(0, 10)
+  }
+
+  const toEditableValue = (value: unknown, column: string) => {
+    if (column.toLowerCase() === 'lastupdate') {
+      return toDateValue(value)
+    }
+    if (value === null || value === undefined) return ''
+    if (typeof value === 'object') return JSON.stringify(value)
+    return String(value)
+  }
+
+  const loadDataSearch = async (
+    nextPage?: number,
+    options?: { resetEdits?: boolean; pageSize?: number; filters?: typeof dataSearchFilters },
+  ) => {
+    const page = nextPage ?? dataSearchPage
+    const pageSize = options?.pageSize ?? dataSearchPageSize
+    const filters = options?.filters ?? dataSearchFilters
+    const query = filters.company || filters.name || ''
+    setDataSearchLoading(true)
+    setDataSearchError(null)
+    if (options?.resetEdits) {
+      setDataSearchEdits({})
+    }
+    try {
+      const result = await listGabungRecords({ page, pageSize, q: query })
+      setDataSearchRows(result.items)
+      setDataSearchPage(result.pagination.page)
+      setDataSearchTotal(result.pagination.total)
+      setDataSearchPageSize(pageSize)
+      setDataSearchNotice(null)
+    } catch (error) {
+      setDataSearchError(error instanceof Error ? error.message : 'Gagal memuat data gabung')
+    } finally {
+      setDataSearchLoading(false)
+    }
+  }
+
+  const openDataSearch = async () => {
+    if (!canOpenSearch) return
+    const nextFilters = {
+      hp: '',
+      company: '',
+      email: '',
+      name: '',
+      business: '',
+      userName: '',
+    }
+    setDataSearchFilters(nextFilters)
+    setDataSearchOpen(true)
+    setDataSearchNotice(null)
+    await loadDataSearch(1, { resetEdits: true, filters: nextFilters })
+    try {
+      await createAuditLog({
+        username: user?.username ?? null,
+        action: 'search',
+        page: 'Add Data',
+        summary: 'Open search data (F3)',
+        data: { feature: 'search-data' },
+      })
+    } catch {
+      // ignore logging failures
+    }
+  }
+
+  const closeDataSearch = () => {
+    setDataSearchOpen(false)
+    setDataSearchNotice(null)
+    setDataSearchError(null)
+  }
+
+  const updateDataSearchEdit = (rowId: string | number, column: string, value: string) => {
+    const rowKey = String(rowId)
+    setDataSearchEdits((prev) => ({
+      ...prev,
+      [rowKey]: {
+        ...(prev[rowKey] ?? {}),
+        [column]: value,
+      },
+    }))
+  }
+
+  const clearDataSearchEdit = (rowId: string | number) => {
+    const rowKey = String(rowId)
+    setDataSearchEdits((prev) => {
+      if (!prev[rowKey]) return prev
+      const next = { ...prev }
+      delete next[rowKey]
+      return next
+    })
+  }
+
+  const saveDataSearchRow = async (row: Record<string, unknown>) => {
+    const rowId = getRowId(row)
+    if (rowId === null) {
+      setDataSearchNotice({ type: 'error', message: 'NOURUT tidak ditemukan untuk baris ini.' })
+      return
+    }
+
+    const rowKey = String(rowId)
+    const edits = dataSearchEdits[rowKey]
+    if (!edits || Object.keys(edits).length === 0) {
+      setDataSearchNotice({ type: 'error', message: 'Tidak ada perubahan untuk disimpan.' })
+      return
+    }
+
+    const payload: Record<string, unknown> = {}
+    Object.entries(edits).forEach(([key, value]) => {
+      const original = toEditableValue(row[key], key)
+      if (original === value) return
+      payload[key] = value === '' ? null : value
+    })
+
+    if (Object.keys(payload).length === 0) {
+      setDataSearchNotice({ type: 'error', message: 'Tidak ada perubahan untuk disimpan.' })
+      clearDataSearchEdit(rowId)
+      return
+    }
+
+    setDataSearchSavingId(rowId)
+    setDataSearchNotice(null)
+    try {
+      const response = await updateAddData(rowId, payload)
+      const updated =
+        response && typeof response === 'object' && !Array.isArray(response)
+          ? (response as Record<string, unknown>)
+          : payload
+      setDataSearchRows((prev) =>
+        prev.map((item) => (getRowId(item) === rowId ? { ...item, ...updated } : item)),
+      )
+      clearDataSearchEdit(rowId)
+      setDataSearchNotice({ type: 'success', message: `Data NOURUT ${rowId} berhasil diperbarui.` })
+    } catch (error) {
+      setDataSearchNotice({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Gagal menyimpan perubahan.',
+      })
+    } finally {
+      setDataSearchSavingId(null)
+    }
   }
 
   const handleCompanyKeyDown = async (event: KeyboardEvent<HTMLInputElement>) => {
@@ -815,7 +1073,13 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
 
   useEffect(() => {
     const onKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (companyLookup.open) return
+      if (companyLookup.open || dataSearchOpen) {
+        if (dataSearchOpen && event.key === 'Escape') {
+          event.preventDefault()
+          closeDataSearch()
+        }
+        return
+      }
       if (event.ctrlKey || event.metaKey || event.altKey) return
 
       if (event.key === 'F5') {
@@ -824,6 +1088,11 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
       } else if (event.key === 'F2') {
         event.preventDefault()
         submitUpdate(event as any)
+      } else if (event.key === 'F3') {
+        event.preventDefault()
+        if (canOpenSearch) {
+          openDataSearch()
+        }
       } else if (event.key === 'Escape') {
         event.preventDefault()
         handleCancel()
@@ -832,7 +1101,16 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [companyLookup.open, submitAdd, submitUpdate, handleCancel])
+  }, [
+    companyLookup.open,
+    dataSearchOpen,
+    submitAdd,
+    submitUpdate,
+    handleCancel,
+    openDataSearch,
+    closeDataSearch,
+    canOpenSearch,
+  ])
 
   useEffect(() => {
     rowsRef.current = companyLookup.rows
@@ -1264,6 +1542,15 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
           >
             {saving ? 'Saving...' : 'Update/Edit (F2)'}
           </button>
+          {canOpenSearch ? (
+            <button
+              type="button"
+              onClick={openDataSearch}
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-700 font-semibold hover:bg-slate-50"
+            >
+              Search (F3)
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={handleCancel}
@@ -1330,6 +1617,292 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
                     ))}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {dataSearchOpen ? (
+        <div className="fixed inset-0 z-40 flex items-start justify-center bg-slate-900/60 backdrop-blur-sm p-4 pt-8">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[95vw] max-h-[90vh] overflow-hidden border border-slate-200">
+            <div className="flex items-start justify-between gap-3 px-6 py-4 border-b border-slate-200">
+              <div>
+                <p className="text-xs font-semibold text-rose-600 uppercase tracking-wide">Search Data (F3)</p>
+                <h3 className="text-lg font-bold text-slate-900">Data Visitor &amp; Exhibitor</h3>
+                <p className="text-xs text-slate-500">Edit langsung di tabel. Tekan ESC atau Close untuk menutup.</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => loadDataSearch(dataSearchPage, { resetEdits: false })}
+                  className="inline-flex items-center justify-center px-3 py-2 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-100 border border-slate-200"
+                  disabled={dataSearchLoading}
+                >
+                  {dataSearchLoading ? 'Loading...' : 'Refresh'}
+                </button>
+                <button
+                  type="button"
+                  onClick={closeDataSearch}
+                  className="inline-flex items-center justify-center px-3 py-2 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-100 border border-slate-200"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-b border-slate-200 space-y-4">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-600">Search By HP</label>
+                  <input
+                    type="text"
+                    value={dataSearchFilters.hp}
+                    onChange={(event) =>
+                      setDataSearchFilters((prev) => ({ ...prev, hp: event.target.value }))
+                    }
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
+                    placeholder="Handphone / Phone"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-600">Search By Company</label>
+                  <input
+                    type="text"
+                    value={dataSearchFilters.company}
+                    onChange={(event) =>
+                      setDataSearchFilters((prev) => ({ ...prev, company: event.target.value }))
+                    }
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
+                    placeholder="Company"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-600">Search By Email</label>
+                  <input
+                    type="text"
+                    value={dataSearchFilters.email}
+                    onChange={(event) =>
+                      setDataSearchFilters((prev) => ({ ...prev, email: event.target.value }))
+                    }
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
+                    placeholder="Email"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-600">Search By Name</label>
+                  <input
+                    type="text"
+                    value={dataSearchFilters.name}
+                    onChange={(event) =>
+                      setDataSearchFilters((prev) => ({ ...prev, name: event.target.value }))
+                    }
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
+                    placeholder="Name"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-600">Search By Business</label>
+                  <input
+                    type="text"
+                    value={dataSearchFilters.business}
+                    onChange={(event) =>
+                      setDataSearchFilters((prev) => ({ ...prev, business: event.target.value }))
+                    }
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
+                    placeholder="Business"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-600">Search By User Name</label>
+                  <input
+                    type="text"
+                    value={dataSearchFilters.userName}
+                    onChange={(event) =>
+                      setDataSearchFilters((prev) => ({ ...prev, userName: event.target.value }))
+                    }
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
+                    placeholder="Update By"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => loadDataSearch(1, { resetEdits: true })}
+                  className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-rose-600 text-white text-sm font-semibold shadow-sm hover:bg-rose-700"
+                  disabled={dataSearchLoading}
+                >
+                  Search
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nextFilters = {
+                      hp: '',
+                      company: '',
+                      email: '',
+                      name: '',
+                      business: '',
+                      userName: '',
+                    }
+                    setDataSearchFilters(nextFilters)
+                    loadDataSearch(1, { resetEdits: true, filters: nextFilters })
+                  }}
+                  className="inline-flex items-center justify-center px-4 py-2 rounded-lg border border-slate-200 text-slate-700 text-sm font-semibold hover:bg-slate-50"
+                >
+                  Reset Filter
+                </button>
+                <span className="text-xs text-slate-500">
+                  Menampilkan {filteredDataSearchRows.length} dari {dataSearchRows.length} baris (page {dataSearchPage}).
+                </span>
+              </div>
+            </div>
+
+            {dataSearchError ? (
+              <div className="px-6 py-3 text-sm font-semibold text-rose-700 bg-rose-50 border-b border-rose-100">
+                {dataSearchError}
+              </div>
+            ) : null}
+
+            {dataSearchNotice ? (
+              <div
+                className={`px-6 py-3 text-sm font-semibold border-b ${
+                  dataSearchNotice.type === 'success'
+                    ? 'text-emerald-700 bg-emerald-50 border-emerald-100'
+                    : 'text-rose-700 bg-rose-50 border-rose-100'
+                }`}
+              >
+                {dataSearchNotice.message}
+              </div>
+            ) : null}
+
+            <div className="px-6 py-4 overflow-auto max-h-[55vh]">
+              <div className="min-w-[1100px]">
+                <table className="min-w-full text-xs border border-slate-200 rounded-lg overflow-hidden">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      {dataSearchColumns.map((column) => (
+                        <th key={column} className="px-2 py-2 text-left font-semibold text-slate-700 border-b border-slate-200">
+                          {column}
+                        </th>
+                      ))}
+                      <th className="px-2 py-2 text-left font-semibold text-slate-700 border-b border-slate-200">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {filteredDataSearchRows.map((row, index) => {
+                      const rowId = getRowId(row)
+                      const rowKey = rowId === null ? `row-${index}` : String(rowId)
+                      const rowEdits = rowId !== null ? dataSearchEdits[rowKey] : undefined
+                      const rowDirty =
+                        rowId !== null &&
+                        rowEdits &&
+                        Object.entries(rowEdits).some(
+                          ([key, value]) => toEditableValue(row[key], key) !== value,
+                        )
+                      return (
+                        <tr key={rowKey} className="hover:bg-rose-50/50">
+                          {dataSearchColumns.map((column) => {
+                            const lower = column.toLowerCase()
+                            const readOnly = lower === 'nourut' || lower === 'id'
+                            const value =
+                              rowId !== null && rowEdits && rowEdits[column] !== undefined
+                                ? rowEdits[column]
+                                : toEditableValue(row[column], column)
+                            return (
+                              <td key={column} className="px-2 py-1 align-top text-slate-800">
+                                {readOnly ? (
+                                  <span className="inline-block min-w-[60px]">{value || '-'}</span>
+                                ) : (
+                                  <input
+                                    type={lower === 'lastupdate' ? 'date' : 'text'}
+                                    value={value}
+                                    onChange={(event) =>
+                                      rowId !== null && updateDataSearchEdit(rowId, column, event.target.value)
+                                    }
+                                    className="w-full min-w-[120px] rounded-md border border-slate-200 px-2 py-1 text-xs focus:border-rose-400 focus:ring-1 focus:ring-rose-100"
+                                  />
+                                )}
+                              </td>
+                            )
+                          })}
+                          <td className="px-2 py-1 align-top">
+                            <div className="flex flex-col gap-2">
+                              <button
+                                type="button"
+                                onClick={() => saveDataSearchRow(row)}
+                                disabled={!rowDirty || String(dataSearchSavingId ?? '') === rowKey}
+                                className="inline-flex items-center justify-center px-3 py-1 rounded-md bg-rose-600 text-white text-xs font-semibold disabled:opacity-50"
+                              >
+                                {String(dataSearchSavingId ?? '') === rowKey ? 'Saving...' : 'Save'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => rowId !== null && clearDataSearchEdit(rowId)}
+                                disabled={!rowEdits}
+                                className="inline-flex items-center justify-center px-3 py-1 rounded-md border border-slate-200 text-slate-700 text-xs font-semibold disabled:opacity-50"
+                              >
+                                Reset
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                    {filteredDataSearchRows.length === 0 ? (
+                      <tr>
+                        <td colSpan={dataSearchColumns.length + 1} className="px-3 py-6 text-center text-slate-500">
+                          Tidak ada data yang cocok.
+                        </td>
+                      </tr>
+                    ) : null}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="px-6 py-3 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3">
+              <div className="text-xs text-slate-500">
+                Total {dataSearchTotal} data &middot; Page {dataSearchPage} / {dataSearchTotalPages}
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="text-xs text-slate-600">
+                  Page size
+                  <select
+                    value={dataSearchPageSize}
+                    onChange={(event) => {
+                      const nextSize = Number(event.target.value) || 200
+                      loadDataSearch(1, { resetEdits: true, pageSize: nextSize })
+                    }}
+                    className="ml-2 rounded-md border border-slate-200 px-2 py-1 text-xs"
+                  >
+                    {[50, 100, 200, 500].map((size) => (
+                      <option key={size} value={size}>
+                        {size}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => loadDataSearch(Math.max(1, dataSearchPage - 1), { resetEdits: true })}
+                  disabled={dataSearchPage <= 1 || dataSearchLoading}
+                  className="inline-flex items-center justify-center px-3 py-1 rounded-md border border-slate-200 text-xs font-semibold text-slate-700 disabled:opacity-50"
+                >
+                  Prev
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    loadDataSearch(Math.min(dataSearchTotalPages, dataSearchPage + 1), { resetEdits: true })
+                  }
+                  disabled={dataSearchPage >= dataSearchTotalPages || dataSearchLoading}
+                  className="inline-flex items-center justify-center px-3 py-1 rounded-md border border-slate-200 text-xs font-semibold text-slate-700 disabled:opacity-50"
+                >
+                  Next
+                </button>
               </div>
             </div>
           </div>

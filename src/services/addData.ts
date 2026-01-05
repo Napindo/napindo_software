@@ -1,4 +1,4 @@
-import { buildApiUrl } from "../utils/api"
+import { buildApiUrl, isApiOk, pickApiData } from "../utils/api"
 import { getDatabaseBridge, getIpcRenderer } from "../utils/bridge"
 
 export type AddDataPayload = Record<string, string | number | boolean | null | undefined>
@@ -6,6 +6,15 @@ export type AddDataPayload = Record<string, string | number | boolean | null | u
 export type DatabaseResponse<T = unknown> =
   | { success: true; data?: T; rows?: T[]; message?: string }
   | { success: false; message: string }
+
+export type GabungListResult = {
+  items: Record<string, unknown>[]
+  pagination: {
+    page: number
+    pageSize: number
+    total: number
+  }
+}
 
 /**
  * Panggil operasi saveAddData lewat window.database atau fallback ke ipcRenderer.invoke.
@@ -92,6 +101,82 @@ export async function findCompanyRecords(company: string): Promise<any[]> {
 
   // Beberapa endpoint bisa pakai `rows` atau `data`
   return (response.rows ?? response.data ?? []) as any[]
+}
+
+export async function listGabungRecords(params?: {
+  page?: number
+  pageSize?: number
+  q?: string
+}): Promise<GabungListResult> {
+  const db = getDatabaseBridge()
+  if (db && typeof db.listGabung === "function") {
+    const response = await db.listGabung(params)
+    if (!response || response.success === false) {
+      throw new Error(response?.message ?? "Gagal memuat data gabung")
+    }
+    const data: any = response.data ?? response
+    const items = (data.items ?? data.rows ?? data ?? []) as Record<string, unknown>[]
+    const pagination = data.pagination ?? {
+      page: params?.page ?? 1,
+      pageSize: params?.pageSize ?? 200,
+      total: items.length,
+    }
+    return { items, pagination }
+  }
+
+  const ipc = getIpcRenderer()
+  if (ipc?.invoke) {
+    const response = await ipc.invoke("db:listGabung", params)
+    if (!response || response.success === false) {
+      throw new Error(response?.message ?? "Gagal memuat data gabung")
+    }
+    const data: any = response.data ?? response
+    const items = (data.items ?? data.rows ?? data ?? []) as Record<string, unknown>[]
+    const pagination = data.pagination ?? {
+      page: params?.page ?? 1,
+      pageSize: params?.pageSize ?? 200,
+      total: items.length,
+    }
+    return { items, pagination }
+  }
+
+  const page = params?.page ?? 1
+  const pageSize = params?.pageSize ?? 200
+  const search = params?.q?.trim()
+  const searchParams = new URLSearchParams({
+    page: String(page),
+    pageSize: String(pageSize),
+  })
+  if (search) {
+    searchParams.set("q", search)
+  }
+
+  const res = await fetch(buildApiUrl(`/gabung?${searchParams.toString()}`))
+  const rawText = await res.text()
+  let body: any = null
+  if (rawText) {
+    try {
+      body = JSON.parse(rawText)
+    } catch {
+      body = null
+    }
+  }
+  if (!res.ok || !isApiOk(body)) {
+    const message =
+      body?.message ??
+      (rawText?.trim()
+        ? `Gagal memuat data gabung: ${rawText.slice(0, 120)}`
+        : "Gagal memuat data gabung")
+    throw new Error(message)
+  }
+  const data: any = pickApiData(body) ?? {}
+  const items = (data.items ?? data.rows ?? data ?? []) as Record<string, unknown>[]
+  const pagination = data.pagination ?? body.pagination ?? {
+    page,
+    pageSize,
+    total: items.length,
+  }
+  return { items, pagination }
 }
 
 /**

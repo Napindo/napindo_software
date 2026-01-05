@@ -13,6 +13,13 @@ contextBridge.exposeInMainWorld('database', {
   fetchExhibitorCountByExpo: () => ipcRenderer.invoke('db:fetchExhibitorCountByExpo'),
   fetchExpoChartData: () => ipcRenderer.invoke('db:fetchExpoChartData'),
   fetchAuditLogs: (limit = 200) => ipcRenderer.invoke('db:fetchAuditLogs', limit),
+  createAuditLog: (payload: {
+    username?: string | null
+    action: string
+    page?: string | null
+    summary?: string | null
+    data?: unknown
+  }) => ipcRenderer.invoke('db:createAuditLog', payload),
 
   login: (payload: { username: string; password: string; division?: string | null }) =>
     ipcRenderer.invoke('db:login', payload),
@@ -34,6 +41,8 @@ contextBridge.exposeInMainWorld('database', {
   listPengguna: () => ipcRenderer.invoke('db:listPengguna'),
 
   findCompany: (company: string) => ipcRenderer.invoke('db:findCompany', company),
+  listGabung: (params?: { page?: number; pageSize?: number; q?: string }) =>
+    ipcRenderer.invoke('db:listGabung', params),
 
   saveAddData: (payload: any) => ipcRenderer.invoke('db:saveAddData', payload),
 

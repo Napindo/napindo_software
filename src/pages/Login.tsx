@@ -13,6 +13,7 @@ type LoginForm = {
 
 type RememberPayload = {
   username?: string;
+  password?: string;
   division?: string;
   remember?: boolean;
 };
@@ -124,6 +125,7 @@ function LoginPage({ onSuccess }: LoginPageProps) {
         JSON.stringify({
           remember: true,
           username: payload.username,
+          password: payload.password,
           division: payload.division,
         } as RememberPayload),
       );
@@ -143,7 +145,7 @@ function LoginPage({ onSuccess }: LoginPageProps) {
           ...prev,
           username: shouldRemember ? parsed.username ?? "" : "",
           division: shouldRemember ? parsed.division ?? "" : "",
-          password: "",
+          password: shouldRemember ? parsed.password ?? "" : "",
         }));
       } catch {
         //
@@ -197,7 +199,7 @@ function LoginPage({ onSuccess }: LoginPageProps) {
   // Sync remember-me
   useEffect(() => {
     persistRemember(remember, form);
-  }, [remember, form.username, form.division]);
+  }, [remember, form.username, form.password, form.division]);
 
   const isReady =
     form.username.trim() !== "" && form.password.trim() !== "";
@@ -247,7 +249,7 @@ function LoginPage({ onSuccess }: LoginPageProps) {
         setGlobalMessage({ type: "success", text: "Login berhasil" });
         persistRemember(remember, {
           username: form.username,
-          password: "",
+          password: form.password,
           division: form.division,
         });
         onSuccess?.(user);

@@ -8,7 +8,7 @@ const fs$1 = require("node:fs/promises");
 var _documentCurrentScript = typeof document !== "undefined" ? document.currentScript : null;
 function createWindow(options) {
   const window = new electron.BrowserWindow({
-    icon: path.join(options.publicDir, "electron-vite.svg"),
+    icon: path.join(options.publicDir, "assets", "logo.ico"),
     webPreferences: {
       preload: options.preload,
       devTools: false
@@ -188,6 +188,24 @@ async function fetchExpoChartData() {
     throw new Error(body.message || "Gagal mengambil data grafik pameran");
   }
   return pickData(body);
+}
+async function listGabungRecords(params) {
+  var _a;
+  const page = (params == null ? void 0 : params.page) ?? 1;
+  const pageSize = (params == null ? void 0 : params.pageSize) ?? 200;
+  const search = (_a = params == null ? void 0 : params.q) == null ? void 0 : _a.trim();
+  const query = new URLSearchParams({
+    page: String(page),
+    pageSize: String(pageSize)
+  });
+  if (search) {
+    query.set("q", search);
+  }
+  const { body } = await apiFetch(`/gabung?${query.toString()}`);
+  if (!isResponseOk(body)) {
+    throw new Error(body.message || "Gagal memuat data gabung");
+  }
+  return pickData(body) ?? body;
 }
 async function findCompanyByName(company) {
   const trimmed = company.trim();
@@ -748,6 +766,14 @@ function registerGabungIpcHandlers() {
       return errorResponse$3(error);
     }
   });
+  electron.ipcMain.handle("db:listGabung", async (_event, params) => {
+    try {
+      const data = await listGabungRecords(params);
+      return { success: true, data };
+    } catch (error) {
+      return errorResponse$3(error);
+    }
+  });
   electron.ipcMain.handle("db:saveAddData", async (_event, payload) => {
     try {
       const result = await saveAddData(payload);
@@ -853,6 +879,16 @@ async function fetchAuditLogs(limit = 200) {
   }
   return pickData(body) ?? [];
 }
+async function createAuditLog(payload) {
+  const { body } = await apiFetch("/audit/logs", {
+    method: "POST",
+    body: JSON.stringify(payload ?? {})
+  });
+  if (!isResponseOk(body)) {
+    throw new Error(body.message || "Gagal menyimpan audit log");
+  }
+  return pickData(body) ?? body;
+}
 const errorResponse$2 = (error) => ({
   success: false,
   message: error instanceof Error ? error.message : String(error)
@@ -862,6 +898,14 @@ function registerAuditIpcHandlers() {
     try {
       const rows = await fetchAuditLogs(Number(limit) || 200);
       return { success: true, rows };
+    } catch (error) {
+      return errorResponse$2(error);
+    }
+  });
+  electron.ipcMain.handle("db:createAuditLog", async (_event, payload) => {
+    try {
+      const data = await createAuditLog(payload);
+      return { success: true, data };
     } catch (error) {
       return errorResponse$2(error);
     }

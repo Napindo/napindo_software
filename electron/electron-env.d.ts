@@ -75,6 +75,13 @@ interface Window {
         }[]
       >
     >
+    createAuditLog: (payload: {
+      username?: string | null
+      action: string
+      page?: string | null
+      summary?: string | null
+      data?: unknown
+    }) => Promise<DatabaseResponse>
     login: (
       payload: { username: string; password: string; division?: string | null },
     ) => Promise<DatabaseResponse<{ username: string; division?: string | null; name?: string | null }>>
@@ -94,6 +101,7 @@ interface Window {
     logoutPengguna: (payload: { username: string }) => Promise<DatabaseResponse<{ username: string; status?: string | null }>>
     listPengguna: () => Promise<DatabaseResponse<{ username?: string; division?: string | null; status?: string | null }>>
     findCompany: <T = Record<string, unknown>>(company: string) => Promise<DatabaseResponse<T>>
+    listGabung: (params?: { page?: number; pageSize?: number; q?: string }) => Promise<DatabaseResponse>
     saveAddData: (payload: Record<string, unknown>) => Promise<DatabaseResponse>
     importGabungExcel: (payload: {
       fileBase64: string

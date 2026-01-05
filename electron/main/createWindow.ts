@@ -10,7 +10,7 @@ export type CreateWindowOptions = {
 
 export function createWindow(options: CreateWindowOptions) {
   const window = new BrowserWindow({
-    icon: path.join(options.publicDir, 'electron-vite.svg'),
+    icon: path.join(options.publicDir, 'assets', 'logo.ico'),
     webPreferences: {
       preload: options.preload,
       devTools: false,

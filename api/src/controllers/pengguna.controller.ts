@@ -2,7 +2,6 @@ import type { Request, Response } from "express";
 import prisma from "../prisma";
 import { ok, fail } from "../utils/apiResponse";
 import { writeAuditLog } from "../services/auditLog";
-import { hashPassword, isHashed, verifyPassword } from "../services/password";
 import { validateDivision, validatePassword, validateUsername } from "../utils/validation";
 
 /**
@@ -83,7 +82,7 @@ export async function createPengguna(req: Request, res: Response) {
     const user = await prisma.pengguna.create({
       data: {
         username: String(username),
-        password: hashPassword(String(password)),
+        password: String(password),
         division: division ? String(division) : null,
         status: status ?? null,
       },
@@ -121,7 +120,7 @@ export async function updatePengguna(req: Request, res: Response) {
     const updated = await prisma.pengguna.update({
       where: { username },
       data: {
-        password: shouldUpdatePassword ? hashPassword(String(password)) : user.password,
+        password: shouldUpdatePassword ? String(password) : user.password,
         division: division ?? user.division,
         status: status ?? user.status,
       },
@@ -172,18 +171,10 @@ export async function loginPengguna(req: Request, res: Response) {
       where: { username },
     });
 
-    if (!user || !verifyPassword(String(password), user.password)) {
+    if (!user || String(user.password ?? "") !== String(password)) {
       return res
         .status(401)
         .json(fail("Username atau password salah"));
-    }
-
-    const plainPassword = String(password);
-    if (user.password && !isHashed(user.password)) {
-      await prisma.pengguna.update({
-        where: { username: user.username },
-        data: { password: hashPassword(plainPassword) },
-      });
     }
 
     if (user.status === "ON") {

@@ -17,13 +17,13 @@ function resolveBaseUrl() {
     ""
 
   if (envUrl) {
-    // Jika hanya port yang diberikan, lengkapi jadi http://127.0.0.1:<port>
-    if (/^\d+$/.test(envUrl.trim())) return `http://127.0.0.1:${envUrl.trim()}`
+    // Jika hanya port yang diberikan, lengkapi jadi http://192.168.1.86:<port>
+    if (/^\d+$/.test(envUrl.trim())) return `http://192.168.1.86:${envUrl.trim()}`
     return envUrl
   }
 
-  // Default to IPv4 to avoid ::1 resolution issues (JSReport running on 5490 per setup)
-  return "http://127.0.0.1:5490"
+  // Default to IPv4 to avoid ::1 resolution issues (JSReport running on 9133 per setup)
+  return "http://192.168.1.86:9133"
 }
 
 export async function renderWithJsreport(body: any) {

@@ -17,13 +17,19 @@ export default function App() {
     }
 
     try {
-      const parsed = JSON.parse(raw) as { remember?: boolean; username?: string; division?: string }
+      const parsed = JSON.parse(raw) as {
+        remember?: boolean
+        username?: string
+        password?: string
+        division?: string
+      }
       if (parsed?.remember) {
         localStorage.setItem(
           key,
           JSON.stringify({
             remember: true,
             username: user?.username ?? parsed.username ?? '',
+            password: parsed.password ?? '',
             division: user?.division ?? parsed.division ?? '',
           }),
         )

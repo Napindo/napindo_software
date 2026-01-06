@@ -3,7 +3,8 @@
   "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
   "appId": "YourAppID",
   "asar": true,
-  "productName": "YourAppName",
+  "productName": "Napindo Visitor Software 2",
+  "icon": "public/assets/logo.ico",
   "directories": {
     "output": "release/${version}"
   },

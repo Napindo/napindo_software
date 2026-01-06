@@ -6,7 +6,7 @@ export const toBase64 = (bytes: Uint8Array) => {
   return btoa(binary)
 }
 
-export const arrayBufferToBase64 = (buffer: ArrayBuffer) => {
+export const arrayBufferToBase64 = (buffer: ArrayBufferLike) => {
   return toBase64(new Uint8Array(buffer))
 }
 

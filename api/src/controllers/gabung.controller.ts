@@ -406,9 +406,13 @@ export async function importGabungExcel(req: Request, res: Response) {
         ? Math.floor(maxRowsInput)
         : 0;
 
-    const buffer = Buffer.from(base64, "base64") as unknown as Buffer;
+    const buffer = Buffer.from(base64, "base64");
+    const arrayBuffer = buffer.buffer.slice(
+      buffer.byteOffset,
+      buffer.byteOffset + buffer.byteLength,
+    );
     const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(buffer, {
+    await workbook.xlsx.load(arrayBuffer, {
       ignoreNodes: [
         "dataValidations",
         "conditionalFormatting",

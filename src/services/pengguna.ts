@@ -25,7 +25,7 @@ export type PenggunaRow = {
 }
 
 export type DatabaseResponse<T = unknown> =
-  | { success: true; data?: T; user?: T; message?: string }
+  | { success: true; data?: T; rows?: T[]; user?: T; message?: string }
   | { success: false; message: string }
 
 async function invokeCreatePengguna(payload: CreatePenggunaPayload): Promise<DatabaseResponse> {

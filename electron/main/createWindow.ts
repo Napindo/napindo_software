@@ -10,12 +10,15 @@ export type CreateWindowOptions = {
 
 export function createWindow(options: CreateWindowOptions) {
   const window = new BrowserWindow({
-    icon: path.join(options.publicDir, 'assets', 'logo.ico'),
+    icon: path.join(options.publicDir, 'assets', 'logo.png'),
+    autoHideMenuBar: true,
     webPreferences: {
       preload: options.preload,
       devTools: false,
     },
   })
+
+  window.setMenuBarVisibility(false)
 
   window.webContents.on('did-finish-load', () => {
     window.webContents.send('main-process-message', new Date().toLocaleString())

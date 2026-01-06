@@ -1,4 +1,13 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from 'react'
+import {
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+  type KeyboardEvent,
+} from 'react'
 import { comboFields, comboOptions, type ComboFieldName, code2Options, code3Options } from '../constants/addDataOptions'
 import { provinceCityMap, provinceOptions } from '../constants/provinces'
 import { countryDial } from '../constants/countryDial'
@@ -293,6 +302,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
   })
   const [dataSearchEdits, setDataSearchEdits] = useState<Record<string, Record<string, string>>>({})
   const [dataSearchSavingId, setDataSearchSavingId] = useState<string | number | null>(null)
+  const deferredDataSearchFilters = useDeferredValue(dataSearchFilters)
   const [comboSearch, setComboSearch] = useState<Record<ComboFieldName, string>>({
     mainActive: '',
     business: '',
@@ -522,37 +532,46 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
 
   const normalizedFilter = (value: string) => value.trim().toLowerCase()
 
+  const dataSearchIndex = useMemo(
+    () =>
+      dataSearchRows.map((row) => ({
+        row,
+        hpText: `${row.phone ?? ''} ${row.handphone ?? ''}`.toLowerCase(),
+        companyText: String(row.company ?? '').toLowerCase(),
+        emailText: String(row.email ?? '').toLowerCase(),
+        nameText: String(row.name ?? '').toLowerCase(),
+        businessText: String(row.business ?? '').toLowerCase(),
+        userNameText: String(row.source ?? '').toLowerCase(),
+      })),
+    [dataSearchRows],
+  )
+
   const filteredDataSearchRows = useMemo(() => {
     const filters = {
-      hp: normalizedFilter(dataSearchFilters.hp),
-      company: normalizedFilter(dataSearchFilters.company),
-      email: normalizedFilter(dataSearchFilters.email),
-      name: normalizedFilter(dataSearchFilters.name),
-      business: normalizedFilter(dataSearchFilters.business),
-      userName: normalizedFilter(dataSearchFilters.userName),
+      hp: normalizedFilter(deferredDataSearchFilters.hp),
+      company: normalizedFilter(deferredDataSearchFilters.company),
+      email: normalizedFilter(deferredDataSearchFilters.email),
+      name: normalizedFilter(deferredDataSearchFilters.name),
+      business: normalizedFilter(deferredDataSearchFilters.business),
+      userName: normalizedFilter(deferredDataSearchFilters.userName),
     }
 
     if (Object.values(filters).every((value) => value === '')) {
       return dataSearchRows
     }
 
-    return dataSearchRows.filter((row) => {
-      const hpText = `${row.phone ?? ''} ${row.handphone ?? ''}`.toLowerCase()
-      const companyText = String(row.company ?? '').toLowerCase()
-      const emailText = String(row.email ?? '').toLowerCase()
-      const nameText = String(row.name ?? '').toLowerCase()
-      const businessText = String(row.business ?? '').toLowerCase()
-      const userNameText = String(row.source ?? '').toLowerCase()
-
-      if (filters.hp && !hpText.includes(filters.hp)) return false
-      if (filters.company && !companyText.includes(filters.company)) return false
-      if (filters.email && !emailText.includes(filters.email)) return false
-      if (filters.name && !nameText.includes(filters.name)) return false
-      if (filters.business && !businessText.includes(filters.business)) return false
-      if (filters.userName && !userNameText.includes(filters.userName)) return false
-      return true
-    })
-  }, [dataSearchFilters, dataSearchRows])
+    return dataSearchIndex
+      .filter((entry) => {
+        if (filters.hp && !entry.hpText.includes(filters.hp)) return false
+        if (filters.company && !entry.companyText.includes(filters.company)) return false
+        if (filters.email && !entry.emailText.includes(filters.email)) return false
+        if (filters.name && !entry.nameText.includes(filters.name)) return false
+        if (filters.business && !entry.businessText.includes(filters.business)) return false
+        if (filters.userName && !entry.userNameText.includes(filters.userName)) return false
+        return true
+      })
+      .map((entry) => entry.row)
+  }, [dataSearchIndex, dataSearchRows, deferredDataSearchFilters])
 
   const dataSearchTotalPages = useMemo(() => {
     const total = Math.ceil(dataSearchTotal / dataSearchPageSize)

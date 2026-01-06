@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import './App.css'
 import DashboardPage from './pages/Dashboard'
 import LoginPage, { type AuthenticatedUser } from './pages/Login'
@@ -7,6 +8,17 @@ import GlobalStatusBar from './components/GlobalStatusBar'
 
 export default function App() {
   const { user, setUser, clearUser, setActivePage, setGlobalMessage } = useAppStore()
+
+  useEffect(() => {
+    if (!user?.username) return
+
+    const handleClose = () => {
+      logoutPengguna({ username: user.username }).catch(() => {})
+    }
+
+    window.addEventListener('beforeunload', handleClose)
+    return () => window.removeEventListener('beforeunload', handleClose)
+  }, [user?.username])
 
   const persistRememberOnLogout = () => {
     const key = 'napindo-login'

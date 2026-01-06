@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { requestLabelOptions, requestLabelPerusahaan } from '../services/printLabel'
+import { comboOptions } from '../constants/addDataOptions'
 import { provinceOptions } from '../constants/provinces'
 import { useAppStore } from '../store/appStore'
 import { toBase64 } from '../utils/base64'
@@ -360,8 +361,8 @@ export function PrintLabelTemplate({
     exhthn: [],
     province: [],
     updatedBy: [],
-    business: [],
-    nonBusiness: [],
+    business: comboOptions.business,
+    nonBusiness: comboOptions.business,
   })
   const { user } = useAppStore()
 
@@ -375,6 +376,8 @@ export function PrintLabelTemplate({
           ...data,
           nonSource: data?.nonSource ?? data?.source ?? prev.nonSource,
           province: [...new Set([...(data?.province ?? []), ...provinceOptions])],
+          business: comboOptions.business,
+          nonBusiness: comboOptions.business,
         }))
       })
       .catch((err) => {

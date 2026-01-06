@@ -30,6 +30,7 @@ import {
   type AddDataPayload,
 } from '../services/addData'
 import { useAppStore } from '../store/appStore'
+import { getUserAccess } from '../utils/access'
 import { normalizeSpaces, toTitleCaseLoose } from '../utils/text'
 import { createAuditLog } from '../services/audit'
 
@@ -256,10 +257,8 @@ const helperText = (name: FieldName) => {
 
 const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, headerTitleOverride }: AddDataProps) => {
   const { user, setGlobalMessage } = useAppStore()
-  const searchAllowedUsers = useMemo(() => new Set(['anton', 'sandi', 'zidan', 'fajrin']), [])
-  const displayUsername = String(user?.username ?? '').trim()
-  const normalizedUsername = displayUsername.toLowerCase()
-  const canOpenSearch = searchAllowedUsers.has(normalizedUsername)
+  const access = useMemo(() => getUserAccess(user), [user])
+  const canOpenSearch = access.canSearchData
   const [form, setForm] = useState<AddDataForm>(defaultForm)
   const [selectedId, setSelectedId] = useState<string | number | null>(null)
   const [highlightIndex, setHighlightIndex] = useState(0)
@@ -738,9 +737,13 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
         response && typeof response === 'object' && !Array.isArray(response)
           ? (response as Record<string, unknown>)
           : payload
+      const mergedRow = { ...row, ...updated }
       setDataSearchRows((prev) =>
-        prev.map((item) => (getRowId(item) === rowId ? { ...item, ...updated } : item)),
+        prev.map((item) => (getRowId(item) === rowId ? mergedRow : item)),
       )
+      if (String(selectedId ?? '') === rowKey) {
+        applyCompanyRow(mergedRow, { keepPopup: true, silent: true })
+      }
       clearDataSearchEdit(rowId)
       setDataSearchNotice({ type: 'success', message: `Data NOURUT ${rowId} berhasil diperbarui.` })
     } catch (error) {
@@ -856,7 +859,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
     }
   }
 
-  const applyCompanyRow = (row: Record<string, unknown>, options?: { keepPopup?: boolean }) => {
+  const applyCompanyRow = (row: Record<string, unknown>, options?: { keepPopup?: boolean; silent?: boolean }) => {
     const lower: Record<string, unknown> = {}
     Object.entries(row || {}).forEach(([key, value]) => {
       lower[key.toLowerCase()] = value
@@ -913,7 +916,9 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
       setCompanyLookup((prev) => ({ ...prev, open: false }))
     }
     setHighlightIndex(0)
-    setFeedback({ type: 'success', message: 'Data company berhasil dimuat ke form.' })
+    if (!options?.silent) {
+      setFeedback({ type: 'success', message: 'Data company berhasil dimuat ke form.' })
+    }
   }
 
   const clampIndex = (value: number, max: number) => {
@@ -1013,11 +1018,38 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
 
   const validate = () => {
     const errors: string[] = []
-    const requiredFieldsList: FieldName[] = ['address1', 'province', 'city', 'name', 'mainActive', 'business', 'source', 'lastUpdate']
+    const requiredFieldsList: FieldName[] = [
+      'company',
+      'address1',
+      'province',
+      'city',
+      'name',
+      'mainActive',
+      'business',
+      'source',
+      'lastUpdate',
+    ]
     requiredFieldsList.forEach((key) => {
       const rawValue = form[key]
       const hasValue = Array.isArray(rawValue) ? rawValue.length > 0 : String(rawValue).trim() !== ''
       if (!hasValue) errors.push(`${labelMap[key]} wajib diisi.`)
+    })
+
+    if (errors.length > 0) return errors
+
+    ;(Object.keys(minLengths) as Array<Exclude<FieldName, 'verify' | 'lastUpdate'>>).forEach((key) => {
+      const min = minLengths[key]
+      const rawValue = form[key]
+      if (Array.isArray(rawValue)) {
+        if (rawValue.length > 0 && rawValue.length < min) {
+          errors.push(`${labelMap[key]} minimal ${min} item.`)
+        }
+        return
+      }
+      const text = String(rawValue ?? '').trim()
+      if (text && text.length < min) {
+        errors.push(`${labelMap[key]} minimal ${min} karakter.`)
+      }
     })
 
     return errors
@@ -1053,6 +1085,29 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
         if (success) {
           setFeedback({ type: 'success', message: `${actionLabel} berhasil disimpan.` })
           setGlobalMessage({ type: 'success', text: `${actionLabel} berhasil disimpan.` })
+          try {
+            const responseId =
+              response && typeof response === 'object'
+                ? (response as Record<string, unknown>).nourut ?? (response as Record<string, unknown>).id
+                : undefined
+            const auditId =
+              action === 'update'
+                ? selectedId
+                : responseId ?? (payload as Record<string, unknown>).nourut ?? undefined
+            await createAuditLog({
+              username: user?.username ?? null,
+              action,
+              page: 'Add Data',
+              summary: `${action === 'add' ? 'Add' : 'Update'} data`,
+              data: {
+                id: auditId ?? null,
+                company: payload.company,
+                name: payload.name,
+              },
+            })
+          } catch {
+            // ignore logging failures
+          }
           setForm(defaultForm())
           setSelectedId(null)
           setCompanyLookup((prev) => ({ ...prev, open: false, rows: [], query: '' }))
@@ -1856,6 +1911,13 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
                                 className="inline-flex items-center justify-center px-3 py-1 rounded-md bg-rose-600 text-white text-xs font-semibold disabled:opacity-50"
                               >
                                 {String(dataSearchSavingId ?? '') === rowKey ? 'Saving...' : 'Save'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => applyCompanyRow(row, { keepPopup: true })}
+                                className="inline-flex items-center justify-center px-3 py-1 rounded-md border border-slate-200 text-slate-700 text-xs font-semibold"
+                              >
+                                Load
                               </button>
                               <button
                                 type="button"

@@ -1,30 +1,66 @@
-# React + TypeScript + Vite
+# Napindo Software
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplikasi desktop (Electron + React) untuk input data, pencarian, report, dan print label. Backend API terpisah di folder `api/` dengan database dan jsreport untuk generate dokumen.
 
-Currently, two official plugins are available:
+## Prasyarat
+- Node.js + npm
+- Database (PostgreSQL sesuai `DATABASE_URL`)
+- jsreport server (untuk export dokumen)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Struktur Repo
+- `src/` UI renderer (React + Vite)
+- `electron/` main process + preload
+- `api/` backend service (Express + Prisma)
 
-## Expanding the ESLint configuration
+## Konfigurasi Environment
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+Root app:
+- Salin `.env.example` menjadi `.env`
+- Isi nilai berikut:
+  - `API_BASE_URL` contoh: `http://localhost:8133`
+  - `API_PREFIX` contoh: `/api`
 
-- Configure the top-level `parserOptions` property like this:
+API server (`api/.env`):
+- `PORT` contoh: `8133`
+- `DATABASE_URL` contoh: `postgresql://USER:PASSWORD@HOST:5432/DB?schema=public`
+- `JSREPORT_URL` contoh: `http://localhost:9133`
+- `JSREPORT_USER` contoh: `admin`
+- `JSREPORT_PASSWORD` contoh: `password`
 
-```js
-export default {
-  // other rules...
-  parserOptions: {
-    ecmaVersion: 'latest',
-    sourceType: 'module',
-    project: ['./tsconfig.json', './tsconfig.node.json'],
-    tsconfigRootDir: __dirname,
-  },
-}
+Catatan: jika jsreport memakai config khusus, lihat `api/jsreport.config.json`.
+
+## Menjalankan Backend (API)
+```bash
+cd api
+npm install
+npm run prisma:generate
+npm run prisma:migrate
+npm run dev
 ```
 
-- Replace `plugin:@typescript-eslint/recommended` to `plugin:@typescript-eslint/recommended-type-checked` or `plugin:@typescript-eslint/strict-type-checked`
-- Optionally add `plugin:@typescript-eslint/stylistic-type-checked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and add `plugin:react/recommended` & `plugin:react/jsx-runtime` to the `extends` list
+## Menjalankan UI (Renderer)
+```bash
+npm install
+npm run dev
+```
+
+## Build
+```bash
+npm run build
+```
+
+Build Windows (semua arsitektur):
+```bash
+npm run build:win:all
+```
+
+## Lint
+```bash
+npm run lint
+```
+
+## Troubleshooting
+- UI tidak bisa akses API: cek `API_BASE_URL` di `.env`, pastikan API sudah running di `PORT` yang sama.
+- Gagal generate report/label: pastikan `JSREPORT_URL`, `JSREPORT_USER`, `JSREPORT_PASSWORD` di `api/.env` benar dan jsreport server aktif.
+- Error Prisma/DB: cek `DATABASE_URL`, pastikan database up dan schema sudah migrate (`npm run prisma:migrate`).
+- Electron tidak load UI: pastikan `npm run dev` (renderer) berjalan dan tidak ada error di terminal.

@@ -11,6 +11,7 @@ export type UserAccess = {
   canImport: boolean
   canViewLog: boolean
   canAddUser: boolean
+  canSearchData: boolean
 }
 
 const fullAccessUsers = new Set(['anton', 'sandi', 'zidan', 'fajrin'])
@@ -53,6 +54,7 @@ export const getUserAccess = (user?: AppUser | null): UserAccess => {
       canImport: true,
       canViewLog: true,
       canAddUser: true,
+      canSearchData: true,
     }
   }
 
@@ -66,6 +68,7 @@ export const getUserAccess = (user?: AppUser | null): UserAccess => {
       canImport: false,
       canViewLog: false,
       canAddUser: false,
+      canSearchData: false,
     }
   }
 
@@ -77,5 +80,6 @@ export const getUserAccess = (user?: AppUser | null): UserAccess => {
     canImport: false,
     canViewLog: false,
     canAddUser: false,
+    canSearchData: false,
   }
 }

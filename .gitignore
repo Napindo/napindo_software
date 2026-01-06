@@ -25,3 +25,5 @@ release
 *.sw?
 
 /src/generated/prisma
+.env
+api/.env

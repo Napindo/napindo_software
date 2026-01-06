@@ -698,7 +698,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
       return
     }
 
-    const payload: Record<string, unknown> = {}
+    const payload: AddDataPayload = {}
     Object.entries(edits).forEach(([key, value]) => {
       const original = toEditableValue(row[key], key)
       if (original === value) return

@@ -228,14 +228,6 @@ export const Sidebar = ({ onLogout }: SidebarProps) => {
     setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }))
   }
 
-  const resolvedActiveParent = useMemo(
-    () =>
-      navStructure
-        .flatMap((group) => group.items)
-        .find((item): item is NavParent => 'items' in item && item.items.some((child) => child.page === activePage)),
-    [activePage],
-  )
-
   return (
     <aside className="relative z-10 w-64 bg-white/95 backdrop-blur-xl border-r border-slate-200 shadow-lg">
       <div className="px-6 pt-6 pb-5 flex items-center gap-3">

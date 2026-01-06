@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, Menu } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -62,6 +62,7 @@ function createMainWindow() {
 }
 
 app.whenReady().then(() => {
+  Menu.setApplicationMenu(null)
   registerGabungIpcHandlers()
   registerAuditIpcHandlers()
   registerPenggunaIpcHandlers()

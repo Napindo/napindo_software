@@ -12,6 +12,8 @@ import {
 } from "docx"
 import type { ReportRow } from "./reportRender"
 
+type DocxAlignment = (typeof AlignmentType)[keyof typeof AlignmentType]
+
 const RUN_FONT = "Arial Narrow"
 const BASE_FONT_SIZE = 20
 const HEADER_FONT_SIZE = 24
@@ -33,14 +35,14 @@ const NO_BORDERS = {
 const makeTextRun = (text: string, bold = false) =>
   new TextRun({ text, size: BASE_FONT_SIZE, font: RUN_FONT, bold })
 
-const makeParagraph = (text: string, bold = false, alignment?: AlignmentType) =>
+const makeParagraph = (text: string, bold = false, alignment?: DocxAlignment) =>
   new Paragraph({
     alignment,
     spacing: { after: 0 },
     children: [makeTextRun(text, bold)],
   })
 
-const makeCell = (lines: Array<{ text: string; bold?: boolean }>, width: number, align?: AlignmentType) =>
+const makeCell = (lines: Array<{ text: string; bold?: boolean }>, width: number, align?: DocxAlignment) =>
   new TableCell({
     width: { size: width, type: WidthType.DXA },
     borders: NO_BORDERS,

@@ -1,11 +1,12 @@
 {
   "name": "napindo_software",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.0.5",
   "type": "commonjs",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build && electron-builder",
+    "build:win:all": "npm version patch --no-git-tag-version && tsc && vite build && electron-builder --win --x64 --ia32 --arm64",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
   },

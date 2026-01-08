@@ -259,6 +259,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
   const { user, setGlobalMessage } = useAppStore()
   const access = useMemo(() => getUserAccess(user), [user])
   const canOpenSearch = access.canSearchData
+  const isEditingFromSearch = Boolean(initialRow)
   const [form, setForm] = useState<AddDataForm>(defaultForm)
   const [selectedId, setSelectedId] = useState<string | number | null>(null)
   const [highlightIndex, setHighlightIndex] = useState(0)
@@ -1158,7 +1159,9 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
 
       if (event.key === 'F5') {
         event.preventDefault()
-        submitAdd(event as any)
+        if (!isEditingFromSearch) {
+          submitAdd(event as any)
+        }
       } else if (event.key === 'F2') {
         event.preventDefault()
         submitUpdate(event as any)
@@ -1184,6 +1187,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
     openDataSearch,
     closeDataSearch,
     canOpenSearch,
+    isEditingFromSearch,
   ])
 
   useEffect(() => {
@@ -1596,19 +1600,24 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
         </div>
       ) : null}
 
-      <form className="bg-white border border-slate-200 shadow-sm rounded-2xl p-6 space-y-6" onSubmit={submitAdd}>
+      <form
+        className="bg-white border border-slate-200 shadow-sm rounded-2xl p-6 space-y-6"
+        onSubmit={isEditingFromSearch ? submitUpdate : submitAdd}
+      >
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="space-y-4">{leftFields.map((field) => renderField(field))}</div>
           <div className="space-y-4">{rightFields.map((field) => renderField(field))}</div>
         </div>
 
         <div className="flex flex-wrap items-center gap-3 pt-2">
-          <button
-            type="submit"
-            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-gradient-to-r from-rose-500 to-rose-600 text-white font-semibold shadow-md hover:shadow-lg"
-          >
-            {saving ? 'Saving...' : 'Add/Save (F5)'}
-          </button>
+          {!isEditingFromSearch ? (
+            <button
+              type="submit"
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-gradient-to-r from-rose-500 to-rose-600 text-white font-semibold shadow-md hover:shadow-lg"
+            >
+              {saving ? 'Saving...' : 'Add/Save (F5)'}
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={submitUpdate}

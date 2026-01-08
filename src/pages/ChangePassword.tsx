@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
 import type { AuthenticatedUser } from './Login'
 import { changePenggunaPassword } from '../services/pengguna'
+import { createAuditLog } from '../services/audit'
 import { useAppStore } from '../store/appStore'
 
 type ChangePasswordForm = {
@@ -106,6 +107,16 @@ const ChangePasswordPage = ({ currentUser }: ChangePasswordProps) => {
       .then(() => {
         setMessage('Password berhasil diubah.')
         setGlobalMessage({ type: 'success', text: 'Password berhasil diubah.' })
+        createAuditLog({
+          username: user?.username ?? null,
+          action: 'change-password',
+          page: 'Change Password',
+          summary: 'Change password',
+          data: {
+            username: form.username.trim(),
+            division: form.division.trim() || null,
+          },
+        }).catch(() => {})
         setForm((prev) => ({
           ...prev,
           currentPassword: '',

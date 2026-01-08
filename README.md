@@ -17,13 +17,13 @@ Aplikasi desktop (Electron + React) untuk input data, pencarian, report, dan pri
 Root app:
 - Salin `.env.example` menjadi `.env`
 - Isi nilai berikut:
-  - `API_BASE_URL` contoh: `http://localhost:8133`
+  - `API_BASE_URL` contoh: `http://<api-host>:<port>`
   - `API_PREFIX` contoh: `/api`
 
 API server (`api/.env`):
-- `PORT` contoh: `8133`
+- `PORT` contoh: `<port>`
 - `DATABASE_URL` contoh: `postgresql://USER:PASSWORD@HOST:5432/DB?schema=public`
-- `JSREPORT_URL` contoh: `http://localhost:9133`
+- `JSREPORT_URL` contoh: `http://<jsreport-host>:<port>`
 - `JSREPORT_USER` contoh: `admin`
 - `JSREPORT_PASSWORD` contoh: `password`
 
@@ -64,3 +64,9 @@ npm run lint
 - Gagal generate report/label: pastikan `JSREPORT_URL`, `JSREPORT_USER`, `JSREPORT_PASSWORD` di `api/.env` benar dan jsreport server aktif.
 - Error Prisma/DB: cek `DATABASE_URL`, pastikan database up dan schema sudah migrate (`npm run prisma:migrate`).
 - Electron tidak load UI: pastikan `npm run dev` (renderer) berjalan dan tidak ada error di terminal.
+
+## Dokumentasi
+- Developer Guide: `docs/DEVELOPER_GUIDE.md`
+- Flow Admin: `docs/ADMIN_FLOW.md`
+- Flow User: `docs/USER_FLOW.md`
+- Troubleshooting: `docs/TROUBLESHOOTING.md`

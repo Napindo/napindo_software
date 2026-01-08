@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent, type ChangeEvent } from 'react'
 import type { AuthenticatedUser } from './Login'
 import { createPengguna } from '../services/pengguna'
+import { createAuditLog } from '../services/audit'
 import { useAppStore } from '../store/appStore'
 import { toTitleCase } from '../utils/text'
 
@@ -110,6 +111,16 @@ const AddUserPage = (_props: AddUserPageProps) => {
       .then(() => {
         setMessage('User berhasil dibuat.')
         setGlobalMessage({ type: 'success', text: 'User berhasil dibuat.' })
+        createAuditLog({
+          username: user?.username ?? null,
+          action: 'add-user',
+          page: 'Add User',
+          summary: `Add user: ${form.username.trim()}`,
+          data: {
+            username: form.username.trim(),
+            division: form.division.trim() || null,
+          },
+        }).catch(() => {})
         setForm((prev) => ({
           ...prev,
           username: '',

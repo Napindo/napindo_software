@@ -268,6 +268,8 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
   const popupRef = useRef<HTMLDivElement | null>(null)
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [openCombo, setOpenCombo] = useState<FieldName | null>(null)
+  const [openSingleSelect, setOpenSingleSelect] = useState<FieldName | null>(null)
+  const [singleSelectIndex, setSingleSelectIndex] = useState(0)
   const [provinceQuery, setProvinceQuery] = useState('')
   const [cityQuery, setCityQuery] = useState('')
   const [saving, setSaving] = useState(false)
@@ -336,7 +338,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
     'Regfish',
     'Regdfn',
     'Regaero',
-    'Regmarin',
+    'Regmarine',
     'Regisf',
     'Regisc',
   ]
@@ -430,6 +432,13 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
     const value = sanitizeText(event.target.value, 'province')
     setProvinceQuery(value)
     setForm((prev) => ({ ...prev, province: value, city: '' }))
+  }
+
+  const handleProvinceSelect = (name: string) => {
+    const sanitized = sanitizeText(name, 'province')
+    setProvinceQuery(sanitized)
+    setCityQuery('')
+    setForm((prev) => ({ ...prev, province: sanitized, city: '' }))
   }
 
   const handleCityChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -588,6 +597,114 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
     }))
     setCityQuery(sanitized)
   }
+
+  const closeSingleSelect = (field: FieldName) => {
+    if (openSingleSelect === field) {
+      setOpenSingleSelect(null)
+    }
+  }
+
+  const getSingleSelectOptions = (field: FieldName) => {
+    if (field === 'province') return filteredProvinceOptions
+    if (field === 'city') return filteredCityOptions
+    if (field === 'updateBy') return filteredUpdateByOptions
+    if (field === 'exhibitorTahun') return exhibitorYearSuggestions
+    return []
+  }
+
+  const getSingleSelectValue = (field: FieldName) => {
+    if (field === 'province') return form.province
+    if (field === 'city') return form.city
+    if (field === 'updateBy') return form.updateBy
+    if (field === 'exhibitorTahun') return form.exhibitorTahun
+    return ''
+  }
+
+  const applySingleSelectValue = (field: FieldName, value: string) => {
+    if (field === 'province') {
+      handleProvinceSelect(value)
+      return
+    }
+    if (field === 'city') {
+      handleCitySelect(value)
+      return
+    }
+    if (field === 'updateBy') {
+      setForm((prev) => ({ ...prev, updateBy: value }))
+      return
+    }
+    if (field === 'exhibitorTahun') {
+      setForm((prev) => ({ ...prev, exhibitorTahun: value }))
+    }
+  }
+
+  const openSingleSelectFor = (field: FieldName) => {
+    setOpenSingleSelect(field)
+    const options = getSingleSelectOptions(field)
+    const current = getSingleSelectValue(field).trim().toLowerCase()
+    const nextIndex = current
+      ? options.findIndex((option) => option.toLowerCase() === current)
+      : 0
+    setSingleSelectIndex(nextIndex >= 0 ? nextIndex : 0)
+  }
+
+  const handleSingleSelectKeyDown =
+    (field: FieldName) =>
+    (event: KeyboardEvent<HTMLInputElement>) => {
+      const options = getSingleSelectOptions(field)
+      if (event.key === 'ArrowDown') {
+        event.preventDefault()
+        if (openSingleSelect !== field) {
+          openSingleSelectFor(field)
+          return
+        }
+        setSingleSelectIndex((prev) => (options.length === 0 ? 0 : Math.min(prev + 1, options.length - 1)))
+        return
+      }
+      if (event.key === 'ArrowUp') {
+        event.preventDefault()
+        if (openSingleSelect !== field) {
+          openSingleSelectFor(field)
+          return
+        }
+        setSingleSelectIndex((prev) => (options.length === 0 ? 0 : Math.max(prev - 1, 0)))
+        return
+      }
+      if (event.key === 'Enter') {
+        if (openSingleSelect === field) {
+          event.preventDefault()
+          const option = options[singleSelectIndex]
+          if (option) {
+            applySingleSelectValue(field, option)
+            setOpenSingleSelect(null)
+          }
+        }
+        return
+      }
+      if (event.key === 'Escape' && openSingleSelect === field) {
+        event.preventDefault()
+        setOpenSingleSelect(null)
+      }
+    }
+
+  useEffect(() => {
+    if (!openSingleSelect) return
+    const options = getSingleSelectOptions(openSingleSelect)
+    if (options.length === 0) {
+      setSingleSelectIndex(0)
+      return
+    }
+    if (singleSelectIndex >= options.length) {
+      setSingleSelectIndex(0)
+    }
+  }, [
+    openSingleSelect,
+    filteredProvinceOptions,
+    filteredCityOptions,
+    filteredUpdateByOptions,
+    exhibitorYearSuggestions,
+    singleSelectIndex,
+  ])
 
   const formatCellValue = (value: unknown) => {
     if (value === null || value === undefined) return '-'
@@ -1255,19 +1372,43 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
               type="text"
               value={form.province}
               onChange={handleProvinceChange}
-              onBlur={() => setForm((prev) => ({ ...prev, province: sanitizeText(prev.province, 'province') }))}
-              list="province-options"
+              onFocus={() => openSingleSelectFor(name)}
+              onKeyDown={handleSingleSelectKeyDown(name)}
+              onBlur={() => {
+                setForm((prev) => ({ ...prev, province: sanitizeText(prev.province, 'province') }))
+                closeSingleSelect(name)
+              }}
               maxLength={minLength}
               required
               autoComplete="off"
               className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-rose-400 focus:ring-4 focus:ring-rose-100 transition"
               placeholder="Pilih province"
             />
-            <datalist id="province-options">
-              {filteredProvinceOptions.map((option) => (
-                <option key={option} value={option} />
-              ))}
-            </datalist>
+            {openSingleSelect === name ? (
+              <div className="absolute z-20 mt-2 w-full rounded-xl border border-slate-200 bg-white shadow-lg p-2 max-h-60 overflow-auto">
+                {filteredProvinceOptions.length === 0 ? (
+                  <p className="px-3 py-2 text-xs text-slate-500">Tidak ada hasil.</p>
+                ) : (
+                  filteredProvinceOptions.map((option, index) => (
+                    <button
+                      key={option}
+                      type="button"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => {
+                        handleProvinceSelect(option)
+                        setOpenSingleSelect(null)
+                      }}
+                      onMouseEnter={() => setSingleSelectIndex(index)}
+                      className={`w-full text-left px-3 py-2 rounded-lg text-sm text-slate-800 ${
+                        index === singleSelectIndex ? 'bg-rose-50' : 'hover:bg-rose-50'
+                      }`}
+                    >
+                      {option}
+                    </button>
+                  ))
+                )}
+              </div>
+            ) : null}
           </div>
           <p className="text-xs text-slate-500">Pilih kode/region provinsi lalu City akan menyesuaikan.</p>
         </div>
@@ -1286,19 +1427,43 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
               type="text"
               value={form.city}
               onChange={handleCityChange}
-              onBlur={() => handleCitySelect(form.city)}
-              list="city-options"
+              onFocus={() => openSingleSelectFor(name)}
+              onKeyDown={handleSingleSelectKeyDown(name)}
+              onBlur={() => {
+                handleCitySelect(form.city)
+                closeSingleSelect(name)
+              }}
               maxLength={minLength}
               required
               autoComplete="off"
               className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-rose-400 focus:ring-4 focus:ring-rose-100 transition"
               placeholder="Pilih city"
             />
-            <datalist id="city-options">
-              {filteredCityOptions.map((option) => (
-                <option key={option} value={option} />
-              ))}
-            </datalist>
+            {openSingleSelect === name ? (
+              <div className="absolute z-20 mt-2 w-full rounded-xl border border-slate-200 bg-white shadow-lg p-2 max-h-60 overflow-auto">
+                {filteredCityOptions.length === 0 ? (
+                  <p className="px-3 py-2 text-xs text-slate-500">Tidak ada hasil.</p>
+                ) : (
+                  filteredCityOptions.map((option, index) => (
+                    <button
+                      key={option}
+                      type="button"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => {
+                        handleCitySelect(option)
+                        setOpenSingleSelect(null)
+                      }}
+                      onMouseEnter={() => setSingleSelectIndex(index)}
+                      className={`w-full text-left px-3 py-2 rounded-lg text-sm text-slate-800 ${
+                        index === singleSelectIndex ? 'bg-rose-50' : 'hover:bg-rose-50'
+                      }`}
+                    >
+                      {option}
+                    </button>
+                  ))
+                )}
+              </div>
+            ) : null}
           </div>
           <p className="text-xs text-slate-500">
             Daftar City mengikuti province terpilih. Kosongkan atau ubah province bila tidak sesuai.
@@ -1360,18 +1525,40 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
               type="text"
               value={form.updateBy}
               onChange={handleChange('updateBy')}
-              list="updateby-options"
+              onFocus={() => openSingleSelectFor(name)}
+              onKeyDown={handleSingleSelectKeyDown(name)}
+              onBlur={() => closeSingleSelect(name)}
               maxLength={minLength}
               required={requiredFields.has(name)}
               autoComplete="off"
               className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-rose-400 focus:ring-4 focus:ring-rose-100 transition"
               placeholder="Pilih atau ketik"
             />
-            <datalist id="updateby-options">
-              {filteredUpdateByOptions.map((option) => (
-                <option key={option} value={option} />
-              ))}
-            </datalist>
+            {openSingleSelect === name ? (
+              <div className="absolute z-20 mt-2 w-full rounded-xl border border-slate-200 bg-white shadow-lg p-2 max-h-60 overflow-auto">
+                {filteredUpdateByOptions.length === 0 ? (
+                  <p className="px-3 py-2 text-xs text-slate-500">Tidak ada hasil.</p>
+                ) : (
+                  filteredUpdateByOptions.map((option, index) => (
+                    <button
+                      key={option}
+                      type="button"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => {
+                        setForm((prev) => ({ ...prev, updateBy: option }))
+                        setOpenSingleSelect(null)
+                      }}
+                      onMouseEnter={() => setSingleSelectIndex(index)}
+                      className={`w-full text-left px-3 py-2 rounded-lg text-sm text-slate-800 ${
+                        index === singleSelectIndex ? 'bg-rose-50' : 'hover:bg-rose-50'
+                      }`}
+                    >
+                      {option}
+                    </button>
+                  ))
+                )}
+              </div>
+            ) : null}
           </div>
           <p className="text-xs text-slate-500">Saran mengikuti tahun berjalan.</p>
         </div>
@@ -1395,17 +1582,39 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
                   exhibitorTahun: event.target.value.toUpperCase(),
                 }))
               }
-              list="exhibitor-year-options"
+              onFocus={() => openSingleSelectFor(name)}
+              onKeyDown={handleSingleSelectKeyDown(name)}
+              onBlur={() => closeSingleSelect(name)}
               maxLength={minLength}
               autoComplete="off"
               className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-rose-400 focus:ring-4 focus:ring-rose-100 transition"
-              placeholder="EXH25"
+              placeholder="EXH"
             />
-            <datalist id="exhibitor-year-options">
-              {exhibitorYearSuggestions.map((option) => (
-                <option key={option} value={option} />
-              ))}
-            </datalist>
+            {openSingleSelect === name ? (
+              <div className="absolute z-20 mt-2 w-full rounded-xl border border-slate-200 bg-white shadow-lg p-2 max-h-60 overflow-auto">
+                {exhibitorYearSuggestions.length === 0 ? (
+                  <p className="px-3 py-2 text-xs text-slate-500">Tidak ada saran.</p>
+                ) : (
+                  exhibitorYearSuggestions.map((option, index) => (
+                    <button
+                      key={option}
+                      type="button"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => {
+                        setForm((prev) => ({ ...prev, exhibitorTahun: option }))
+                        setOpenSingleSelect(null)
+                      }}
+                      onMouseEnter={() => setSingleSelectIndex(index)}
+                      className={`w-full text-left px-3 py-2 rounded-lg text-sm text-slate-800 ${
+                        index === singleSelectIndex ? 'bg-rose-50' : 'hover:bg-rose-50'
+                      }`}
+                    >
+                      {option}
+                    </button>
+                  ))
+                )}
+              </div>
+            ) : null}
           </div>
           <p className="text-xs text-slate-500">Gunakan format EXHYY, contoh tahun ini: {exhibitorYearSuggestions[0]}.</p>
         </div>

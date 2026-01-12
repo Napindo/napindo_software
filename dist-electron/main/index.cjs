@@ -12,7 +12,7 @@ function createWindow(options) {
     autoHideMenuBar: true,
     webPreferences: {
       preload: options.preload,
-      devTools: false
+      devTools: true
     }
   });
   window.setMenuBarVisibility(false);
@@ -1452,6 +1452,16 @@ electron.app.whenReady().then(() => {
   registerPenggunaIpcHandlers();
   registerReportsIpcHandlers();
   createMainWindow();
+  electron.globalShortcut.register("CommandOrControl+Shift+I", () => {
+    if (mainWindow == null ? void 0 : mainWindow.webContents) {
+      mainWindow.webContents.toggleDevTools();
+    }
+  });
+  electron.globalShortcut.register("F12", () => {
+    if (mainWindow == null ? void 0 : mainWindow.webContents) {
+      mainWindow.webContents.toggleDevTools();
+    }
+  });
 });
 electron.app.on("activate", () => {
   if (electron.BrowserWindow.getAllWindows().length === 0) {
@@ -1463,6 +1473,9 @@ electron.app.on("window-all-closed", () => {
     electron.app.quit();
     mainWindow = null;
   }
+});
+electron.app.on("will-quit", () => {
+  electron.globalShortcut.unregisterAll();
 });
 exports.MAIN_DIST = MAIN_DIST;
 exports.RENDERER_DIST = RENDERER_DIST;

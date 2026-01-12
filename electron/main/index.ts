@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu } from 'electron'
+import { app, BrowserWindow, Menu, globalShortcut } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -68,6 +68,16 @@ app.whenReady().then(() => {
   registerPenggunaIpcHandlers()
   registerReportsIpcHandlers()
   createMainWindow()
+  globalShortcut.register('CommandOrControl+Shift+I', () => {
+    if (mainWindow?.webContents) {
+      mainWindow.webContents.toggleDevTools()
+    }
+  })
+  globalShortcut.register('F12', () => {
+    if (mainWindow?.webContents) {
+      mainWindow.webContents.toggleDevTools()
+    }
+  })
 })
 
 app.on('activate', () => {
@@ -81,4 +91,8 @@ app.on('window-all-closed', () => {
     app.quit()
     mainWindow = null
   }
+})
+
+app.on('will-quit', () => {
+  globalShortcut.unregisterAll()
 })

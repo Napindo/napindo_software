@@ -73,7 +73,7 @@ export const printLabelPerusahaanHtml = `<!DOCTYPE html>
       right: 1mm;
       bottom: 1mm;
       top: 70%;
-      left: 60%;
+      left: 65%;
       font-size: 8pt;
       white-space: nowrap;
       text-align: left;

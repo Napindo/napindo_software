@@ -895,8 +895,34 @@ export async function exportReportJumlahGovernmentExcel(req: Request, res: Respo
 
 export async function getLabelOptions(_req: Request, res: Response) {
   try {
+    const tableName = 'public."GABUNG"'
+    const dbInfo = await prisma.$queryRaw<{ current_database: string; current_schema: string }[]>(
+      Prisma.sql`SELECT current_database() as current_database, current_schema() as current_schema`,
+    )
+    const summaryCounts = await prisma.$queryRaw<{ total: bigint; code3: bigint; code4: bigint; forum: bigint; exhthn: bigint; source: bigint }[]>(
+      Prisma.sql`SELECT
+        COUNT(*)::bigint as total,
+        COUNT(*) FILTER (WHERE "CODE3" IS NOT NULL AND TRIM("CODE3") <> '')::bigint as code3,
+        COUNT(*) FILTER (WHERE "CODE4" IS NOT NULL AND TRIM("CODE4") <> '')::bigint as code4,
+        COUNT(*) FILTER (WHERE "FORUM" IS NOT NULL AND TRIM("FORUM") <> '')::bigint as forum,
+        COUNT(*) FILTER (WHERE "EXHTHN" IS NOT NULL AND TRIM("EXHTHN") <> '')::bigint as exhthn,
+        COUNT(*) FILTER (WHERE "SOURCE" IS NOT NULL AND TRIM("SOURCE") <> '')::bigint as source
+      FROM ${Prisma.raw(tableName)}`,
+    )
+    const rawCounts = summaryCounts?.[0]
+    const counts = rawCounts
+      ? {
+          total: Number(rawCounts.total),
+          code3: Number(rawCounts.code3),
+          code4: Number(rawCounts.code4),
+          forum: Number(rawCounts.forum),
+          exhthn: Number(rawCounts.exhthn),
+          source: Number(rawCounts.source),
+        }
+      : null
     const columns = [
       { key: "code1", column: "CODE1" },
+      { key: "code2Db", column: "CODE2" },
       { key: "code3", column: "CODE3" },
       { key: "source", column: "CODE4" },
       { key: "nonSource", column: "CODE4" },
@@ -909,18 +935,19 @@ export async function getLabelOptions(_req: Request, res: Response) {
     const result: Record<string, string[]> = {}
 
     for (const { key, column } of columns) {
-      const col = Prisma.raw(`"${column}"`)
-      const rows = await prisma.$queryRaw<{ val: string | null }[]>(
-        Prisma.sql`SELECT DISTINCT ${col} as val FROM "vnongover" WHERE ${col} IS NOT NULL`,
-      )
+      const sql = `SELECT DISTINCT TRIM("${column}") as val FROM ${tableName} WHERE "${column}" IS NOT NULL AND TRIM("${column}") <> ''`
+      const rows = await prisma.$queryRawUnsafe<{ val: string | null }[]>(sql)
       result[key] = rows
-        .map((r) => (r?.val ?? "").trim())
+        .map((row) => (row?.val ?? "").trim())
         .filter(Boolean)
         .sort((a, b) => a.localeCompare(b))
     }
 
-    // Code2: gunakan master options dari AddData form
-    result.code2 = [...code2Options]
+    // Code2: gabungkan data dari DB + master options
+    result.code2 = Array.from(
+      new Set([...(result.code2Db ?? []), ...code2Options].map((val) => val.trim()).filter(Boolean)),
+    ).sort((a, b) => a.localeCompare(b))
+    delete result.code2Db
 
     // Province: gabungkan katalog + dari DB
     const provinceSet = new Set<string>([...provinceOptions, ...(result.provinceDb ?? [])].map((p) => p.trim()).filter(Boolean))
@@ -936,7 +963,16 @@ export async function getLabelOptions(_req: Request, res: Response) {
     result.nonSource = result.nonSource ?? result.source ?? []
 
     // Code1/3 already set; Source already set
-    return res.json(ok(result))
+    return res.json(
+      ok({
+        ...result,
+        debug: {
+          database: dbInfo?.[0]?.current_database ?? null,
+          schema: dbInfo?.[0]?.current_schema ?? null,
+          counts,
+        },
+      }),
+    )
   } catch (err: any) {
     return res.status(500).json(fail(err?.message || String(err)))
   }

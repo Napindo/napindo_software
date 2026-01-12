@@ -14,7 +14,7 @@ export function createWindow(options: CreateWindowOptions) {
     autoHideMenuBar: true,
     webPreferences: {
       preload: options.preload,
-      devTools: false,
+      devTools: true,
     },
   })
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { lazy, Suspense, useEffect, useMemo } from 'react'
 
 import { Sidebar } from '../components/Sidebar'
 import type { AuthenticatedUser } from './Login'
@@ -6,20 +6,20 @@ import { useAppStore } from '../store/appStore'
 import { getUserAccess } from '../utils/access'
 import type { PageKey } from '../types/navigation'
 
-import Home from './Home'
-import ExhibitorPage from './Exhibitor'
-import VisitorPage from './Visitor'
-import AddUserPage from './AddUser'
-import ChangePasswordPage from './ChangePassword'
-import AuditLogPage from './AuditLog'
-import PrintLabelPerusahaan from './PrintLabelPerusahaan'
-import PrintLabelGovernment from './PrintLabelGovernment'
-import ReportPerusahaan from './ReportPerusahaan'
-import ReportGovernment from './ReportGovernment'
-import ReportJumlahPerusahaan from './ReportJumlahPerusahaan'
-import ReportJumlahGovernment from './ReportJumlahGovernment'
-import ImportDataPage from './ImportData'
-import AddDataHub from './AddDataHub'
+const Home = lazy(() => import('./Home'))
+const ExhibitorPage = lazy(() => import('./Exhibitor'))
+const VisitorPage = lazy(() => import('./Visitor'))
+const AddUserPage = lazy(() => import('./AddUser'))
+const ChangePasswordPage = lazy(() => import('./ChangePassword'))
+const AuditLogPage = lazy(() => import('./AuditLog'))
+const PrintLabelPerusahaan = lazy(() => import('./PrintLabelPerusahaan'))
+const PrintLabelGovernment = lazy(() => import('./PrintLabelGovernment'))
+const ReportPerusahaan = lazy(() => import('./ReportPerusahaan'))
+const ReportGovernment = lazy(() => import('./ReportGovernment'))
+const ReportJumlahPerusahaan = lazy(() => import('./ReportJumlahPerusahaan'))
+const ReportJumlahGovernment = lazy(() => import('./ReportJumlahGovernment'))
+const ImportDataPage = lazy(() => import('./ImportData'))
+const AddDataHub = lazy(() => import('./AddDataHub'))
 
 type DashboardProps = {
   user?: AuthenticatedUser | null
@@ -86,7 +86,9 @@ const DashboardPage = ({ user, onLogout }: DashboardProps) => {
 
       <main className="flex-1 relative z-10 px-6 lg:px-8 py-6 lg:py-8">
         <div className="bg-white/90 backdrop-blur-xl border border-white shadow-card rounded-3xl p-6 lg:p-10 dashboard-shell min-h-[calc(100vh-140px)]">
-          {renderContent()}
+          <Suspense fallback={<div className="text-sm text-slate-500">Memuat halaman...</div>}>
+            {renderContent()}
+          </Suspense>
         </div>
       </main>
     </div>

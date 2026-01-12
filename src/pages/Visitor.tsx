@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useDeferredValue, useEffect, useMemo, useState } from 'react'
 import { InputDeck } from './Exhibitor'
 import type { VisitorRow, VisitorSegment } from '../services/visitors'
 import { fetchVisitors } from '../services/visitors'
@@ -95,6 +95,7 @@ const VisitorTable = ({
   canDelete,
 }: VisitorTableProps) => {
   const [search, setSearch] = useState('')
+  const deferredSearch = useDeferredValue(search)
   const [rowsPerPage, setRowsPerPage] = useState(25)
   const [page, setPage] = useState(1)
   const [selectedIds, setSelectedIds] = useState<(string | number)[]>([])
@@ -106,7 +107,7 @@ const VisitorTable = ({
   }, [segment, rows.length])
 
   const filteredRows = useMemo(() => {
-    const lower = search.trim().toLowerCase()
+    const lower = deferredSearch.trim().toLowerCase()
     const bySegment = rows.filter((row) => rowMatchesSegment(row.raw, segment, visitorFlagKey))
 
     if (!lower) return bySegment
@@ -116,7 +117,7 @@ const VisitorTable = ({
         .filter(Boolean)
         .some((value) => typeof value === 'string' && value.toLowerCase().includes(lower)),
     )
-  }, [rows, search, segment])
+  }, [rows, deferredSearch, segment])
 
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / rowsPerPage))
   const currentPage = Math.min(page, totalPages)

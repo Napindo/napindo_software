@@ -410,10 +410,36 @@ export async function requestLabelGovernment(filter: unknown): Promise<PrintLabe
 }
 
 export async function requestLabelOptions(): Promise<any> {
+  const isOptionsPayload = (value: unknown) =>
+    value &&
+    typeof value === 'object' &&
+    ('code2' in (value as any) ||
+      'code3' in (value as any) ||
+      'source' in (value as any) ||
+      'forum' in (value as any) ||
+      'exhthn' in (value as any) ||
+      'updatedBy' in (value as any))
+
+  try {
+    const res = await fetch(buildApiUrl('/report/label/options'))
+    const body = await res.json()
+    if (isApiOk(body)) {
+      const data = pickApiData(body) ?? (body as any)?.data ?? body
+      if (isOptionsPayload(data)) {
+        return data
+      }
+    }
+  } catch {
+    // fall back to bridge/ipc
+  }
+
   const bridge = getDatabaseBridge()
   if (bridge && typeof bridge.reportLabelOptions === 'function') {
     const resp = await bridge.reportLabelOptions()
-    return resp?.data ?? resp
+    const data = resp?.data ?? resp
+    if (isOptionsPayload(data)) {
+      return data
+    }
   }
 
   const ipc = getIpcRenderer()
@@ -422,9 +448,12 @@ export async function requestLabelOptions(): Promise<any> {
     if (response?.success === false) {
       throw new Error(response?.message ?? 'Gagal memuat opsi label')
     }
-    return response?.data ?? response
+    const data = response?.data ?? response
+    if (isOptionsPayload(data)) {
+      return data
+    }
   }
 
-  throw new Error('Bridge Electron untuk opsi label tidak tersedia')
+  throw new Error('Gagal memuat opsi label')
 }
 

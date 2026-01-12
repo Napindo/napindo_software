@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { fetchExhibitorCountByExpo, fetchExpoChartData } from '../services/exhibitors'
 import { listPengguna, type PenggunaRow } from '../services/pengguna'
 import { useAppStore } from '../store/appStore'
@@ -10,7 +10,9 @@ type HomeProps = {
 const Home = ({ displayName }: HomeProps) => {
   const { user } = useAppStore()
   const resolvedName = displayName ?? user?.name ?? user?.username ?? 'User'
-  const [loading, setLoading] = useState(true)
+  const [statsLoading, setStatsLoading] = useState(true)
+  const [chartLoading, setChartLoading] = useState(true)
+  const [usersLoading, setUsersLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [stats, setStats] = useState({
     defence: 0,
@@ -22,6 +24,8 @@ const Home = ({ displayName }: HomeProps) => {
     Array<{ label: string; color: string; values: Record<number, number> }>
   >([])
   const [users, setUsers] = useState<PenggunaRow[]>([])
+  const idleHandleRef = useRef<number | null>(null)
+  const idleHandleTypeRef = useRef<'idle' | 'timeout' | null>(null)
 
   const MIN_YEAR = 2023
   const MIN_Y_STEP = 50000
@@ -29,52 +33,99 @@ const Home = ({ displayName }: HomeProps) => {
 
   useEffect(() => {
     let active = true
+    const idleWindow = window as Window & {
+      requestIdleCallback?: (callback: () => void, opts?: { timeout: number }) => number
+      cancelIdleCallback?: (handle: number) => void
+    }
+    const clearIdle = () => {
+      if (!idleHandleRef.current) return
+      if (idleHandleTypeRef.current === 'idle' && idleWindow.cancelIdleCallback) {
+        idleWindow.cancelIdleCallback(idleHandleRef.current)
+      } else {
+        window.clearTimeout(idleHandleRef.current)
+      }
+      idleHandleRef.current = null
+      idleHandleTypeRef.current = null
+    }
+    const scheduleIdle = (cb: () => void) => {
+      clearIdle()
+      if (typeof idleWindow.requestIdleCallback === 'function') {
+        idleHandleTypeRef.current = 'idle'
+        idleHandleRef.current = idleWindow.requestIdleCallback(() => cb(), { timeout: 1000 })
+      } else {
+        idleHandleTypeRef.current = 'timeout'
+        idleHandleRef.current = window.setTimeout(cb, 200)
+      }
+    }
     const loadDashboard = async () => {
-      setLoading(true)
       setError(null)
+      setStatsLoading(true)
       try {
-        const [penggunaRows, counts, chartData] = await Promise.all([
-          listPengguna(),
-          fetchExhibitorCountByExpo(),
-          fetchExpoChartData(),
-        ])
-
+        const counts = await fetchExhibitorCountByExpo()
         if (!active) return
-
-        const series = [
-          { label: 'Indo Defence', color: '#e11d48', values: chartData?.indoDefence ?? {} },
-          { label: 'Indo Water', color: '#0ea5e9', values: chartData?.indoWater ?? {} },
-          { label: 'Indo Livestock', color: '#16a34a', values: chartData?.indoLivestock ?? {} },
-        ]
-
-        const years = series
-          .flatMap((item) => Object.keys(item.values).map((year) => Number(year)))
-          .filter((year) => Number.isFinite(year) && year >= MIN_YEAR)
-        const maxYear = Math.max(MIN_YEAR, ...years, new Date().getFullYear())
-        const yearList = []
-        for (let year = MIN_YEAR; year <= maxYear; year += 1) {
-          yearList.push(year)
-        }
-
         setStats({
           defence: counts?.indoDefence ?? 0,
           water: counts?.indoWater ?? 0,
           livestock: counts?.indoLivestock ?? 0,
         })
-        setChartSeries(series)
-        setChartYears(yearList)
-        setUsers(penggunaRows)
       } catch (err) {
         if (!active) return
         setError(err instanceof Error ? err.message : 'Gagal memuat data dashboard.')
       } finally {
-        if (active) setLoading(false)
+        if (active) setStatsLoading(false)
       }
     }
 
     loadDashboard()
+    setChartLoading(true)
+    setUsersLoading(true)
+    scheduleIdle(async () => {
+      try {
+        const [penggunaResult, chartResult] = await Promise.allSettled([
+          listPengguna(),
+          fetchExpoChartData(),
+        ])
+
+        if (!active) return
+
+        if (penggunaResult.status === 'fulfilled') {
+          setUsers(penggunaResult.value)
+        } else {
+          setError(penggunaResult.reason instanceof Error ? penggunaResult.reason.message : 'Gagal memuat data pengguna.')
+        }
+
+        if (chartResult.status === 'fulfilled') {
+          const chartData = chartResult.value
+          const series = [
+            { label: 'Indo Defence', color: '#e11d48', values: chartData?.indoDefence ?? {} },
+            { label: 'Indo Water', color: '#0ea5e9', values: chartData?.indoWater ?? {} },
+            { label: 'Indo Livestock', color: '#16a34a', values: chartData?.indoLivestock ?? {} },
+          ]
+
+          const years = series
+            .flatMap((item) => Object.keys(item.values).map((year) => Number(year)))
+            .filter((year) => Number.isFinite(year) && year >= MIN_YEAR)
+          const maxYear = Math.max(MIN_YEAR, ...years, new Date().getFullYear())
+          const yearList = []
+          for (let year = MIN_YEAR; year <= maxYear; year += 1) {
+            yearList.push(year)
+          }
+
+          setChartSeries(series)
+          setChartYears(yearList)
+        } else {
+          setError(chartResult.reason instanceof Error ? chartResult.reason.message : 'Gagal memuat data chart.')
+        }
+      } finally {
+        if (active) {
+          setUsersLoading(false)
+          setChartLoading(false)
+        }
+      }
+    })
     return () => {
       active = false
+      clearIdle()
     }
   }, [])
 
@@ -167,8 +218,8 @@ const Home = ({ displayName }: HomeProps) => {
             >
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{card.label}</p>
               <p className="text-3xl font-extrabold text-slate-900 mt-2">
-                {loading ? '...' : card.value.toLocaleString('id-ID')}
-                {!loading ? <span className="text-sm font-semibold text-slate-500 ml-2">Exhibitor</span> : null}
+                {statsLoading ? '...' : card.value.toLocaleString('id-ID')}
+                {!statsLoading ? <span className="text-sm font-semibold text-slate-500 ml-2">Exhibitor</span> : null}
               </p>
               <p className="text-xs text-slate-500 mt-2">{card.segments}</p>
             </div>
@@ -193,93 +244,97 @@ const Home = ({ displayName }: HomeProps) => {
             </div>
 
             <div className="mt-4">
-              <svg
-                viewBox={`0 0 ${chartLayout.width} ${chartLayout.height}`}
-                className="w-full h-[300px]"
-                role="img"
-                aria-label="Grafik exhibitor dan visitor"
-              >
-                <rect x="0" y="0" width={chartLayout.width} height={chartLayout.height} fill="white" />
-                <line
-                  x1={chartLayout.padding.left}
-                  x2={chartLayout.width - chartLayout.padding.right}
-                  y1={chartLayout.height - chartLayout.padding.bottom}
-                  y2={chartLayout.height - chartLayout.padding.bottom}
-                  stroke="#94a3b8"
-                  strokeWidth="1"
-                />
-                <line
-                  x1={chartLayout.padding.left}
-                  x2={chartLayout.padding.left}
-                  y1={chartLayout.padding.top}
-                  y2={chartLayout.height - chartLayout.padding.bottom}
-                  stroke="#94a3b8"
-                  strokeWidth="1"
-                />
+              {chartLoading ? (
+                <div className="flex items-center justify-center h-[300px] text-sm text-slate-500">Memuat chart...</div>
+              ) : (
+                <svg
+                  viewBox={`0 0 ${chartLayout.width} ${chartLayout.height}`}
+                  className="w-full h-[300px]"
+                  role="img"
+                  aria-label="Grafik exhibitor dan visitor"
+                >
+                  <rect x="0" y="0" width={chartLayout.width} height={chartLayout.height} fill="white" />
+                  <line
+                    x1={chartLayout.padding.left}
+                    x2={chartLayout.width - chartLayout.padding.right}
+                    y1={chartLayout.height - chartLayout.padding.bottom}
+                    y2={chartLayout.height - chartLayout.padding.bottom}
+                    stroke="#94a3b8"
+                    strokeWidth="1"
+                  />
+                  <line
+                    x1={chartLayout.padding.left}
+                    x2={chartLayout.padding.left}
+                    y1={chartLayout.padding.top}
+                    y2={chartLayout.height - chartLayout.padding.bottom}
+                    stroke="#94a3b8"
+                    strokeWidth="1"
+                  />
 
-                {Array.from({ length: Math.floor(chartLayout.maxY / chartLayout.tickStep) + 1 }, (_, index) => index * chartLayout.tickStep).map(
-                  (value) => {
-                  const y = chartLayout.getY(value)
-                  return (
-                    <g key={value}>
-                      <line
-                        x1={chartLayout.padding.left}
-                        x2={chartLayout.width - chartLayout.padding.right}
-                        y1={y}
-                        y2={y}
-                        stroke="#e2e8f0"
-                        strokeDasharray="4 4"
-                      />
-                      <text
-                        x={chartLayout.padding.left - 10}
-                        y={y + 4}
-                        fontSize="10"
-                        textAnchor="end"
-                        fill="#64748b"
-                      >
-                        {value.toLocaleString('id-ID')}
-                      </text>
-                    </g>
-                  )
-                },
-                )}
-
-                {chartLayout.years.map((year, index) => (
-                  <text
-                    key={year}
-                    x={chartLayout.getX(index)}
-                    y={chartLayout.height - 12}
-                    fontSize="10"
-                    textAnchor="middle"
-                    fill="#64748b"
-                  >
-                    {year}
-                  </text>
-                ))}
-
-                {chartLayout.paths.map((series) => (
-                  <g key={series.label}>
-                    <path
-                      d={series.path}
-                      fill="none"
-                      stroke={series.color}
-                      strokeWidth="2.5"
-                      strokeLinejoin="round"
-                      strokeLinecap="round"
-                    />
-                    {series.points.map((point, index) => (
-                      <g key={`${series.label}-${index}`}>
-                        <circle cx={point.x} cy={point.y} r="4" fill={series.color} />
-                        {point.value > 0 ? (
-                          <text x={point.x} y={point.y - 8} fontSize="10" textAnchor="middle" fill={series.color}>
-                            {point.value.toLocaleString('id-ID')}
-                          </text>
-                        ) : null}
+                  {Array.from({ length: Math.floor(chartLayout.maxY / chartLayout.tickStep) + 1 }, (_, index) => index * chartLayout.tickStep).map(
+                    (value) => {
+                    const y = chartLayout.getY(value)
+                    return (
+                      <g key={value}>
+                        <line
+                          x1={chartLayout.padding.left}
+                          x2={chartLayout.width - chartLayout.padding.right}
+                          y1={y}
+                          y2={y}
+                          stroke="#e2e8f0"
+                          strokeDasharray="4 4"
+                        />
+                        <text
+                          x={chartLayout.padding.left - 10}
+                          y={y + 4}
+                          fontSize="10"
+                          textAnchor="end"
+                          fill="#64748b"
+                        >
+                          {value.toLocaleString('id-ID')}
+                        </text>
                       </g>
-                    ))}
-                  </g>
-                ))}
-              </svg>
+                    )
+                  },
+                  )}
+
+                  {chartLayout.years.map((year, index) => (
+                    <text
+                      key={year}
+                      x={chartLayout.getX(index)}
+                      y={chartLayout.height - 12}
+                      fontSize="10"
+                      textAnchor="middle"
+                      fill="#64748b"
+                    >
+                      {year}
+                    </text>
+                  ))}
+
+                  {chartLayout.paths.map((series) => (
+                    <g key={series.label}>
+                      <path
+                        d={series.path}
+                        fill="none"
+                        stroke={series.color}
+                        strokeWidth="2.5"
+                        strokeLinejoin="round"
+                        strokeLinecap="round"
+                      />
+                      {series.points.map((point, index) => (
+                        <g key={`${series.label}-${index}`}>
+                          <circle cx={point.x} cy={point.y} r="4" fill={series.color} />
+                          {point.value > 0 ? (
+                            <text x={point.x} y={point.y - 8} fontSize="10" textAnchor="middle" fill={series.color}>
+                              {point.value.toLocaleString('id-ID')}
+                            </text>
+                          ) : null}
+                        </g>
+                      ))}
+                    </g>
+                  ))}
+                </svg>
+              )}
             </div>
           </div>
 
@@ -293,7 +348,7 @@ const Home = ({ displayName }: HomeProps) => {
             </div>
 
             <div className="mt-4 space-y-3 max-h-[320px] overflow-auto pr-1">
-              {users.length === 0 && !loading ? (
+              {users.length === 0 && !usersLoading ? (
                 <p className="text-sm text-slate-500">Belum ada data pengguna.</p>
               ) : null}
               {sortedUsers.map((person) => {
@@ -319,7 +374,7 @@ const Home = ({ displayName }: HomeProps) => {
                   </div>
                 )
               })}
-              {loading ? <p className="text-sm text-slate-500">Memuat pengguna...</p> : null}
+              {usersLoading ? <p className="text-sm text-slate-500">Memuat pengguna...</p> : null}
             </div>
           </div>
         </div>

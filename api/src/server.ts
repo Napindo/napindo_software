@@ -1,4 +1,5 @@
-import "dotenv/config"
+import dotenv from "dotenv"
+import path from "node:path"
 import express from "express"
 import cors from "cors"
 import gabungRoutes from "./routes/gabung.routes"
@@ -6,6 +7,8 @@ import penggunaRoutes from "./routes/pengguna.routes"
 import auditRoutes from "./routes/audit.routes"
 import reportRoutes from "./routes/report.routes"
 import prisma from "./prisma"
+
+dotenv.config({ path: path.resolve(__dirname, "..", ".env"), override: true })
 
 const app = express()
 const API_PREFIX = process.env.API_PREFIX || "/api"

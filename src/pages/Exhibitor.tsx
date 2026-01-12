@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useDeferredValue, useEffect, useMemo, useState } from 'react'
 import type { ExhibitorRow, ExhibitorSegment } from '../services/exhibitors'
 import { fetchExhibitors } from '../services/exhibitors'
 import { deleteAddData } from '../services/addData'
@@ -6,22 +6,25 @@ import { useAppStore } from '../store/appStore'
 import { getUserAccess } from '../utils/access'
 import { formatDateOnly } from '../utils/date'
 import { rowMatchesSegment } from '../utils/flags'
+import logoIdd from '../assets/LOGO IDD 2026.png'
+import logoWater from '../assets/Logo Water 2026 series.png'
+import logoIdl from '../assets/Logo IDL Lengkap.png'
 
 const eventCards = [
   {
     id: 'defence',
     title: 'Indo Defence, Aerospace, Marine',
-    logo: '/assets/LOGO IDD 2026.png',
+    logo: logoIdd,
   },
   {
     id: 'water',
     title: 'Indo Water, Waste, IISMEX, Renergy, Firex, Security',
-    logo: '/assets/Logo Water 2026 series.png',
+    logo: logoWater,
   },
   {
     id: 'livestock',
     title: 'Indo Livestock, Agrotech, Vet, Fisheries, Feed, Dairy, Horticulture',
-    logo: '/assets/Logo IDL Lengkap.png',
+    logo: logoIdl,
   },
 ]
 
@@ -156,6 +159,7 @@ const ExhibitorTable = ({
   canDelete,
 }: ExhibitorTableProps) => {
   const [search, setSearch] = useState('')
+  const deferredSearch = useDeferredValue(search)
   const [rowsPerPage, setRowsPerPage] = useState(25)
   const [page, setPage] = useState(1)
   const [selectedIds, setSelectedIds] = useState<(string | number)[]>([])
@@ -167,7 +171,7 @@ const ExhibitorTable = ({
   }, [segment, rows.length])
 
   const filteredRows = useMemo(() => {
-    const lower = search.trim().toLowerCase()
+    const lower = deferredSearch.trim().toLowerCase()
     const bySegment = rows.filter((row) => rowMatchesSegment(row.raw, segment, segmentFlagKey))
 
     if (!lower) return bySegment
@@ -177,7 +181,7 @@ const ExhibitorTable = ({
         .filter(Boolean)
         .some((value) => typeof value === 'string' && value.toLowerCase().includes(lower)),
     )
-  }, [rows, search, segment])
+  }, [rows, deferredSearch, segment])
 
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / rowsPerPage))
   const currentPage = Math.min(page, totalPages)

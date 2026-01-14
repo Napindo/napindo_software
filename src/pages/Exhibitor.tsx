@@ -476,7 +476,7 @@ const ExhibitorPage = () => {
     setLoading(true)
     setError(null)
     try {
-      const data = await fetchExhibitors(targetSegment, 200)
+      const data = await fetchExhibitors(targetSegment, 0)
       setRows(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal memuat data exhibitor')

@@ -127,7 +127,7 @@ function mapExhibitorToVisitor(ex: {
  */
 export async function fetchVisitors(
   segment: ExhibitorSegment,
-  limit = 200,
+  limit = 0,
 ): Promise<VisitorRow[]> {
   const exhibitors = await fetchExhibitors(segment, limit, "visitor")
   return exhibitors.map((row) => mapExhibitorToVisitor({ ...row, segment }))
@@ -135,7 +135,7 @@ export async function fetchVisitors(
 
 export async function getVisitorsBySegment(
   segment: ExhibitorSegment,
-  limit = 200,
+  limit = 0,
 ): Promise<VisitorRow[]> {
   return fetchVisitors(segment, limit)
 }

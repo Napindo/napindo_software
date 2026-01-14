@@ -254,6 +254,7 @@ export async function exportLabelGoverPdf(req: Request, res: Response) {
       title: (payload?.judul_label as string) || "Print Label Government",
       totalCount: rows.length,
       rows,
+      showGreeting: true,
     }
 
     const pdf = await renderLabelPerusahaanPdf(data)

@@ -45,7 +45,7 @@ export function registerGabungIpcHandlers() {
     }
   })
 
-  ipcMain.handle('db:fetchExhibitors', async (_event, segment, limit = 200, person = 'exhibitor') => {
+ipcMain.handle('db:fetchExhibitors', async (_event, segment, limit = 0, person = 'exhibitor') => {
     try {
       const rows = await fetchExhibitorsBySegment(segment, limit, person)
       return { success: true, rows }

@@ -642,7 +642,9 @@ export async function exportPersonalDatabasePdf(req: Request, res: Response) {
 export async function listGabungBySegment(req: Request, res: Response) {
   try {
     const segment = req.params.segment as SegmentCode;
-    const limit = Number(req.query.limit || 200);
+    const limitInput = Number(req.query.limit ?? 200);
+    const limit = Number.isFinite(limitInput) ? Math.floor(limitInput) : 200;
+    const take = limit > 0 ? limit : undefined;
 
     const personParam = String(req.query.person || "exhibitor").toLowerCase();
     const person = personParam === "visitor" ? "visitor" : "exhibitor";
@@ -651,10 +653,10 @@ export async function listGabungBySegment(req: Request, res: Response) {
 
     const items = await prisma.gabung.findMany({
       where,
-      take: limit,
+      take,
     });
 
-    return res.json(ok({ items, segment, limit, person }));
+    return res.json(ok({ items, segment, limit: take ? limit : 0, person }));
   } catch (err: any) {
     return res.status(500).json(fail(err.message || String(err)));
   }

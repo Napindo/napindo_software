@@ -19,7 +19,7 @@ export async function fetchTopRows(tableName: string, top = 10) {
 
 export async function fetchExhibitorsBySegment(
   segment: string,
-  limit = 200,
+  limit = 0,
   person: PersonType = 'exhibitor',
 ) {
   const params = new URLSearchParams({ limit: String(limit), person })

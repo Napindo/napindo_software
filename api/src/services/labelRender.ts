@@ -28,6 +28,7 @@ export type LabelReportData = {
   title: string
   totalCount: number
   rows: LabelRow[]
+  showGreeting?: boolean
 }
 
 export async function renderLabelPerusahaanPdf(data: LabelReportData) {

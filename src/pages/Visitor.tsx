@@ -412,7 +412,7 @@ const VisitorPage = () => {
     setLoading(true)
     setError(null)
     try {
-      const data = await fetchVisitors(targetSegment, 200)
+      const data = await fetchVisitors(targetSegment, 0)
       setRows(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal memuat data visitor')

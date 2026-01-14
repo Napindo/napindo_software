@@ -181,7 +181,7 @@ async function fetchTopRows(tableName, top = 10) {
   const data = pickData(body);
   return (data == null ? void 0 : data.rows) ?? data ?? [];
 }
-async function fetchExhibitorsBySegment(segment, limit = 200, person = "exhibitor") {
+async function fetchExhibitorsBySegment(segment, limit = 0, person = "exhibitor") {
   const params = new URLSearchParams({ limit: String(limit), person });
   const { body } = await apiFetch(
     `/gabung/segment/${encodeURIComponent(segment)}?${params.toString()}`
@@ -751,7 +751,7 @@ function registerGabungIpcHandlers() {
       return errorResponse$3(error);
     }
   });
-  electron.ipcMain.handle("db:fetchExhibitors", async (_event, segment, limit = 200, person = "exhibitor") => {
+  electron.ipcMain.handle("db:fetchExhibitors", async (_event, segment, limit = 0, person = "exhibitor") => {
     try {
       const rows = await fetchExhibitorsBySegment(segment, limit, person);
       return { success: true, rows };

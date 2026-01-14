@@ -232,7 +232,7 @@ function normalizeExhibitorRow(row: Record<string, any>, segment?: ExhibitorSegm
  */
 async function invokeFetchExhibitors(
   segment: ExhibitorSegment,
-  limit = 200,
+  limit = 0,
   person: "exhibitor" | "visitor" = "exhibitor",
 ): Promise<DatabaseResponse<Record<string, any>>> {
   const backendSegment = SEGMENT_TO_BACKEND[segment] ?? segment
@@ -264,7 +264,7 @@ async function invokeFetchExhibitors(
  */
 export async function fetchExhibitors(
   segment: ExhibitorSegment,
-  limit = 200,
+  limit = 0,
   person: "exhibitor" | "visitor" = "exhibitor",
 ): Promise<ExhibitorRow[]> {
   const response = await invokeFetchExhibitors(segment, limit, person)
@@ -284,7 +284,7 @@ export async function fetchExhibitors(
  */
 export async function getExhibitorsBySegment(
   segment: ExhibitorSegment,
-  limit = 200,
+  limit = 0,
   person: "exhibitor" | "visitor" = "exhibitor",
 ): Promise<ExhibitorRow[]> {
   return fetchExhibitors(segment, limit, person)
@@ -295,7 +295,7 @@ export async function getExhibitorsBySegment(
  */
 export async function getExhibitors(
   segment: ExhibitorSegment,
-  limit = 200,
+  limit = 0,
 ): Promise<ExhibitorRow[]> {
   return fetchExhibitors(segment, limit)
 }

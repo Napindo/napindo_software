@@ -8,10 +8,10 @@
     "shortid": "dGZACvJF_8",
     "chrome": {
         "printBackground": true,
-        "marginTop": "0.4cm",
-        "marginRight": "0.15cm",
-        "marginBottom": "3cm",
-        "marginLeft": "1.32cm",
+        "marginTop": "0cm",
+        "marginRight": "0cm",
+        "marginBottom": "0cm",
+        "marginLeft": "0cm",
         "landscape": false
     },
     "creationDate": {

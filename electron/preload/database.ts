@@ -86,4 +86,5 @@ contextBridge.exposeInMainWorld('database', {
   reportJumlahGovernmentExcel: (filter: unknown) => ipcRenderer.invoke('report:jumlah-government:excel', filter),
   reportJumlahGovernmentWord: (filter: unknown) => ipcRenderer.invoke('report:jumlah-government:word', filter),
   reportJumlahGovernmentExportSave: (filter: unknown) => ipcRenderer.invoke('report:jumlah-government:export-save', filter),
+  getAppInfo: () => ipcRenderer.invoke('app:getInfo'),
 })

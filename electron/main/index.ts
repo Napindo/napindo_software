@@ -1,4 +1,5 @@
-import { app, BrowserWindow, Menu, globalShortcut } from 'electron'
+import { app, BrowserWindow, Menu, globalShortcut, ipcMain } from 'electron'
+import { autoUpdater } from 'electron-updater'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -56,9 +57,79 @@ const windowConfig = {
 
 let mainWindow: BrowserWindow | null = null
 
+type UpdateStatus =
+  | 'idle'
+  | 'checking'
+  | 'available'
+  | 'downloading'
+  | 'downloaded'
+  | 'not-available'
+  | 'error'
+
+const updateState: { status: UpdateStatus; message?: string } = {
+  status: 'idle',
+}
+
 function createMainWindow() {
   mainWindow = createWindow(windowConfig)
   return mainWindow
+}
+
+function setupAutoUpdater() {
+  if (!app.isPackaged) return
+
+  autoUpdater.autoDownload = true
+  autoUpdater.autoInstallOnAppQuit = true
+
+  autoUpdater.on('error', (err) => {
+    const message = err == null ? 'unknown' : (err as Error).message
+    updateState.status = 'error'
+    updateState.message = message
+    console.log('Auto update error:', message)
+  })
+  autoUpdater.on('update-available', () => {
+    updateState.status = 'available'
+    updateState.message = undefined
+    console.log('Auto update available. Downloading in background.')
+  })
+  autoUpdater.on('update-not-available', () => {
+    updateState.status = 'not-available'
+    updateState.message = undefined
+    console.log('Auto update not available.')
+  })
+  autoUpdater.on('download-progress', () => {
+    updateState.status = 'downloading'
+    updateState.message = undefined
+  })
+  autoUpdater.on('update-downloaded', () => {
+    updateState.status = 'downloaded'
+    updateState.message = undefined
+    console.log('Auto update downloaded. Will install on app quit.')
+  })
+
+  updateState.status = 'checking'
+  updateState.message = undefined
+  autoUpdater.checkForUpdates().catch((err) => {
+    updateState.status = 'error'
+    console.log('Auto update check failed:', err == null ? 'unknown' : (err as Error).message)
+  })
+
+  const sixHoursMs = 6 * 60 * 60 * 1000
+  setInterval(() => {
+    updateState.status = 'checking'
+    updateState.message = undefined
+    autoUpdater.checkForUpdates().catch((err) => {
+      updateState.status = 'error'
+      console.log('Auto update check failed:', err == null ? 'unknown' : (err as Error).message)
+    })
+  }, sixHoursMs)
+}
+
+function registerAppIpcHandlers() {
+  ipcMain.handle('app:getInfo', () => ({
+    version: app.getVersion(),
+    update: { ...updateState },
+  }))
 }
 
 app.whenReady().then(() => {
@@ -67,6 +138,8 @@ app.whenReady().then(() => {
   registerAuditIpcHandlers()
   registerPenggunaIpcHandlers()
   registerReportsIpcHandlers()
+  registerAppIpcHandlers()
+  setupAutoUpdater()
   createMainWindow()
   globalShortcut.register('CommandOrControl+Shift+I', () => {
     if (mainWindow?.webContents) {

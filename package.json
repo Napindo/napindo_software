@@ -1,7 +1,7 @@
 {
   "name": "napindo_software",
   "private": true,
-  "version": "0.0.14",
+  "version": "0.0.23",
   "type": "commonjs",
   "scripts": {
     "dev": "vite",
@@ -14,6 +14,7 @@
     "@prisma/client": "^7.0.0",
     "cors": "^2.8.5",
     "express": "^5.1.0",
+    "electron-updater": "^6.6.2",
     "mssql": "^9.3.2",
     "prisma": "^7.0.0",
     "react": "^18.2.0",

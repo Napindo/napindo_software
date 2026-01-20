@@ -13,7 +13,14 @@
   },
   "files": [
     "dist",
-    "dist-electron"
+    "dist-electron",
+    ".env"
+  ],
+  "publish": [
+    {
+      "provider": "generic",
+      "url": "http://192.168.1.86:8080"
+    }
   ],
   "mac": {
     "target": [

@@ -93,6 +93,75 @@ Kegagalan logging tidak memblokir flow utama.
 Tidak ada test runner eksplisit di repo ini.
 Validasi utama dilakukan di UI (Add Data) sebelum submit.
 
+## Catatan Print Label
+- Template label disetel untuk ukuran kertas A4.
+- Pastikan printer default atau opsi print menggunakan ukuran A4 dan skala 100% (Actual size) agar layout label tidak berubah.
+
+## Auto Update (LAN/Offline)
+Mode ini memakai server lokal (LAN) untuk menyajikan file update agar client bisa auto‑update tanpa internet.
+
+### Server LAN
+1. Siapkan web server sederhana di PC server (contoh: `http://192.168.1.86:8080/updates`).
+2. Folder `updates` harus berisi file hasil build:
+   - `latest.yml`
+   - `Napindo Visitor Software 2 Ver X.Y.Z-Windows-Setup.exe`
+   - (opsional) `*.blockmap`
+3. Pastikan semua client bisa akses URL tersebut lewat browser.
+
+### Mengaktifkan Web Server (CMD)
+Contoh menjalankan web server dari folder `E:\updates`:
+```cmd
+cd /d E:\updates
+python -m http.server 8080
+```
+Setelah aktif, akses `http://192.168.1.86:8080/` dari client.
+
+### Build & Publish
+1. Build installer:
+```bash
+npm run build:win:all
+```
+2. Upload hasil build ke folder `updates` di server LAN.
+
+### Copy cepat dari release ke updates (CMD)
+Gunakan skrip CMD yang sudah disediakan:
+```cmd
+cd /d E:\Zidan\Software\napindo_software
+scripts\publish-updates.cmd
+```
+Jika folder updates berbeda:
+```cmd
+scripts\publish-updates.cmd E:\updates
+```
+
+### Perilaku Update
+- Aplikasi cek update saat startup dan tiap 6 jam.
+- Update diunduh otomatis dan dipasang saat aplikasi ditutup (silent).
+
+## Build & Release
+Release versi terbaru (otomatis bump patch version di `package.json`):
+```bash
+npm run build:win:all
+```
+
+## Menjalankan API dan jsreport
+1. Siapkan environment API:
+   - Copy `api/.env.example` ke `api/.env` lalu sesuaikan `DATABASE_URL` dan `JSREPORT_URL`.
+2. Jalankan API (dev):
+```bash
+cd api
+npm install
+npm run dev
+```
+3. Jalankan jsreport:
+```bash
+cd api
+npx jsreport start --config jsreport.config.json
+```
+Catatan:
+- Default jsreport berjalan di port `9133` (lihat `api/jsreport.config.json`).
+- Pastikan `JSREPORT_URL` di `api/.env` mengarah ke alamat jsreport yang aktif.
+
 ## Dokumen Terkait
 - Flow Admin: `docs/ADMIN_FLOW.md`
 - Flow User: `docs/USER_FLOW.md`

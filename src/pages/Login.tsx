@@ -23,6 +23,16 @@ type HintsCache = {
   divisions: string[];
 };
 
+type UpdateInfo = {
+  status?: string;
+  message?: string;
+};
+
+type AppInfo = {
+  version?: string;
+  update?: UpdateInfo;
+};
+
 export type AuthenticatedUser = AppUser;
 
 const REMEMBER_KEY = "napindo-login";
@@ -92,6 +102,15 @@ async function invokeUserHints() {
   );
 }
 
+async function invokeAppInfo() {
+  const w = window as any;
+
+  if (w.database?.getAppInfo) return w.database.getAppInfo();
+  if (w.ipcRenderer?.invoke) return w.ipcRenderer.invoke("app:getInfo");
+
+  return null;
+}
+
 type LoginPageProps = {
   onSuccess?: (user: AuthenticatedUser) => void;
 };
@@ -116,6 +135,8 @@ function LoginPage({ onSuccess }: LoginPageProps) {
     divisions: [],
   });
   const [hintsError, setHintsError] = useState<string | null>(null);
+  const [appVersion, setAppVersion] = useState<string>("");
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo>({});
 
   // Load remember-me + animasi
   const persistRemember = (nextRemember: boolean, payload: LoginForm) => {
@@ -153,6 +174,26 @@ function LoginPage({ onSuccess }: LoginPageProps) {
     }
     const timer = setTimeout(() => setShowShell(true), 80);
     return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    invokeAppInfo()
+      .then((info: AppInfo | null) => {
+        if (!active || !info) return;
+        if (typeof info.version === "string") {
+          setAppVersion(info.version);
+        }
+        if (info.update) {
+          setUpdateInfo(info.update);
+        }
+      })
+      .catch(() => {
+        //
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   // Load hints username/division
@@ -268,10 +309,15 @@ function LoginPage({ onSuccess }: LoginPageProps) {
 
   return (
     <div
-      className={`min-h-screen flex items-center justify-center px-4 py-10 transition duration-500 ${
+      className={`min-h-screen relative flex items-center justify-center px-4 py-10 transition duration-500 ${
         showShell ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
       }`}
     >
+      {appVersion ? (
+        <div className="absolute bottom-5 left-6 text-xs text-slate-500 font-semibold">
+          Version {appVersion}
+        </div>
+      ) : null}
       <div className="w-full max-w-5xl bg-white/90 backdrop-blur-md shadow-card rounded-3xl border border-white overflow-hidden grid md:grid-cols-2">
         {/* Panel kiri (brand) */}
         <div className="bg-gradient-to-br from-white via-rose-50 to-slate-50 flex items-center justify-center p-8 md:p-10">
@@ -297,6 +343,21 @@ function LoginPage({ onSuccess }: LoginPageProps) {
             <p className="text-slate-600">
               Type your credential SQL Server to continue.
             </p>
+            {updateInfo.status === "available" && (
+              <p className="mt-3 text-xs font-semibold text-amber-700 bg-amber-100 border border-amber-200 rounded-lg px-3 py-2">
+                Update tersedia. Mengunduh di background.
+              </p>
+            )}
+            {updateInfo.status === "downloading" && (
+              <p className="mt-3 text-xs font-semibold text-sky-700 bg-sky-100 border border-sky-200 rounded-lg px-3 py-2">
+                Sedang mengunduh update terbaru.
+              </p>
+            )}
+            {updateInfo.status === "downloaded" && (
+              <p className="mt-3 text-xs font-semibold text-emerald-700 bg-emerald-100 border border-emerald-200 rounded-lg px-3 py-2">
+                Update siap. Akan terpasang saat aplikasi ditutup.
+              </p>
+            )}
           </header>
 
           <form className="space-y-4 max-w-md" onSubmit={handleSubmit}>

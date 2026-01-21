@@ -324,12 +324,12 @@ function LoginPage({ onSuccess }: LoginPageProps) {
           <div className="flex items-center gap-6 float-soft">
             <NapindoMark className="w-28 h-28 md:w-32 md:h-32 shrink-0" />
             <div className="relative">
-              <span className="block text-rose-600 text-lg font-semibold italic tagline-underline">
-                Showing The Way !
-              </span>
               <h1 className="text-5xl font-bold text-slate-900 mt-2">
                 Napindo
               </h1>
+              <span className="block text-rose-600 text-lg font-semibold italic tagline-underline">
+                Data Entry Application
+              </span>
             </div>
           </div>
         </div>

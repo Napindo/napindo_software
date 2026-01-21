@@ -233,7 +233,7 @@ export const Sidebar = ({ onLogout }: SidebarProps) => {
       <div className="px-6 pt-6 pb-5 flex items-center gap-3">
         <NapindoMark className="w-10 h-10 shrink-0" />
         <div className="leading-tight">
-          <span className="block text-xs font-semibold text-rose-600">Showing The Way !</span>
+          <span className="block text-xs font-semibold text-rose-600">Data Entry Application</span>
           <span className="block text-lg font-bold tracking-tight text-slate-900">Napindo</span>
         </div>
       </div>

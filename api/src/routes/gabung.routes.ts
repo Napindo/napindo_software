@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   listGabung,
+  listSourceOptions,
   listGabungBySegment,
   getGabung,
   getTablePreview,
@@ -17,6 +18,7 @@ import {
 const router = Router();
 
 router.get("/", listGabung);
+router.get("/source-options", listSourceOptions);
 router.get("/segment/:segment", listGabungBySegment);
 router.get("/exhibitor-count", countExhibitorsByExpo);
 router.get("/expo-chart", getExpoChartData);

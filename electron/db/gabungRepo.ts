@@ -76,6 +76,15 @@ export async function listGabungRecords(params?: { page?: number; pageSize?: num
   return pickData(body) ?? body
 }
 
+export async function fetchSourceOptions() {
+  const { body } = await apiFetch("/gabung/source-options")
+  if (!isResponseOk(body)) {
+    throw new Error(body.message || "Gagal memuat source options")
+  }
+  const data: any = pickData(body) ?? {}
+  return (data.options ?? data.rows ?? data ?? []) as string[]
+}
+
 export async function findCompanyByName(company: string) {
   const trimmed = company.trim()
   const encoded = encodeURIComponent(trimmed)

@@ -265,6 +265,30 @@ export async function listGabung(req: Request, res: Response) {
   }
 }
 
+// ===================== LIST SOURCE OPTIONS (CODE4) =====================
+
+export async function listSourceOptions(_req: Request, res: Response) {
+  try {
+    const rows = await prisma.gabung.findMany({
+      distinct: ["code4"],
+      select: { code4: true },
+      orderBy: { code4: "asc" },
+    });
+
+    const options = Array.from(
+      new Set(
+        rows
+          .map((row) => String(row.code4 ?? "").trim())
+          .filter((value) => value !== ""),
+      ),
+    );
+
+    return res.json(ok({ options }));
+  } catch (err: any) {
+    return res.status(500).json(fail(err.message || String(err)));
+  }
+}
+
 // ===================== GET DETAIL BY ID (opsional, kalau route-nya ada) =====================
 
 export async function getGabung(req: Request, res: Response) {

@@ -27,6 +27,7 @@ import {
   findCompanyRecords,
   exportPersonalDatabasePdf,
   listGabungRecords,
+  listSourceOptions,
   type AddDataPayload,
 } from '../services/addData'
 import { useAppStore } from '../store/appStore'
@@ -266,12 +267,16 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
   const highlightIndexRef = useRef(0)
   const rowsRef = useRef<Record<string, unknown>[]>([])
   const popupRef = useRef<HTMLDivElement | null>(null)
+  const singleSelectListRefs = useRef<Record<FieldName, HTMLDivElement | null>>({} as Record<FieldName, HTMLDivElement | null>)
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [openCombo, setOpenCombo] = useState<FieldName | null>(null)
   const [openSingleSelect, setOpenSingleSelect] = useState<FieldName | null>(null)
   const [singleSelectIndex, setSingleSelectIndex] = useState(0)
   const [provinceQuery, setProvinceQuery] = useState('')
   const [cityQuery, setCityQuery] = useState('')
+  const [sourceOptions, setSourceOptions] = useState<string[]>([])
+  const [sourceOptionsLoading, setSourceOptionsLoading] = useState(false)
+  const [sourceOptionsError, setSourceOptionsError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [companyLookup, setCompanyLookup] = useState<{
     open: boolean
@@ -353,6 +358,28 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [companyLookup.open])
+
+  useEffect(() => {
+    let active = true
+    setSourceOptionsLoading(true)
+    setSourceOptionsError(null)
+    listSourceOptions()
+      .then((options) => {
+        if (!active) return
+        setSourceOptions(options)
+      })
+      .catch((error) => {
+        if (!active) return
+        setSourceOptionsError(error instanceof Error ? error.message : 'Gagal memuat source options')
+      })
+      .finally(() => {
+        if (!active) return
+        setSourceOptionsLoading(false)
+      })
+    return () => {
+      active = false
+    }
+  }, [])
 
   const sanitizeText = (value: string, field?: FieldName) => {
     if (field === 'email' || field === 'website') {
@@ -477,6 +504,12 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
     if (!term) return updateByOptions
     return updateByOptions.filter((opt) => opt.toLowerCase().includes(term))
   }, [form.updateBy, updateByOptions])
+
+  const filteredSourceOptions = useMemo(() => {
+    const term = form.source.trim().toLowerCase()
+    if (!term) return sourceOptions
+    return sourceOptions.filter((opt) => opt.toLowerCase().includes(term))
+  }, [form.source, sourceOptions])
 
   const exhibitorYearSuggestions = useMemo(() => {
     const yy = String(new Date().getFullYear() % 100).padStart(2, '0')
@@ -604,9 +637,16 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
     }
   }
 
+  const setSingleSelectListRef =
+    (field: FieldName) =>
+    (node: HTMLDivElement | null) => {
+      singleSelectListRefs.current[field] = node
+    }
+
   const getSingleSelectOptions = (field: FieldName) => {
     if (field === 'province') return filteredProvinceOptions
     if (field === 'city') return filteredCityOptions
+    if (field === 'source') return filteredSourceOptions
     if (field === 'updateBy') return filteredUpdateByOptions
     if (field === 'exhibitorTahun') return exhibitorYearSuggestions
     return []
@@ -615,6 +655,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
   const getSingleSelectValue = (field: FieldName) => {
     if (field === 'province') return form.province
     if (field === 'city') return form.city
+    if (field === 'source') return form.source
     if (field === 'updateBy') return form.updateBy
     if (field === 'exhibitorTahun') return form.exhibitorTahun
     return ''
@@ -627,6 +668,10 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
     }
     if (field === 'city') {
       handleCitySelect(value)
+      return
+    }
+    if (field === 'source') {
+      setForm((prev) => ({ ...prev, source: value }))
       return
     }
     if (field === 'updateBy') {
@@ -701,10 +746,23 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
     openSingleSelect,
     filteredProvinceOptions,
     filteredCityOptions,
+    filteredSourceOptions,
     filteredUpdateByOptions,
     exhibitorYearSuggestions,
     singleSelectIndex,
   ])
+
+  useEffect(() => {
+    if (!openSingleSelect) return
+    const field = openSingleSelect
+    const container = singleSelectListRefs.current[field]
+    if (!container) return
+    const handle = requestAnimationFrame(() => {
+      const target = container.querySelector<HTMLButtonElement>(`[data-index="${singleSelectIndex}"]`)
+      target?.scrollIntoView({ block: 'nearest' })
+    })
+    return () => cancelAnimationFrame(handle)
+  }, [openSingleSelect, singleSelectIndex, filteredProvinceOptions, filteredCityOptions, filteredSourceOptions, filteredUpdateByOptions, exhibitorYearSuggestions])
 
   const formatCellValue = (value: unknown) => {
     if (value === null || value === undefined) return '-'
@@ -1385,13 +1443,17 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
               placeholder="Pilih province"
             />
             {openSingleSelect === name ? (
-              <div className="absolute z-20 mt-2 w-full rounded-xl border border-slate-200 bg-white shadow-lg p-2 max-h-60 overflow-auto">
+              <div
+                ref={setSingleSelectListRef(name)}
+                className="absolute z-20 mt-2 w-full rounded-xl border border-slate-200 bg-white shadow-lg p-2 max-h-60 overflow-auto"
+              >
                 {filteredProvinceOptions.length === 0 ? (
                   <p className="px-3 py-2 text-xs text-slate-500">Tidak ada hasil.</p>
                 ) : (
                   filteredProvinceOptions.map((option, index) => (
                     <button
                       key={option}
+                      data-index={index}
                       type="button"
                       onMouseDown={(event) => event.preventDefault()}
                       onClick={() => {
@@ -1440,13 +1502,17 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
               placeholder="Pilih city"
             />
             {openSingleSelect === name ? (
-              <div className="absolute z-20 mt-2 w-full rounded-xl border border-slate-200 bg-white shadow-lg p-2 max-h-60 overflow-auto">
+              <div
+                ref={setSingleSelectListRef(name)}
+                className="absolute z-20 mt-2 w-full rounded-xl border border-slate-200 bg-white shadow-lg p-2 max-h-60 overflow-auto"
+              >
                 {filteredCityOptions.length === 0 ? (
                   <p className="px-3 py-2 text-xs text-slate-500">Tidak ada hasil.</p>
                 ) : (
                   filteredCityOptions.map((option, index) => (
                     <button
                       key={option}
+                      data-index={index}
                       type="button"
                       onMouseDown={(event) => event.preventDefault()}
                       onClick={() => {
@@ -1513,6 +1579,66 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
       )
     }
 
+    if (name === 'source') {
+      return (
+        <div className="space-y-2" key={name}>
+          <label className="text-sm font-semibold text-slate-800 flex items-center gap-1">
+            {labelMap[name]}
+            {requiredFields.has(name) ? <span className="text-rose-600">*</span> : null}
+          </label>
+          <div className="relative">
+            <input
+              type="text"
+              value={form.source}
+              onChange={handleChange('source')}
+              onFocus={() => openSingleSelectFor(name)}
+              onKeyDown={handleSingleSelectKeyDown(name)}
+              onBlur={() => closeSingleSelect(name)}
+              maxLength={minLength}
+              required={requiredFields.has(name)}
+              autoComplete="off"
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-rose-400 focus:ring-4 focus:ring-rose-100 transition"
+              placeholder="Pilih atau ketik"
+            />
+            {openSingleSelect === name ? (
+              <div
+                ref={setSingleSelectListRef(name)}
+                className="absolute z-20 mt-2 w-full rounded-xl border border-slate-200 bg-white shadow-lg p-2 max-h-60 overflow-auto"
+              >
+                {sourceOptionsLoading ? (
+                  <p className="px-3 py-2 text-xs text-slate-500">Memuat data...</p>
+                ) : sourceOptionsError ? (
+                  <p className="px-3 py-2 text-xs text-rose-600">{sourceOptionsError}</p>
+                ) : filteredSourceOptions.length === 0 ? (
+                  <p className="px-3 py-2 text-xs text-slate-500">Tidak ada hasil.</p>
+                ) : (
+                  filteredSourceOptions.map((option, index) => (
+                    <button
+                      key={option}
+                      data-index={index}
+                      type="button"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => {
+                        setForm((prev) => ({ ...prev, source: option }))
+                        setOpenSingleSelect(null)
+                      }}
+                      onMouseEnter={() => setSingleSelectIndex(index)}
+                      className={`w-full text-left px-3 py-2 rounded-lg text-sm text-slate-800 ${
+                        index === singleSelectIndex ? 'bg-rose-50' : 'hover:bg-rose-50'
+                      }`}
+                    >
+                      {option}
+                    </button>
+                  ))
+                )}
+              </div>
+            ) : null}
+          </div>
+          <p className="text-xs text-slate-500">Daftar source mengikuti data yang ada di database.</p>
+        </div>
+      )
+    }
+
     if (name === 'updateBy') {
       return (
         <div className="space-y-2" key={name}>
@@ -1535,13 +1661,17 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
               placeholder="Pilih atau ketik"
             />
             {openSingleSelect === name ? (
-              <div className="absolute z-20 mt-2 w-full rounded-xl border border-slate-200 bg-white shadow-lg p-2 max-h-60 overflow-auto">
+              <div
+                ref={setSingleSelectListRef(name)}
+                className="absolute z-20 mt-2 w-full rounded-xl border border-slate-200 bg-white shadow-lg p-2 max-h-60 overflow-auto"
+              >
                 {filteredUpdateByOptions.length === 0 ? (
                   <p className="px-3 py-2 text-xs text-slate-500">Tidak ada hasil.</p>
                 ) : (
                   filteredUpdateByOptions.map((option, index) => (
                     <button
                       key={option}
+                      data-index={index}
                       type="button"
                       onMouseDown={(event) => event.preventDefault()}
                       onClick={() => {
@@ -1591,13 +1721,17 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
               placeholder="EXH"
             />
             {openSingleSelect === name ? (
-              <div className="absolute z-20 mt-2 w-full rounded-xl border border-slate-200 bg-white shadow-lg p-2 max-h-60 overflow-auto">
+              <div
+                ref={setSingleSelectListRef(name)}
+                className="absolute z-20 mt-2 w-full rounded-xl border border-slate-200 bg-white shadow-lg p-2 max-h-60 overflow-auto"
+              >
                 {exhibitorYearSuggestions.length === 0 ? (
                   <p className="px-3 py-2 text-xs text-slate-500">Tidak ada saran.</p>
                 ) : (
                   exhibitorYearSuggestions.map((option, index) => (
                     <button
                       key={option}
+                      data-index={index}
                       type="button"
                       onMouseDown={(event) => event.preventDefault()}
                       onClick={() => {

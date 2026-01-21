@@ -86,6 +86,7 @@ async function invokeFindCompany(company: string): Promise<DatabaseResponse> {
   throw new Error("Bridge Electron untuk findCompany tidak tersedia")
 }
 
+
 /**
  * Cari record perusahaan berdasarkan nama (COMPANY) di tabel GABUNG.
  * Mengembalikan array baris mentah dari database (sesuai yang dikirim API).
@@ -177,6 +178,49 @@ export async function listGabungRecords(params?: {
     total: items.length,
   }
   return { items, pagination }
+}
+
+export async function listSourceOptions(): Promise<string[]> {
+  const db = getDatabaseBridge()
+  if (db && typeof db.listSourceOptions === "function") {
+    const response = await db.listSourceOptions()
+    if (!response || response.success === false) {
+      throw new Error(response?.message ?? "Gagal memuat source options")
+    }
+    const data: any = response.data ?? response
+    return (data.options ?? data.rows ?? data ?? []) as string[]
+  }
+
+  const ipc = getIpcRenderer()
+  if (ipc?.invoke) {
+    const response = await ipc.invoke("db:listSourceOptions")
+    if (!response || response.success === false) {
+      throw new Error(response?.message ?? "Gagal memuat source options")
+    }
+    const data: any = response.data ?? response
+    return (data.options ?? data.rows ?? data ?? []) as string[]
+  }
+
+  const res = await fetch(buildApiUrl("/gabung/source-options"))
+  const rawText = await res.text()
+  let body: any = null
+  if (rawText) {
+    try {
+      body = JSON.parse(rawText)
+    } catch {
+      body = null
+    }
+  }
+  if (!res.ok || !isApiOk(body)) {
+    const message =
+      body?.message ??
+      (rawText?.trim()
+        ? `Gagal memuat source options: ${rawText.slice(0, 120)}`
+        : "Gagal memuat source options")
+    throw new Error(message)
+  }
+  const data: any = pickApiData(body) ?? {}
+  return (data.options ?? data.rows ?? data ?? []) as string[]
 }
 
 /**

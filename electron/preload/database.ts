@@ -43,6 +43,7 @@ contextBridge.exposeInMainWorld('database', {
   findCompany: (company: string) => ipcRenderer.invoke('db:findCompany', company),
   listGabung: (params?: { page?: number; pageSize?: number; q?: string }) =>
     ipcRenderer.invoke('db:listGabung', params),
+  listSourceOptions: () => ipcRenderer.invoke('db:listSourceOptions'),
 
   saveAddData: (payload: any) => ipcRenderer.invoke('db:saveAddData', payload),
 

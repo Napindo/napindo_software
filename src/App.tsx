@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import './App.css'
 import DashboardPage from './pages/Dashboard'
 import LoginPage, { type AuthenticatedUser } from './pages/Login'
@@ -21,7 +21,7 @@ export default function App() {
     return () => window.removeEventListener('beforeunload', handleClose)
   }, [user?.username])
 
-  const persistRememberOnLogout = () => {
+  const persistRememberOnLogout = useCallback(() => {
     const key = 'napindo-login'
     const raw = localStorage.getItem(key)
     if (!raw) {
@@ -52,14 +52,14 @@ export default function App() {
     } catch {
       localStorage.removeItem(key)
     }
-  }
+  }, [user?.division, user?.username])
 
   const handleLoginSuccess = (profile: AuthenticatedUser) => {
     setUser(profile)
     setGlobalMessage({ type: 'success', text: 'Login berhasil' })
   }
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     if (user?.username) {
       try {
         await logoutPengguna({ username: user.username })
@@ -72,7 +72,7 @@ export default function App() {
     clearUser()
     setActivePage('dashboard')
     setGlobalMessage({ type: 'info', text: 'Anda telah logout' })
-  }
+  }, [user?.username, persistRememberOnLogout, clearUser, setActivePage, setGlobalMessage])
 
   useEffect(() => {
     if (!user?.username) return

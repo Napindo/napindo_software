@@ -6,6 +6,7 @@ export type CreateWindowOptions = {
   rendererDist: string
   preload: string
   publicDir: string
+  isDev?: boolean
 }
 
 export function createWindow(options: CreateWindowOptions) {
@@ -14,7 +15,7 @@ export function createWindow(options: CreateWindowOptions) {
     autoHideMenuBar: true,
     webPreferences: {
       preload: options.preload,
-      devTools: true,
+      devTools: options.isDev ?? false,
     },
   })
 

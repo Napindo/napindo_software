@@ -17,7 +17,7 @@
       "enabled": false
     },
     "sample-template": {
-      "createSamples": true
+      "createSamples": false
     },
     "fs-store": {
       "syncModifications": false

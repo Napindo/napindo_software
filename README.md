@@ -24,10 +24,10 @@ API server (`api/.env`):
 - `PORT` contoh: `<port>`
 - `DATABASE_URL` contoh: `postgresql://USER:PASSWORD@HOST:5432/DB?schema=public`
 - `JSREPORT_URL` contoh: `http://<jsreport-host>:<port>`
-- `JSREPORT_USER` contoh: `admin`
-- `JSREPORT_PASSWORD` contoh: `password`
+- `JSREPORT_USER` contoh: `admin` (opsional, jika auth jsreport diaktifkan)
+- `JSREPORT_PASSWORD` contoh: `password` (opsional, jika auth jsreport diaktifkan)
 
-Catatan: jika jsreport memakai config khusus, lihat `api/jsreport.config.json`.
+Catatan: auth jsreport default nonaktif di `api/jsreport.config.json`. Aktifkan jika perlu dan sesuaikan env di atas.
 
 ## Menjalankan Backend (API)
 ```bash
@@ -61,7 +61,7 @@ npm run lint
 
 ## Troubleshooting
 - UI tidak bisa akses API: cek `API_BASE_URL` di `.env`, pastikan API sudah running di `PORT` yang sama.
-- Gagal generate report/label: pastikan `JSREPORT_URL`, `JSREPORT_USER`, `JSREPORT_PASSWORD` di `api/.env` benar dan jsreport server aktif.
+- Gagal generate report/label: pastikan `JSREPORT_URL` benar dan jsreport server aktif. Jika auth aktif, pastikan `JSREPORT_USER`/`JSREPORT_PASSWORD` sesuai.
 - Error Prisma/DB: cek `DATABASE_URL`, pastikan database up dan schema sudah migrate (`npm run prisma:migrate`).
 - Electron tidak load UI: pastikan `npm run dev` (renderer) berjalan dan tidak ada error di terminal.
 

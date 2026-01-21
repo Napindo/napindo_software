@@ -26,7 +26,7 @@
     "target": [
       "dmg"
     ],
-    "artifactName": "${productName} Ver ${version}-Mac-Installer.${ext}"
+    "artifactName": "Setup Ver ${version}-Mac-Installer.${ext}"
   },
   "win": {
     "target": [
@@ -37,7 +37,7 @@
         ]
       }
     ],
-    "artifactName": "${productName} Ver ${version}-Windows-Setup.${ext}"
+    "artifactName": "Setup Ver ${version}-Windows-Setup.${ext}"
   },
   "nsis": {
     "oneClick": false,
@@ -49,6 +49,6 @@
     "target": [
       "AppImage"
     ],
-    "artifactName": "${productName} Ver ${version}-Linux.${ext}"
+    "artifactName": "Setup Ver ${version}-Linux.${ext}"
   }
 }

@@ -7,6 +7,7 @@ import {
   fetchTopRows,
   listGabungRecords,
   fetchSourceOptions,
+  fetchCode1Options,
   findCompanyByName,
   saveAddData,
   importGabungExcel,
@@ -94,6 +95,15 @@ ipcMain.handle('db:fetchExhibitors', async (_event, segment, limit = 0, person =
   ipcMain.handle('db:listSourceOptions', async () => {
     try {
       const data = await fetchSourceOptions()
+      return { success: true, data }
+    } catch (error) {
+      return errorResponse(error)
+    }
+  })
+
+  ipcMain.handle('db:listCode1Options', async () => {
+    try {
+      const data = await fetchCode1Options()
       return { success: true, data }
     } catch (error) {
       return errorResponse(error)

@@ -85,6 +85,15 @@ export async function fetchSourceOptions() {
   return (data.options ?? data.rows ?? data ?? []) as string[]
 }
 
+export async function fetchCode1Options() {
+  const { body } = await apiFetch("/gabung/code1-options")
+  if (!isResponseOk(body)) {
+    throw new Error(body.message || "Gagal memuat code1 options")
+  }
+  const data: any = pickData(body) ?? {}
+  return (data.options ?? data.rows ?? data ?? []) as string[]
+}
+
 export async function findCompanyByName(company: string) {
   const trimmed = company.trim()
   const encoded = encodeURIComponent(trimmed)

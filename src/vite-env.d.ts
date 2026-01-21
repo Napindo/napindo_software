@@ -63,6 +63,7 @@ interface Window {
     listPengguna: () => Promise<RendererDatabaseResponse<{ username?: string; division?: string | null; status?: string | null }>>
     listGabung: (params?: { page?: number; pageSize?: number; q?: string }) => Promise<RendererDatabaseResponse>
     listSourceOptions: () => Promise<RendererDatabaseResponse<string[]>>
+    listCode1Options: () => Promise<RendererDatabaseResponse<string[]>>
     saveAddData: (payload: Record<string, unknown>) => Promise<RendererDatabaseResponse>
     importGabungExcel: (payload: {
       fileBase64: string

@@ -223,6 +223,49 @@ export async function listSourceOptions(): Promise<string[]> {
   return (data.options ?? data.rows ?? data ?? []) as string[]
 }
 
+export async function listCode1Options(): Promise<string[]> {
+  const db = getDatabaseBridge()
+  if (db && typeof db.listCode1Options === "function") {
+    const response = await db.listCode1Options()
+    if (!response || response.success === false) {
+      throw new Error(response?.message ?? "Gagal memuat code1 options")
+    }
+    const data: any = response.data ?? response
+    return (data.options ?? data.rows ?? data ?? []) as string[]
+  }
+
+  const ipc = getIpcRenderer()
+  if (ipc?.invoke) {
+    const response = await ipc.invoke("db:listCode1Options")
+    if (!response || response.success === false) {
+      throw new Error(response?.message ?? "Gagal memuat code1 options")
+    }
+    const data: any = response.data ?? response
+    return (data.options ?? data.rows ?? data ?? []) as string[]
+  }
+
+  const res = await fetch(buildApiUrl("/gabung/code1-options"))
+  const rawText = await res.text()
+  let body: any = null
+  if (rawText) {
+    try {
+      body = JSON.parse(rawText)
+    } catch {
+      body = null
+    }
+  }
+  if (!res.ok || !isApiOk(body)) {
+    const message =
+      body?.message ??
+      (rawText?.trim()
+        ? `Gagal memuat code1 options: ${rawText.slice(0, 120)}`
+        : "Gagal memuat code1 options")
+    throw new Error(message)
+  }
+  const data: any = pickApiData(body) ?? {}
+  return (data.options ?? data.rows ?? data ?? []) as string[]
+}
+
 /**
  * Simpan data baru ke tabel GABUNG.
  * Payload adalah bentuk key–value yang sudah dibangun di layer UI.

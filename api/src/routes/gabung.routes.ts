@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   listGabung,
   listSourceOptions,
+  listCode1Options,
   listGabungBySegment,
   getGabung,
   getTablePreview,
@@ -19,6 +20,7 @@ const router = Router();
 
 router.get("/", listGabung);
 router.get("/source-options", listSourceOptions);
+router.get("/code1-options", listCode1Options);
 router.get("/segment/:segment", listGabungBySegment);
 router.get("/exhibitor-count", countExhibitorsByExpo);
 router.get("/expo-chart", getExpoChartData);

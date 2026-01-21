@@ -28,6 +28,7 @@ import {
   exportPersonalDatabasePdf,
   listGabungRecords,
   listSourceOptions,
+  listCode1Options,
   type AddDataPayload,
 } from '../services/addData'
 import { useAppStore } from '../store/appStore'
@@ -85,40 +86,40 @@ type AddDataProps = {
 
 type FieldName = keyof AddDataForm
 
-const minLengths: Record<Exclude<FieldName, 'verify' | 'lastUpdate'>, number> = {
-  typeOfBusiness: 2,
-  company: 40,
-  address1: 40,
-  address2: 50,
-  province: 30,
-  city: 30,
+const maxLengths: Record<Exclude<FieldName, 'verify' | 'lastUpdate'>, number> = {
+  typeOfBusiness: 20,
+  company: 255,
+  address1: 255,
+  address2: 255,
+  province: 100,
+  city: 100,
   zip: 10,
-  codePhone: 5,
+  codePhone: 10,
   phoneNumber: 20,
   facsimile: 20,
   handphone: 20,
-  sex: 4,
-  name: 35,
-  position: 40,
-  email: 40,
-  website: 50,
-  mainActive: 2,
-  business: 2,
-  source: 30,
-  updateBy: 10,
-  forum: 5,
+  sex: 10,
+  name: 255,
+  position: 255,
+  email: 255,
+  website: 255,
+  mainActive: 255,
+  business: 255,
+  source: 255,
+  updateBy: 50,
+  forum: 50,
   exhibitorTahun: 10,
-  code1: 10,
-  code2: 2,
-  code3: 2,
-  exhibitor: 2,
-  visitor: 2,
-  typeOfVisitor: 2,
-  specialInvitationIndoDefence: 2,
-  openingCeremony: 2,
-  kartuUcapan: 2,
-  poster: 2,
-  tidakDikirim: 2,
+  code1: 50,
+  code2: 10,
+  code3: 10,
+  exhibitor: 255,
+  visitor: 255,
+  typeOfVisitor: 255,
+  specialInvitationIndoDefence: 255,
+  openingCeremony: 255,
+  kartuUcapan: 255,
+  poster: 255,
+  tidakDikirim: 255,
 }
 const labelMap: Record<FieldName, string> = {
   typeOfBusiness: 'Type of Business (PT / CV / UD / Etc)',
@@ -277,6 +278,9 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
   const [sourceOptions, setSourceOptions] = useState<string[]>([])
   const [sourceOptionsLoading, setSourceOptionsLoading] = useState(false)
   const [sourceOptionsError, setSourceOptionsError] = useState<string | null>(null)
+  const [code1Options, setCode1Options] = useState<string[]>([])
+  const [code1OptionsLoading, setCode1OptionsLoading] = useState(false)
+  const [code1OptionsError, setCode1OptionsError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [companyLookup, setCompanyLookup] = useState<{
     open: boolean
@@ -297,7 +301,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
     null,
   )
   const [dataSearchPage, setDataSearchPage] = useState(1)
-  const [dataSearchPageSize, setDataSearchPageSize] = useState(200)
+  const [dataSearchPageSize, setDataSearchPageSize] = useState(100)
   const [dataSearchTotal, setDataSearchTotal] = useState(0)
   const [dataSearchFilters, setDataSearchFilters] = useState({
     hp: '',
@@ -381,6 +385,28 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
     }
   }, [])
 
+  useEffect(() => {
+    let active = true
+    setCode1OptionsLoading(true)
+    setCode1OptionsError(null)
+    listCode1Options()
+      .then((options) => {
+        if (!active) return
+        setCode1Options(options)
+      })
+      .catch((error) => {
+        if (!active) return
+        setCode1OptionsError(error instanceof Error ? error.message : 'Gagal memuat code1 options')
+      })
+      .finally(() => {
+        if (!active) return
+        setCode1OptionsLoading(false)
+      })
+    return () => {
+      active = false
+    }
+  }, [])
+
   const sanitizeText = (value: string, field?: FieldName) => {
     if (field === 'email' || field === 'website') {
       return normalizeSpaces(value)
@@ -433,6 +459,11 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
       }
       if (field === 'lastUpdate') {
         setForm((prev) => ({ ...prev, lastUpdate: String(rawValue) }))
+        return
+      }
+
+      if (field === 'code1') {
+        setForm((prev) => ({ ...prev, code1: String(rawValue).toUpperCase() }))
         return
       }
 
@@ -510,6 +541,12 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
     if (!term) return sourceOptions
     return sourceOptions.filter((opt) => opt.toLowerCase().includes(term))
   }, [form.source, sourceOptions])
+
+  const filteredCode1Options = useMemo(() => {
+    const term = form.code1.trim().toLowerCase()
+    if (!term) return code1Options
+    return code1Options.filter((opt) => opt.toLowerCase().includes(term))
+  }, [form.code1, code1Options])
 
   const exhibitorYearSuggestions = useMemo(() => {
     const yy = String(new Date().getFullYear() % 100).padStart(2, '0')
@@ -648,6 +685,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
     if (field === 'city') return filteredCityOptions
     if (field === 'source') return filteredSourceOptions
     if (field === 'updateBy') return filteredUpdateByOptions
+    if (field === 'code1') return filteredCode1Options
     if (field === 'exhibitorTahun') return exhibitorYearSuggestions
     return []
   }
@@ -657,6 +695,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
     if (field === 'city') return form.city
     if (field === 'source') return form.source
     if (field === 'updateBy') return form.updateBy
+    if (field === 'code1') return form.code1
     if (field === 'exhibitorTahun') return form.exhibitorTahun
     return ''
   }
@@ -676,6 +715,10 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
     }
     if (field === 'updateBy') {
       setForm((prev) => ({ ...prev, updateBy: value }))
+      return
+    }
+    if (field === 'code1') {
+      setForm((prev) => ({ ...prev, code1: value.toUpperCase() }))
       return
     }
     if (field === 'exhibitorTahun') {
@@ -748,6 +791,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
     filteredCityOptions,
     filteredSourceOptions,
     filteredUpdateByOptions,
+    filteredCode1Options,
     exhibitorYearSuggestions,
     singleSelectIndex,
   ])
@@ -762,7 +806,16 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
       target?.scrollIntoView({ block: 'nearest' })
     })
     return () => cancelAnimationFrame(handle)
-  }, [openSingleSelect, singleSelectIndex, filteredProvinceOptions, filteredCityOptions, filteredSourceOptions, filteredUpdateByOptions, exhibitorYearSuggestions])
+  }, [
+    openSingleSelect,
+    singleSelectIndex,
+    filteredProvinceOptions,
+    filteredCityOptions,
+    filteredSourceOptions,
+    filteredUpdateByOptions,
+    filteredCode1Options,
+    exhibitorYearSuggestions,
+  ])
 
   const formatCellValue = (value: unknown) => {
     if (value === null || value === undefined) return '-'
@@ -1064,7 +1117,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
       updateBy: String(lower['source'] ?? ''),
       forum: String(lower['forum'] ?? ''),
       exhibitorTahun: String(lower['exhthn'] ?? ''),
-      code1: String(lower['code1'] ?? ''),
+      code1: String(lower['code1'] ?? '').toUpperCase(),
       code2: String(lower['code2'] ?? ''),
       code3: String(lower['code3'] ?? ''),
       exhibitor: pickFlagLabels(lower, exhibitorFlagMap),
@@ -1213,18 +1266,15 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
 
     if (errors.length > 0) return errors
 
-    ;(Object.keys(minLengths) as Array<Exclude<FieldName, 'verify' | 'lastUpdate'>>).forEach((key) => {
-      const min = minLengths[key]
+    ;(Object.keys(maxLengths) as Array<Exclude<FieldName, 'verify' | 'lastUpdate'>>).forEach((key) => {
+      const max = maxLengths[key]
       const rawValue = form[key]
       if (Array.isArray(rawValue)) {
-        if (rawValue.length > 0 && rawValue.length < min) {
-          errors.push(`${labelMap[key]} minimal ${min} item.`)
-        }
         return
       }
       const text = String(rawValue ?? '').trim()
-      if (text && text.length < min) {
-        errors.push(`${labelMap[key]} minimal ${min} karakter.`)
+      if (text && text.length > max) {
+        errors.push(`${labelMap[key]} maksimal ${max} karakter.`)
       }
     })
 
@@ -1415,7 +1465,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
 
     const isDate = name === 'lastUpdate'
     const isCombo = isComboField(name)
-    const minLength = minLengths[name as Exclude<FieldName, 'verify' | 'lastUpdate'>]
+    const maxLength = maxLengths[name as Exclude<FieldName, 'verify' | 'lastUpdate'>]
     const selected = (form[name] as string[]) ?? []
 
     if (name === 'province') {
@@ -1436,7 +1486,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
                 setForm((prev) => ({ ...prev, province: sanitizeText(prev.province, 'province') }))
                 closeSingleSelect(name)
               }}
-              maxLength={minLength}
+              maxLength={maxLength}
               required
               autoComplete="off"
               className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-rose-400 focus:ring-4 focus:ring-rose-100 transition"
@@ -1495,7 +1545,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
                 handleCitySelect(form.city)
                 closeSingleSelect(name)
               }}
-              maxLength={minLength}
+              maxLength={maxLength}
               required
               autoComplete="off"
               className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-rose-400 focus:ring-4 focus:ring-rose-100 transition"
@@ -1594,7 +1644,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
               onFocus={() => openSingleSelectFor(name)}
               onKeyDown={handleSingleSelectKeyDown(name)}
               onBlur={() => closeSingleSelect(name)}
-              maxLength={minLength}
+              maxLength={maxLength}
               required={requiredFields.has(name)}
               autoComplete="off"
               className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-rose-400 focus:ring-4 focus:ring-rose-100 transition"
@@ -1639,6 +1689,66 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
       )
     }
 
+    if (name === 'code1') {
+      return (
+        <div className="space-y-2" key={name}>
+          <label className="text-sm font-semibold text-slate-800 flex items-center gap-1">
+            {labelMap[name]}
+            {requiredFields.has(name) ? <span className="text-rose-600">*</span> : null}
+          </label>
+          <div className="relative">
+            <input
+              type="text"
+              value={form.code1}
+              onChange={handleChange('code1')}
+              onFocus={() => openSingleSelectFor(name)}
+              onKeyDown={handleSingleSelectKeyDown(name)}
+              onBlur={() => closeSingleSelect(name)}
+              maxLength={maxLength}
+              required={requiredFields.has(name)}
+              autoComplete="off"
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-rose-400 focus:ring-4 focus:ring-rose-100 transition"
+              placeholder="Pilih atau ketik"
+            />
+            {openSingleSelect === name ? (
+              <div
+                ref={setSingleSelectListRef(name)}
+                className="absolute z-20 mt-2 w-full rounded-xl border border-slate-200 bg-white shadow-lg p-2 max-h-60 overflow-auto"
+              >
+                {code1OptionsLoading ? (
+                  <p className="px-3 py-2 text-xs text-slate-500">Memuat data...</p>
+                ) : code1OptionsError ? (
+                  <p className="px-3 py-2 text-xs text-rose-600">{code1OptionsError}</p>
+                ) : filteredCode1Options.length === 0 ? (
+                  <p className="px-3 py-2 text-xs text-slate-500">Tidak ada hasil.</p>
+                ) : (
+                  filteredCode1Options.map((option, index) => (
+                    <button
+                      key={option}
+                      data-index={index}
+                      type="button"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => {
+                        setForm((prev) => ({ ...prev, code1: option.toUpperCase() }))
+                        setOpenSingleSelect(null)
+                      }}
+                      onMouseEnter={() => setSingleSelectIndex(index)}
+                      className={`w-full text-left px-3 py-2 rounded-lg text-sm text-slate-800 ${
+                        index === singleSelectIndex ? 'bg-rose-50' : 'hover:bg-rose-50'
+                      }`}
+                    >
+                      {option}
+                    </button>
+                  ))
+                )}
+              </div>
+            ) : null}
+          </div>
+          <p className="text-xs text-slate-500">Daftar Code 1 mengikuti data yang ada di database.</p>
+        </div>
+      )
+    }
+
     if (name === 'updateBy') {
       return (
         <div className="space-y-2" key={name}>
@@ -1654,7 +1764,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
               onFocus={() => openSingleSelectFor(name)}
               onKeyDown={handleSingleSelectKeyDown(name)}
               onBlur={() => closeSingleSelect(name)}
-              maxLength={minLength}
+              maxLength={maxLength}
               required={requiredFields.has(name)}
               autoComplete="off"
               className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-rose-400 focus:ring-4 focus:ring-rose-100 transition"
@@ -1715,7 +1825,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
               onFocus={() => openSingleSelectFor(name)}
               onKeyDown={handleSingleSelectKeyDown(name)}
               onBlur={() => closeSingleSelect(name)}
-              maxLength={minLength}
+              maxLength={maxLength}
               autoComplete="off"
               className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-rose-400 focus:ring-4 focus:ring-rose-100 transition"
               placeholder="EXH"
@@ -1868,7 +1978,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
               onBlur={() => trimField(name)}
               onKeyDown={name === 'company' ? handleCompanyKeyDown : undefined}
               required={requiredFields.has(name)}
-              maxLength={minLength}
+              maxLength={maxLength}
               autoComplete="off"
               className={`w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-rose-400 focus:ring-4 focus:ring-rose-100 transition ${isDate ? 'pr-10' : ''}`}
               placeholder={requiredFields.has(name) ? 'Wajib diisi' : 'Isi data'}
@@ -2204,8 +2314,9 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
               </div>
             ) : null}
 
-            <div className="px-6 py-4 overflow-auto max-h-[55vh]">
-              <div className="min-w-[1100px]">
+            <div className="px-3 sm:px-6 py-4 overflow-auto max-h-[55vh]">
+              <div className="w-full overflow-x-auto">
+                <div className="min-w-[900px] sm:min-w-[1100px]">
                 <table className="min-w-full text-xs border border-slate-200 rounded-lg overflow-hidden">
                   <thead className="bg-slate-50">
                     <tr>
@@ -2293,6 +2404,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
                     ) : null}
                   </tbody>
                 </table>
+                </div>
               </div>
             </div>
 

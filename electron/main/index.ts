@@ -31,6 +31,7 @@ process.env.APP_ROOT = APP_ROOT
 export const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL']
 export const MAIN_DIST = path.join(APP_ROOT, 'dist-electron')
 export const RENDERER_DIST = path.join(APP_ROOT, 'dist')
+const IS_DEV = !app.isPackaged || Boolean(VITE_DEV_SERVER_URL)
 
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL
   ? path.join(APP_ROOT, 'public')
@@ -53,6 +54,7 @@ const windowConfig = {
   rendererDist: RENDERER_DIST,
   preload: preloadPath,
   publicDir: process.env.VITE_PUBLIC ?? path.join(APP_ROOT, 'public'),
+  isDev: IS_DEV,
 }
 
 let mainWindow: BrowserWindow | null = null
@@ -141,16 +143,18 @@ app.whenReady().then(() => {
   registerAppIpcHandlers()
   setupAutoUpdater()
   createMainWindow()
-  globalShortcut.register('CommandOrControl+Shift+I', () => {
-    if (mainWindow?.webContents) {
-      mainWindow.webContents.toggleDevTools()
-    }
-  })
-  globalShortcut.register('F12', () => {
-    if (mainWindow?.webContents) {
-      mainWindow.webContents.toggleDevTools()
-    }
-  })
+  if (IS_DEV) {
+    globalShortcut.register('CommandOrControl+Shift+I', () => {
+      if (mainWindow?.webContents) {
+        mainWindow.webContents.toggleDevTools()
+      }
+    })
+    globalShortcut.register('F12', () => {
+      if (mainWindow?.webContents) {
+        mainWindow.webContents.toggleDevTools()
+      }
+    })
+  }
 })
 
 app.on('activate', () => {

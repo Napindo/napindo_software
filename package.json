@@ -1,7 +1,7 @@
 {
   "name": "napindo_software",
   "private": true,
-  "version": "0.0.23",
+  "version": "0.0.28",
   "type": "commonjs",
   "scripts": {
     "dev": "vite",
@@ -11,18 +11,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@prisma/client": "^7.0.0",
-    "cors": "^2.8.5",
-    "express": "^5.1.0",
     "electron-updater": "^6.6.2",
-    "mssql": "^9.3.2",
-    "prisma": "^7.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
-    "@types/express": "^5.0.5",
-    "@types/mssql": "^9.1.6",
     "@types/node": "^24.10.1",
     "@types/react": "^18.2.64",
     "@types/react-dom": "^18.2.21",

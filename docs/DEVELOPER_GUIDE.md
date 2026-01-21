@@ -161,6 +161,7 @@ npx jsreport start --config jsreport.config.json
 Catatan:
 - Default jsreport berjalan di port `9133` (lihat `api/jsreport.config.json`).
 - Pastikan `JSREPORT_URL` di `api/.env` mengarah ke alamat jsreport yang aktif.
+- Auth jsreport default nonaktif. Jika diaktifkan di `api/jsreport.config.json`, set `JSREPORT_USER` dan `JSREPORT_PASSWORD` agar render/report tidak gagal.
 
 ## Dokumen Terkait
 - Flow Admin: `docs/ADMIN_FLOW.md`

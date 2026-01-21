@@ -3,7 +3,6 @@ import { dialog } from 'electron'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import {
-  reportBusinessVisitor,
   renderLabelVisitorPdf,
   renderLabelVisitorExcel,
   renderLabelVisitorWord,
@@ -30,15 +29,6 @@ const errorResponse = (error: unknown) => ({
 })
 
 export function registerReportsIpcHandlers() {
-  ipcMain.handle('report:businessvisitor', async (_event, filter) => {
-    try {
-      const data = await reportBusinessVisitor(filter)
-      return { success: true, data }
-    } catch (error) {
-      return errorResponse(error)
-    }
-  })
-
   ipcMain.handle('report:labelvisitor:pdf', async (_event, filter) => {
     try {
       const data = await renderLabelVisitorPdf(filter)

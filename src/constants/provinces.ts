@@ -459,7 +459,7 @@ export const provinceCityMap: Record<string, string[]> = {
     'Yapen Waropen',
   ],
   Asia: [
-    'Afganistan',
+    'Afghanistan',
     'Armenia',
     'Australia',
     'Azerbaijan',

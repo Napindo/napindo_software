@@ -101,7 +101,7 @@ Validasi utama dilakukan di UI (Add Data) sebelum submit.
 Mode ini memakai server lokal (LAN) untuk menyajikan file update agar client bisa auto‑update tanpa internet.
 
 ### Server LAN
-1. Siapkan web server sederhana di PC server (contoh: `http://192.168.1.86:8080/updates`).
+1. Siapkan web server sederhana di PC server (contoh: `http://192.168.1.171:8080/updates`).
 2. Folder `updates` harus berisi file hasil build:
    - `latest.yml`
    - `Napindo Visitor Software 2 Ver X.Y.Z-Windows-Setup.exe`
@@ -114,7 +114,7 @@ Contoh menjalankan web server dari folder `E:\updates`:
 cd /d E:\updates
 python -m http.server 8080
 ```
-Setelah aktif, akses `http://192.168.1.86:8080/` dari client.
+Setelah aktif, akses `http://192.168.1.171:8080/` dari client.
 
 ### Build & Publish
 1. Build installer:

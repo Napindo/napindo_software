@@ -19,7 +19,7 @@
   "publish": [
     {
       "provider": "generic",
-      "url": "http://192.168.1.86:8080"
+      "url": "http://192.168.1.171:8080"
     }
   ],
   "mac": {

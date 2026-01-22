@@ -1,9 +1,9 @@
-import { Prisma } from "@prisma/client"
+import { empty, join, raw, sqltag as sql, type Sql } from "@prisma/client/runtime/library"
 
 export type LabelFilterPayload = Record<string, unknown>
 
 type BuildResult = {
-  where: Prisma.Sql
+  where: Sql
   selectionFormula: string
 }
 
@@ -226,38 +226,38 @@ const valueNotEquals: ValueDef[] = [
 
 const TRIM = (val: unknown) => (val == null ? "" : String(val).trim())
 
-export function buildLabelQuery(filter: LabelFilterPayload, extraConditions: Prisma.Sql[] = []): BuildResult {
-  const conditions: Prisma.Sql[] = [...extraConditions]
+export function buildLabelQuery(filter: LabelFilterPayload, extraConditions: Sql[] = []): BuildResult {
+  const conditions: Sql[] = [...extraConditions]
   const crystals: string[] = []
 
   const addCond = (field: string, op: "=" | "<>", value: string, crystalOp?: "=" | "<>") => {
-    const safeField = Prisma.raw(`"${field}"`)
-    const sqlOp = Prisma.raw(op)
-    conditions.push(Prisma.sql`${safeField} ${sqlOp} ${value}`)
+    const safeField = raw(`"${field}"`)
+    const sqlOp = raw(op)
+    conditions.push(sql`${safeField} ${sqlOp} ${value}`)
 
     const esc = value.replace(/'/g, "''")
     crystals.push(`{vnongover.${field}} ${crystalOp ?? op} '${esc}'`)
   }
 
   const addLike = (field: string, value: string) => {
-    const safeField = Prisma.raw(`"${field}"`)
-    conditions.push(Prisma.sql`${safeField} ILIKE ${value}`)
+    const safeField = raw(`"${field}"`)
+    conditions.push(sql`${safeField} ILIKE ${value}`)
     const esc = value.replace(/%/g, "").replace(/'/g, "''").replace(/\*/g, "")
     crystals.push(`{vnongover.${field}} LIKE '*${esc.replace(/^%|%$/g, "")}*'`)
   }
 
   const addNotEqualsOrNull = (field: string, value: string) => {
-    const safeField = Prisma.raw(`"${field}"`)
-    const sqlOp = Prisma.raw("<>")
-    conditions.push(Prisma.sql`(${safeField} IS NULL OR ${safeField} ${sqlOp} ${value})`)
+    const safeField = raw(`"${field}"`)
+    const sqlOp = raw("<>")
+    conditions.push(sql`(${safeField} IS NULL OR ${safeField} ${sqlOp} ${value})`)
 
     const esc = value.replace(/'/g, "''")
     crystals.push(`({vnongover.${field}} <> '${esc}' OR IsNull({vnongover.${field}}))`)
   }
 
   const addNotLikeOrNull = (field: string, value: string) => {
-    const safeField = Prisma.raw(`"${field}"`)
-    conditions.push(Prisma.sql`(${safeField} IS NULL OR ${safeField} NOT ILIKE ${value})`)
+    const safeField = raw(`"${field}"`)
+    conditions.push(sql`(${safeField} IS NULL OR ${safeField} NOT ILIKE ${value})`)
     const esc = value.replace(/%/g, "").replace(/'/g, "''").replace(/\*/g, "")
     crystals.push(`({vnongover.${field}} NOT LIKE '*${esc.replace(/^%|%$/g, "")}*' OR IsNull({vnongover.${field}}))`)
   }
@@ -328,8 +328,8 @@ export function buildLabelQuery(filter: LabelFilterPayload, extraConditions: Pri
   const separator = " AND "
   const where =
     conditions.length > 0
-      ? Prisma.sql`WHERE ${Prisma.join(conditions, separator)}`
-      : Prisma.empty
+      ? sql`WHERE ${join(conditions, separator)}`
+      : empty
 
   const selectionFormula = crystals.join(" AND ")
 

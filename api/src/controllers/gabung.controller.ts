@@ -278,8 +278,8 @@ export async function listSourceOptions(_req: Request, res: Response) {
     const options = Array.from(
       new Set(
         rows
-          .map((row) => String(row.code4 ?? "").trim())
-          .filter((value) => value !== ""),
+          .map((row: { code4?: string | null }) => String(row.code4 ?? "").trim())
+          .filter((value: string) => value !== ""),
       ),
     );
 
@@ -302,8 +302,8 @@ export async function listCode1Options(_req: Request, res: Response) {
     const options = Array.from(
       new Set(
         rows
-          .map((row) => String(row.code1 ?? "").trim())
-          .filter((value) => value !== ""),
+          .map((row: { code1?: string | null }) => String(row.code1 ?? "").trim())
+          .filter((value: string) => value !== ""),
       ),
     );
 
@@ -884,7 +884,7 @@ export async function getExpoChartData(req: Request, res: Response) {
       indoLivestock: {},
     };
 
-    rows.forEach((row) => {
+    rows.forEach((row: (typeof rows)[number]) => {
       const year = extractYear(row);
       if (!year) return;
 

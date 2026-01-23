@@ -22,11 +22,14 @@ type AuditMeta = {
   extra?: Record<string, unknown>
 }
 
-const queryRaw = prisma.$queryRaw as <T = unknown>(
+const queryRaw = prisma.$queryRaw.bind(prisma) as <T = unknown>(
   query: TemplateStringsArray | Sql,
   ...values: any[]
 ) => Promise<T>
-const queryRawUnsafe = prisma.$queryRawUnsafe as <T = unknown>(query: string, ...values: any[]) => Promise<T>
+const queryRawUnsafe = prisma.$queryRawUnsafe.bind(prisma) as <T = unknown>(
+  query: string,
+  ...values: any[]
+) => Promise<T>
 
 function clamp(num: number, min: number, max: number) {
   return Math.min(Math.max(num, min), max)

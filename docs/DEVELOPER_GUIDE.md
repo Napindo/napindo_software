@@ -126,7 +126,7 @@ npm run build:win:all
 ### Copy cepat dari release ke updates (CMD)
 Gunakan skrip CMD yang sudah disediakan:
 ```cmd
-cd /d E:\Zidan\Software\napindo_software
+cd /d C:\Software\napindo_software
 scripts\publish-updates.cmd
 ```
 Jika folder updates berbeda:

@@ -109,9 +109,9 @@ Mode ini memakai server lokal (LAN) untuk menyajikan file update agar client bis
 3. Pastikan semua client bisa akses URL tersebut lewat browser.
 
 ### Mengaktifkan Web Server (CMD)
-Contoh menjalankan web server dari folder `C:\Software\Updates`:
+Contoh menjalankan web server dari folder `C:\Software\updates`:
 ```cmd
-cd /d C:\Software\Updates
+cd /d C:\Software\updates
 python -m http.server 8080
 ```
 Setelah aktif, akses `http://192.168.1.171:8080/` dari client.
@@ -131,7 +131,7 @@ scripts\publish-updates.cmd
 ```
 Jika folder updates berbeda:
 ```cmd
-scripts\publish-updates.cmd C:\Software\Updates
+scripts\publish-updates.cmd C:\Software\updates
 ```
 
 ### Perilaku Update

@@ -633,7 +633,7 @@ export function PrintLabelTemplate({
               <select
                 value={selectValues[filter.key] ?? ''}
                 onChange={(e) => setSelectValues((prev) => ({ ...prev, [filter.key]: e.target.value }))}
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-200 bg-white text-slate-700"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 placeholder-slate-400 focus:border-rose-400 focus:ring-4 focus:ring-rose-100 transition"
                 style={{ color: selectValues[filter.key] ? undefined : '#9ca3af' }}
               >
                 <option value="" className="text-slate-400">
@@ -663,7 +663,7 @@ export function PrintLabelTemplate({
               <select
                 value={textValues[filter.key] ?? ''}
                 onChange={(e) => setTextValues((prev) => ({ ...prev, [filter.key]: e.target.value }))}
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-200 bg-white text-slate-700"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 placeholder-slate-400 focus:border-rose-400 focus:ring-4 focus:ring-rose-100 transition"
                 style={{ color: textValues[filter.key] ? undefined : '#9ca3af' }}
               >
                 <option value="" className="text-slate-400">

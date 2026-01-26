@@ -6,9 +6,9 @@ import { useAppStore } from '../store/appStore'
 import { getUserAccess } from '../utils/access'
 import { formatDateOnly } from '../utils/date'
 import { rowMatchesSegment } from '../utils/flags'
-import logoIdd from '../assets/LOGO IDD 2026.png'
-import logoWater from '../assets/Logo Water 2026 series.png'
-import logoIdl from '../assets/Logo IDL Lengkap.png'
+import logoIdd from '../assets/LOGO IDAM.png'
+import logoWater from '../assets/LOGO IDW.png'
+import logoIdl from '../assets/LOGO IDL.png'
 
 const eventCards = [
   {

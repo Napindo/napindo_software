@@ -83,3 +83,11 @@ interface Window {
     ) => Promise<RendererDatabaseResponse<{ base64?: string; contentType?: string; filename?: string }>>
   }
 }
+
+interface ImportMetaEnv {
+  readonly VITE_API_BASE_URL?: string;
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}

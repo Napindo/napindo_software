@@ -1,0 +1,38 @@
+export const endpoints = {
+  gabung: {
+    list: "/gabung",
+    detail: (id: number | string) => `/gabung/${id}`,
+    create: "/gabung",
+    update: (id: number | string) => `/gabung/${id}`,
+    remove: (id: number | string) => `/gabung/${id}`,
+    importExcel: "/gabung/import/excel",
+    personalPdf: "/gabung/personal-pdf",
+    sourceOptions: "/gabung/source-options",
+    code1Options: "/gabung/code1-options",
+  },
+  pengguna: {
+    login: "/pengguna/login",
+    logout: "/pengguna/logout",
+    list: "/pengguna/list",
+    changePassword: "/pengguna/change-password",
+    hints: "/pengguna/hints",
+  },
+  audit: {
+    list: "/audit",
+    create: "/audit",
+  },
+  report: {
+    perusahaanPdf: "/report/perusahaan/pdf",
+    perusahaanExcel: "/report/perusahaan/excel",
+    perusahaanWord: "/report/perusahaan/word",
+    governmentPdf: "/report/government/pdf",
+    governmentExcel: "/report/government/excel",
+    governmentWord: "/report/government/word",
+    jumlahPerusahaanPdf: "/report/jumlah-perusahaan/pdf",
+    jumlahPerusahaanExcel: "/report/jumlah-perusahaan/excel",
+    jumlahPerusahaanWord: "/report/jumlah-perusahaan/word",
+    jumlahGovernmentPdf: "/report/jumlah-government/pdf",
+    jumlahGovernmentExcel: "/report/jumlah-government/excel",
+    jumlahGovernmentWord: "/report/jumlah-government/word",
+  },
+};

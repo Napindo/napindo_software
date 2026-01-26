@@ -5,10 +5,13 @@
   "type": "commonjs",
   "scripts": {
     "dev": "vite",
+    "dev:web": "vite --config vite.web.config.ts --mode web",
     "build": "tsc && vite build && electron-builder",
+    "build:web": "tsc && vite build --config vite.web.config.ts --mode web",
     "build:win:all": "npm version patch --no-git-tag-version && tsc && vite build && electron-builder --win --x64 --ia32 --arm64",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "preview:web": "vite preview --config vite.web.config.ts --mode web --port 7133"
   },
   "dependencies": {
     "electron-updater": "^6.6.2",
@@ -38,3 +41,5 @@
   },
   "main": "dist-electron/main/index.cjs"
 }
+
+

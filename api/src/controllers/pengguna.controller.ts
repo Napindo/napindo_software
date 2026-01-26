@@ -212,3 +212,89 @@ export async function loginPengguna(req: Request, res: Response) {
     return res.status(500).json(fail(err.message));
   }
 }
+/**
+ * POST /pengguna/change-password
+ * body: { username, currentPassword, newPassword, division? }
+ */
+export async function changePasswordPengguna(req: Request, res: Response) {
+  try {
+    const { username, currentPassword, newPassword, division } = req.body ?? {};
+
+    const usernameError = validateUsername(username);
+    if (usernameError) return res.status(400).json(fail(usernameError));
+
+    if (String(currentPassword ?? "").trim() === "") {
+      return res.status(400).json(fail("currentPassword wajib diisi"));
+    }
+
+    const passwordError = validatePassword(newPassword, { min: 4 });
+    if (passwordError) return res.status(400).json(fail(passwordError));
+
+    const user = await prisma.pengguna.findUnique({ where: { username } });
+    if (!user) {
+      return res.status(404).json(fail("User tidak ditemukan"));
+    }
+
+    if (String(user.password ?? "") !== String(currentPassword)) {
+      return res.status(401).json(fail("Password saat ini salah"));
+    }
+
+    const updated = await prisma.pengguna.update({
+      where: { username },
+      data: {
+        password: String(newPassword),
+        division: division ?? user.division,
+      },
+    });
+
+    return res.json(
+      ok(
+        {
+          username: updated.username,
+          division: updated.division,
+          status: updated.status,
+        },
+        "Password berhasil diubah",
+      ),
+    );
+  } catch (err: any) {
+    return res.status(500).json(fail(err.message));
+  }
+}
+
+/**
+ * POST /pengguna/logout
+ * body: { username }
+ */
+export async function logoutPengguna(req: Request, res: Response) {
+  try {
+    const { username } = req.body ?? {};
+
+    const usernameError = validateUsername(username);
+    if (usernameError) return res.status(400).json(fail(usernameError));
+
+    const user = await prisma.pengguna.findUnique({ where: { username } });
+    if (!user) {
+      return res.status(404).json(fail("User tidak ditemukan"));
+    }
+
+    const updated = await prisma.pengguna.update({
+      where: { username },
+      data: { status: "OFF" },
+    });
+
+    return res.json(
+      ok(
+        {
+          username: updated.username,
+          division: updated.division,
+          status: updated.status,
+        },
+        "Logout berhasil",
+      ),
+    );
+  } catch (err: any) {
+    return res.status(500).json(fail(err.message));
+  }
+}
+

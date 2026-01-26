@@ -17,6 +17,8 @@ export const endpoints = {
     update: (username: string) => `/pengguna/${username}`,
     remove: (username: string) => `/pengguna/${username}`,
     login: "/pengguna/login",
+    changePassword: "/pengguna/change-password",
+    logout: "/pengguna/logout",
   },
   audit: {
     list: "/audit/logs",

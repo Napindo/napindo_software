@@ -1,4 +1,6 @@
 import { getDatabaseBridge, getIpcRenderer } from '../utils/bridge'
+import { requestJson } from '../api/client'
+import { endpoints } from '../api/endpoints'
 
 export type CreatePenggunaPayload = {
   username: string
@@ -24,6 +26,12 @@ export type PenggunaRow = {
   status?: string | null
 }
 
+type ApiResponse<T> = {
+  ok: boolean
+  data: T
+  message: string
+}
+
 export type DatabaseResponse<T = unknown> =
   | { success: true; data?: T; rows?: T[]; user?: T; message?: string }
   | { success: false; message: string }
@@ -39,7 +47,16 @@ async function invokeCreatePengguna(payload: CreatePenggunaPayload): Promise<Dat
     return ipc.invoke('db:createPengguna', payload) as Promise<DatabaseResponse>
   }
 
-  throw new Error('Bridge Electron untuk createPengguna tidak tersedia')
+  const response = await requestJson<ApiResponse<any>>(endpoints.pengguna.create, {
+    method: 'POST',
+    json: payload,
+  })
+
+  if (!response.ok) {
+    return { success: false, message: response.message }
+  }
+
+  return { success: true, data: response.data, message: response.message }
 }
 
 export async function createPengguna(payload: CreatePenggunaPayload): Promise<any> {
@@ -62,7 +79,16 @@ async function invokeChangePassword(payload: ChangePenggunaPasswordPayload): Pro
     return ipc.invoke('db:changePenggunaPassword', payload) as Promise<DatabaseResponse>
   }
 
-  throw new Error('Bridge Electron untuk changePenggunaPassword tidak tersedia')
+  const response = await requestJson<ApiResponse<any>>(endpoints.pengguna.changePassword, {
+    method: 'POST',
+    json: payload,
+  })
+
+  if (!response.ok) {
+    return { success: false, message: response.message }
+  }
+
+  return { success: true, data: response.data, message: response.message }
 }
 
 export async function changePenggunaPassword(payload: ChangePenggunaPasswordPayload): Promise<any> {
@@ -85,7 +111,16 @@ async function invokeLogoutPengguna(payload: LogoutPenggunaPayload): Promise<Dat
     return ipc.invoke('db:logoutPengguna', payload) as Promise<DatabaseResponse>
   }
 
-  throw new Error('Bridge Electron untuk logoutPengguna tidak tersedia')
+  const response = await requestJson<ApiResponse<any>>(endpoints.pengguna.logout, {
+    method: 'POST',
+    json: payload,
+  })
+
+  if (!response.ok) {
+    return { success: false, message: response.message }
+  }
+
+  return { success: true, data: response.data, message: response.message }
 }
 
 export async function logoutPengguna(payload: LogoutPenggunaPayload): Promise<any> {
@@ -108,7 +143,15 @@ async function invokeListPengguna(): Promise<DatabaseResponse> {
     return ipc.invoke('db:listPengguna') as Promise<DatabaseResponse>
   }
 
-  throw new Error('Bridge Electron untuk listPengguna tidak tersedia')
+  const response = await requestJson<ApiResponse<PenggunaRow[]>>(endpoints.pengguna.list, {
+    method: 'GET',
+  })
+
+  if (!response.ok) {
+    return { success: false, message: response.message }
+  }
+
+  return { success: true, data: response.data, rows: response.data, message: response.message }
 }
 
 export async function listPengguna(): Promise<PenggunaRow[]> {

@@ -1,7 +1,7 @@
 {
   "name": "napindo_software",
   "private": true,
-  "version": "0.0.35",
+  "version": "0.0.37",
   "type": "commonjs",
   "scripts": {
     "dev": "vite",
@@ -41,5 +41,3 @@
   },
   "main": "dist-electron/main/index.cjs"
 }
-
-

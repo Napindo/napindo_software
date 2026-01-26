@@ -1,14 +1,22 @@
-const DEFAULT_BASE_URL = "http://localhost:8133/api";
+const DEFAULT_BASE_URL = "http://localhost:8133";
 
 const getBaseUrl = () => {
   const envUrl = import.meta.env.VITE_API_BASE_URL as string | undefined;
   return envUrl && envUrl.trim() ? envUrl.trim() : DEFAULT_BASE_URL;
 };
 
+const getPrefix = () => {
+  const envPrefix = import.meta.env.VITE_API_PREFIX as string | undefined;
+  const trimmed = envPrefix?.trim() ?? "";
+  if (!trimmed || trimmed === "/") return "";
+  return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+};
+
 const buildUrl = (path: string) => {
   const base = getBaseUrl().replace(/\/$/, "");
+  const prefix = getPrefix();
   const suffix = path.startsWith("/") ? path : `/${path}`;
-  return `${base}${suffix}`;
+  return `${base}${prefix}${suffix}`;
 };
 
 type RequestOptions = RequestInit & {

@@ -1,3 +1,5 @@
+import { requestJson } from "../api/client"
+import { endpoints } from "../api/endpoints"
 import { buildApiUrl, isApiOk, pickApiData } from "../utils/api"
 import { getDatabaseBridge, getIpcRenderer } from "../utils/bridge"
 
@@ -6,6 +8,13 @@ export type AddDataPayload = Record<string, string | number | boolean | null | u
 export type DatabaseResponse<T = unknown> =
   | { success: true; data?: T; rows?: T[]; message?: string }
   | { success: false; message: string }
+
+
+type ApiResponse<T> = {
+  ok: boolean
+  data: T
+  message: string
+}
 
 export type GabungListResult = {
   items: Record<string, unknown>[]
@@ -30,7 +39,18 @@ async function invokeSaveAddData(payload: AddDataPayload): Promise<DatabaseRespo
     return ipc.invoke("db:saveAddData", payload) as Promise<DatabaseResponse>
   }
 
-  throw new Error("Bridge Electron untuk saveAddData tidak tersedia")
+  try {
+    const response = await requestJson<ApiResponse<any>>(endpoints.gabung.create, {
+      method: "POST",
+      json: payload,
+    })
+    if (!response.ok) {
+      return { success: false, message: response.message }
+    }
+    return { success: true, data: response.data, message: response.message }
+  } catch (err: any) {
+    return { success: false, message: err?.message ?? "Gagal menyimpan data" }
+  }
 }
 
 /**
@@ -47,7 +67,18 @@ async function invokeUpdateAddData(id: string | number, payload: AddDataPayload)
     return ipc.invoke("db:updateAddData", id, payload) as Promise<DatabaseResponse>
   }
 
-  throw new Error("Bridge Electron untuk updateAddData tidak tersedia")
+  try {
+    const response = await requestJson<ApiResponse<any>>(endpoints.gabung.update(id), {
+      method: "PUT",
+      json: payload,
+    })
+    if (!response.ok) {
+      return { success: false, message: response.message }
+    }
+    return { success: true, data: response.data, message: response.message }
+  } catch (err: any) {
+    return { success: false, message: err?.message ?? "Gagal memperbarui data" }
+  }
 }
 
 /**
@@ -64,7 +95,21 @@ async function invokeDeleteAddData(ids: Array<string | number>): Promise<Databas
     return ipc.invoke("db:deleteAddData", ids) as Promise<DatabaseResponse>
   }
 
-  throw new Error("Bridge Electron untuk deleteAddData tidak tersedia")
+  try {
+    const results = [] as any[]
+    for (const id of ids) {
+      const response = await requestJson<ApiResponse<any>>(endpoints.gabung.remove(id), {
+        method: "DELETE",
+      })
+      if (!response.ok) {
+        return { success: false, message: response.message }
+      }
+      results.push(response.data)
+    }
+    return { success: true, data: results, message: "OK" }
+  } catch (err: any) {
+    return { success: false, message: err?.message ?? "Gagal menghapus data" }
+  }
 }
 
 /**
@@ -83,7 +128,19 @@ async function invokeFindCompany(company: string): Promise<DatabaseResponse> {
     return ipc.invoke("db:findCompany", trimmed) as Promise<DatabaseResponse>
   }
 
-  throw new Error("Bridge Electron untuk findCompany tidak tersedia")
+  try {
+    const encoded = encodeURIComponent(trimmed)
+    const response = await requestJson<ApiResponse<{ items: any[] }>>(endpoints.gabung.findCompany(encoded), {
+      method: "GET",
+    })
+    if (!response.ok) {
+      return { success: false, message: response.message }
+    }
+    const items = response.data?.items ?? []
+    return { success: true, data: items }
+  } catch (err: any) {
+    return { success: false, message: err?.message ?? "Gagal mengambil data perusahaan" }
+  }
 }
 
 

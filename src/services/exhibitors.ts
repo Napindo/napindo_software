@@ -16,6 +16,7 @@ export type ExhibitorSegment =
   | "dairy"
   | "horticulture"
 
+import { buildApiUrl, isApiOk, pickApiData } from '../utils/api'
 import { getDatabaseBridge, getIpcRenderer } from '../utils/bridge'
 
 export type DatabaseResponse<T = unknown> =
@@ -71,7 +72,13 @@ async function invokeFetchExhibitorCountByExpo(): Promise<DatabaseResponse> {
     return ipc.invoke('db:fetchExhibitorCountByExpo') as Promise<DatabaseResponse>
   }
 
-  throw new Error('Bridge Electron untuk fetchExhibitorCountByExpo tidak tersedia')
+  const res = await fetch(buildApiUrl('/gabung/exhibitor-count'))
+  const body = await res.json()
+  if (!isApiOk(body)) {
+    throw new Error(body?.message ?? 'Gagal mengambil jumlah exhibitor per pameran')
+  }
+  const data = pickApiData(body)
+  return { success: true, data }
 }
 
 async function invokeFetchExpoChartData(): Promise<DatabaseResponse> {
@@ -85,7 +92,13 @@ async function invokeFetchExpoChartData(): Promise<DatabaseResponse> {
     return ipc.invoke('db:fetchExpoChartData') as Promise<DatabaseResponse>
   }
 
-  throw new Error('Bridge Electron untuk fetchExpoChartData tidak tersedia')
+  const res = await fetch(buildApiUrl('/gabung/expo-chart'))
+  const body = await res.json()
+  if (!isApiOk(body)) {
+    throw new Error(body?.message ?? 'Gagal mengambil data grafik pameran')
+  }
+  const data = pickApiData(body)
+  return { success: true, data }
 }
 
 /**
@@ -256,7 +269,18 @@ async function invokeFetchExhibitors(
     ) as Promise<DatabaseResponse<Record<string, any>>>
   }
 
-  throw new Error("Bridge Electron untuk fetchExhibitors tidak tersedia")
+  const search = new URLSearchParams({
+    limit: String(limit),
+    person,
+  })
+  const res = await fetch(buildApiUrl(`/gabung/segment/${encodeURIComponent(backendSegment)}?${search.toString()}`))
+  const body = await res.json()
+  if (!isApiOk(body)) {
+    return { success: false, message: body?.message ?? 'Gagal mengambil data exhibitor' }
+  }
+  const data = pickApiData(body)
+  const items = (data?.items ?? data?.rows ?? data ?? [])
+  return { success: true, rows: items }
 }
 
 /**

@@ -9,6 +9,7 @@ export const endpoints = {
     personalPdf: "/gabung/personal-pdf",
     sourceOptions: "/gabung/source-options",
     code1Options: "/gabung/code1-options",
+    findCompany: (company: string) => `/gabung/company/${company}`,
   },
   pengguna: {
     list: "/pengguna",

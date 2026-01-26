@@ -73,21 +73,21 @@ export const penggunaApi = {
         return { success: false, message: response.message };
       }
 
-      const items = response.data?.items ?? response.data ?? [];
+      const items: Array<{ username?: string | null; division?: string | null }> =
+        Array.isArray(response.data?.items)
+          ? response.data.items
+          : Array.isArray(response.data)
+          ? response.data
+          : [];
+
       const usernames = Array.from(
-        new Set(
-          (items || [])
-            .map((item) => String(item?.username || "").trim())
-            .filter(Boolean),
-        ),
+        new Set(items.map((item) => String(item?.username || "").trim()).filter(Boolean)),
       );
+
       const divisions = Array.from(
-        new Set(
-          (items || [])
-            .map((item) => String(item?.division || "").trim())
-            .filter(Boolean),
-        ),
+        new Set(items.map((item) => String(item?.division || "").trim()).filter(Boolean)),
       );
+
 
       return { success: true, hints: { usernames, divisions } };
     } catch (error: any) {

@@ -983,7 +983,11 @@ export async function getExpoChartData(req: Request, res: Response) {
       { year: number; indoDefence: number | null; indoWater: number | null; indoLivestock: number | null }[]
     >(sql);
 
-    const counts: Record<string, Record<number, number>> = {
+    const counts: {
+      indoDefence: Record<number, number>;
+      indoWater: Record<number, number>;
+      indoLivestock: Record<number, number>;
+    } = {
       indoDefence: {},
       indoWater: {},
       indoLivestock: {},

@@ -6,6 +6,8 @@ import {
   updatePengguna,
   deletePengguna,
   loginPengguna,
+  changePasswordPengguna,
+  logoutPengguna,
 } from "../controllers/pengguna.controller";
 import { rateLimit } from "../middleware/rateLimit";
 
@@ -22,9 +24,12 @@ const passwordLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
   max: 6,
   message: "Terlalu banyak percobaan ganti password. Coba lagi nanti.",
-  keyGenerator: (req) => `${req.ip || "unknown"}:${String(req.params.username || "").toLowerCase()}`,
+  keyGenerator: (req) => {
+    const raw = req.params?.username ?? req.body?.username ?? "";
+    return `${req.ip || "unknown"}:${String(raw).toLowerCase()}`;
+  },
   skip: (req) => {
-    const raw = req.body?.password;
+    const raw = req.body?.password ?? req.body?.newPassword;
     return raw === undefined || raw === null || String(raw).trim() === "";
   },
 });
@@ -37,5 +42,7 @@ router.delete("/:username", deletePengguna);
 
 // login endpoint
 router.post("/login", loginLimiter, loginPengguna);
+router.post("/change-password", passwordLimiter, changePasswordPengguna);
+router.post("/logout", logoutPengguna);
 
 export default router;

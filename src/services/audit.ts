@@ -1,4 +1,6 @@
 import { getDatabaseBridge, getIpcRenderer } from '../utils/bridge'
+import { requestJson } from '../api/client'
+import { endpoints } from '../api/endpoints'
 
 export type AuditLogRow = {
   id: number
@@ -8,6 +10,12 @@ export type AuditLogRow = {
   summary?: string | null
   data?: unknown
   createdAt: string
+}
+
+type ApiResponse<T> = {
+  ok: boolean
+  data: T
+  message: string
 }
 
 type DatabaseResponse<T = unknown> =
@@ -25,7 +33,16 @@ async function invokeFetchAuditLogs(limit = 200): Promise<DatabaseResponse> {
     return ipc.invoke('db:fetchAuditLogs', limit) as Promise<DatabaseResponse>
   }
 
-  throw new Error('Bridge Electron untuk fetchAuditLogs tidak tersedia')
+  const response = await requestJson<ApiResponse<AuditLogRow[]>>(
+    `${endpoints.audit.list}?limit=${encodeURIComponent(String(limit))}`,
+    { method: 'GET' },
+  )
+
+  if (!response.ok) {
+    return { success: false, message: response.message }
+  }
+
+  return { success: true, data: response.data, rows: response.data, message: response.message }
 }
 
 export async function fetchAuditLogs(limit = 200): Promise<AuditLogRow[]> {
@@ -62,5 +79,14 @@ export async function createAuditLog(payload: {
     return response.data ?? response
   }
 
-  throw new Error('Bridge Electron untuk createAuditLog tidak tersedia')
+  const response = await requestJson<ApiResponse<AuditLogRow>>(endpoints.audit.create, {
+    method: 'POST',
+    json: payload,
+  })
+
+  if (!response.ok) {
+    throw new Error(response.message || 'Gagal menyimpan audit log')
+  }
+
+  return response.data
 }

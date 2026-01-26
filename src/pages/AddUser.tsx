@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent, type ChangeEvent } from 'react'
 import type { AuthenticatedUser } from './Login'
+import { penggunaApi } from '../services/http/pengguna'
 import { createPengguna } from '../services/pengguna'
 import { createAuditLog } from '../services/audit'
 import { useAppStore } from '../store/appStore'
@@ -24,7 +25,7 @@ async function invokeUserHints() {
   const w = window as any
   if (w.database?.userHints) return w.database.userHints()
   if (w.ipcRenderer?.invoke) return w.ipcRenderer.invoke('db:userHints')
-  throw new Error('Fungsi userHints tidak tersedia, restart aplikasi atau rebuild preload.')
+  return penggunaApi.hints()
 }
 
 const AddUserPage = (_props: AddUserPageProps) => {
@@ -252,3 +253,4 @@ const AddUserPage = (_props: AddUserPageProps) => {
 }
 
 export default AddUserPage
+

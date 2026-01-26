@@ -478,7 +478,15 @@ export function PrintLabelTemplate({
     try {
       const result = await onSubmit({ ...payload, action: 'export-save' })
       const meta: any = result?.data ?? {}
-      if (meta?.canceled) {
+      const base64 = extractBase64(meta)
+      if (base64) {
+        const filename = meta?.filename || `${nounText}-${Date.now()}.docx`
+        const mime =
+          meta?.contentType ||
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        downloadBase64File(base64, filename, mime)
+        setMessage(`Export selesai. File ${filename} diunduh.`)
+      } else if (meta?.canceled) {
         setMessage('Export dibatalkan.')
       } else {
         setMessage('Export selesai. File disimpan sesuai pilihan Anda.')
@@ -777,3 +785,18 @@ function base64ToBlobUrl(base64: string, contentType = 'application/pdf') {
   return URL.createObjectURL(blob)
 }
 
+function downloadBase64File(base64: string, filename: string, contentType: string) {
+  const byteString = atob(base64)
+  const len = byteString.length
+  const bytes = new Uint8Array(len)
+  for (let i = 0; i < len; i += 1) bytes[i] = byteString.charCodeAt(i)
+  const blob = new Blob([bytes], { type: contentType })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 0)
+}

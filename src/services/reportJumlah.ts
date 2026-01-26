@@ -3,6 +3,30 @@ import { buildApiUrl, isApiOk, pickApiData } from '../utils/api'
 import { getDatabaseBridge, getIpcRenderer, unwrapBridgeResponse } from '../utils/bridge'
 import { extractCount } from '../utils/reporting'
 
+const fetchBinaryAsBase64 = async (
+  path: string,
+  filter: unknown,
+  filename: string,
+  fallbackType: string,
+) => {
+  const res = await fetch(buildApiUrl(path), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(filter ?? {}),
+  })
+  if (!res.ok) {
+    const message = await res.text()
+    throw new Error(message || 'Gagal mengunduh file')
+  }
+  const buffer = await res.arrayBuffer()
+  const base64 = arrayBufferToBase64(buffer)
+  return {
+    base64,
+    contentType: res.headers.get('content-type') || fallbackType,
+    filename,
+  }
+}
+
 export type ReportJumlahResult = {
   data?: unknown
   total?: number
@@ -74,7 +98,13 @@ export async function requestReportJumlahPerusahaan(filter: unknown): Promise<Re
       return { data: response, total: payload?.total }
     }
 
-    throw new Error('Bridge Electron untuk ekspor belum tersedia')
+    const data = await fetchBinaryAsBase64(
+      '/report/jumlah/perusahaan/export/word',
+      filter,
+      'report-jumlah-perusahaan.docx',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    )
+    return { data, total: payload?.total }
   }
 
   if (payload?.action === 'preview-word' || payload?.action === 'preview') {
@@ -178,7 +208,13 @@ export async function requestReportJumlahPerusahaan(filter: unknown): Promise<Re
       return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
     }
 
-    throw new Error('Bridge Electron untuk cetak report jumlah tidak tersedia')
+    const data = await fetchBinaryAsBase64(
+      '/report/jumlah/perusahaan/print',
+      filter,
+      'report-jumlah-perusahaan.pdf',
+      'application/pdf',
+    )
+    return { data, total: payload?.total }
   }
 
   if (payload?.action === 'export-excel') {
@@ -200,7 +236,13 @@ export async function requestReportJumlahPerusahaan(filter: unknown): Promise<Re
       return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
     }
 
-    throw new Error('Bridge Electron untuk cetak report jumlah (Excel) tidak tersedia')
+    const data = await fetchBinaryAsBase64(
+      '/report/jumlah/perusahaan/export/excel',
+      filter,
+      'report-jumlah-perusahaan.xlsx',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
+    return { data, total: payload?.total }
   }
 
   if (payload?.action === 'export-word') {
@@ -222,7 +264,13 @@ export async function requestReportJumlahPerusahaan(filter: unknown): Promise<Re
       return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
     }
 
-    throw new Error('Bridge Electron untuk cetak report jumlah (Word) tidak tersedia')
+    const data = await fetchBinaryAsBase64(
+      '/report/jumlah/perusahaan/export/word',
+      filter,
+      'report-jumlah-perusahaan.docx',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    )
+    return { data, total: payload?.total }
   }
 
   return invokeReport('report:jumlah-perusahaan', filter)
@@ -250,7 +298,13 @@ export async function requestReportJumlahGovernment(filter: unknown): Promise<Re
       return { data: response, total: payload?.total }
     }
 
-    throw new Error('Bridge Electron untuk ekspor belum tersedia')
+    const data = await fetchBinaryAsBase64(
+      '/report/jumlah/government/export/word',
+      filter,
+      'report-jumlah-government.docx',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    )
+    return { data, total: payload?.total }
   }
 
   if (payload?.action === 'preview-word' || payload?.action === 'preview') {
@@ -354,7 +408,13 @@ export async function requestReportJumlahGovernment(filter: unknown): Promise<Re
       return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
     }
 
-    throw new Error('Bridge Electron untuk cetak report jumlah tidak tersedia')
+    const data = await fetchBinaryAsBase64(
+      '/report/jumlah/government/print',
+      filter,
+      'report-jumlah-government.pdf',
+      'application/pdf',
+    )
+    return { data, total: payload?.total }
   }
 
   if (payload?.action === 'export-excel') {
@@ -376,7 +436,13 @@ export async function requestReportJumlahGovernment(filter: unknown): Promise<Re
       return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
     }
 
-    throw new Error('Bridge Electron untuk cetak report jumlah (Excel) tidak tersedia')
+    const data = await fetchBinaryAsBase64(
+      '/report/jumlah/government/export/excel',
+      filter,
+      'report-jumlah-government.xlsx',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
+    return { data, total: payload?.total }
   }
 
   if (payload?.action === 'export-word') {
@@ -398,7 +464,13 @@ export async function requestReportJumlahGovernment(filter: unknown): Promise<Re
       return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
     }
 
-    throw new Error('Bridge Electron untuk cetak report jumlah (Word) tidak tersedia')
+    const data = await fetchBinaryAsBase64(
+      '/report/jumlah/government/export/word',
+      filter,
+      'report-jumlah-government.docx',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    )
+    return { data, total: payload?.total }
   }
 
   return invokeReport('report:jumlah-government', filter)

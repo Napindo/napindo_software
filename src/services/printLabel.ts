@@ -3,6 +3,31 @@ import { buildApiUrl, isApiOk, pickApiData } from '../utils/api'
 import { getDatabaseBridge, getIpcRenderer, unwrapBridgeResponse } from '../utils/bridge'
 import { extractCount } from '../utils/reporting'
 
+
+const fetchBinaryAsBase64 = async (
+  path: string,
+  filter: unknown,
+  filename: string,
+  fallbackType: string,
+) => {
+  const res = await fetch(buildApiUrl(path), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(filter ?? {}),
+  })
+  if (!res.ok) {
+    const message = await res.text()
+    throw new Error(message || 'Gagal mengunduh file')
+  }
+  const buffer = await res.arrayBuffer()
+  const base64 = arrayBufferToBase64(buffer)
+  return {
+    base64,
+    contentType: res.headers.get('content-type') || fallbackType,
+    filename,
+  }
+}
+
 export type PrintLabelResult = {
   data?: unknown
   total?: number
@@ -72,7 +97,13 @@ export async function requestLabelPerusahaan(filter: unknown): Promise<PrintLabe
       return { data: response, total: payload?.total }
     }
 
-    throw new Error('Bridge Electron untuk ekspor belum tersedia')
+    const data = await fetchBinaryAsBase64(
+      '/report/labelvisitor/export/word',
+      filter,
+      'print-label-perusahaan.docx',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    )
+    return { data, total: payload?.total }
   }
 
   // Preview Word (base64 docx, no save dialog)
@@ -158,7 +189,6 @@ export async function requestLabelPerusahaan(filter: unknown): Promise<PrintLabe
       total: payload?.total,
     }
 
-    throw new Error('Bridge Electron untuk preview PDF tidak tersedia')
   }
 
   // Export PDF
@@ -181,7 +211,13 @@ export async function requestLabelPerusahaan(filter: unknown): Promise<PrintLabe
       return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
     }
 
-    throw new Error('Bridge Electron untuk cetak label tidak tersedia')
+    const data = await fetchBinaryAsBase64(
+      '/report/labelvisitor/print',
+      filter,
+      'print-label-perusahaan.pdf',
+      'application/pdf',
+    )
+    return { data, total: payload?.total }
   }
 
   // Export Excel
@@ -204,7 +240,13 @@ export async function requestLabelPerusahaan(filter: unknown): Promise<PrintLabe
       return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
     }
 
-    throw new Error('Bridge Electron untuk cetak label (Excel) tidak tersedia')
+    const data = await fetchBinaryAsBase64(
+      '/report/labelvisitor/export/excel',
+      filter,
+      'print-label-perusahaan.xlsx',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
+    return { data, total: payload?.total }
   }
 
   // Export Word
@@ -227,7 +269,13 @@ export async function requestLabelPerusahaan(filter: unknown): Promise<PrintLabe
       return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
     }
 
-    throw new Error('Bridge Electron untuk cetak label (Word) tidak tersedia')
+    const data = await fetchBinaryAsBase64(
+      '/report/labelvisitor/export/word',
+      filter,
+      'print-label-perusahaan.docx',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    )
+    return { data, total: payload?.total }
   }
 
   return invokeReport('report:labelvisitor', filter)
@@ -255,7 +303,13 @@ export async function requestLabelGovernment(filter: unknown): Promise<PrintLabe
       return { data: response, total: payload?.total }
     }
 
-    throw new Error('Bridge Electron untuk ekspor belum tersedia')
+    const data = await fetchBinaryAsBase64(
+      '/report/labelgover/export/word',
+      filter,
+      'print-label-government.docx',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    )
+    return { data, total: payload?.total }
   }
 
   if (payload?.action === 'preview-word' || payload?.action === 'preview') {
@@ -359,7 +413,13 @@ export async function requestLabelGovernment(filter: unknown): Promise<PrintLabe
       return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
     }
 
-    throw new Error('Bridge Electron untuk cetak label tidak tersedia')
+    const data = await fetchBinaryAsBase64(
+      '/report/labelgover/print',
+      filter,
+      'print-label-government.pdf',
+      'application/pdf',
+    )
+    return { data, total: payload?.total }
   }
 
   if (payload?.action === 'export-excel') {
@@ -381,7 +441,13 @@ export async function requestLabelGovernment(filter: unknown): Promise<PrintLabe
       return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
     }
 
-    throw new Error('Bridge Electron untuk cetak label (Excel) tidak tersedia')
+    const data = await fetchBinaryAsBase64(
+      '/report/labelgover/export/excel',
+      filter,
+      'print-label-government.xlsx',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
+    return { data, total: payload?.total }
   }
 
   if (payload?.action === 'export-word') {
@@ -403,7 +469,13 @@ export async function requestLabelGovernment(filter: unknown): Promise<PrintLabe
       return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
     }
 
-    throw new Error('Bridge Electron untuk cetak label (Word) tidak tersedia')
+    const data = await fetchBinaryAsBase64(
+      '/report/labelgover/export/word',
+      filter,
+      'print-label-government.docx',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    )
+    return { data, total: payload?.total }
   }
 
   return invokeReport('report:labelgover', filter)

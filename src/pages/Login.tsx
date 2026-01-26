@@ -1,6 +1,7 @@
 import type { ChangeEvent, FormEvent } from "react";
 import { useEffect, useState } from "react";
 import ComboField from "../components/ComboField";
+import { penggunaApi } from "../services/http/pengguna";
 import { useAppStore, type AppUser } from "../store/appStore";
 
 type LoginStatus = "idle" | "loading" | "success" | "error";
@@ -86,9 +87,7 @@ async function invokeLogin(payload: {
   if (w.database?.login) return w.database.login(payload);
   if (w.ipcRenderer?.invoke) return w.ipcRenderer.invoke("db:login", payload);
 
-  throw new Error(
-    "Fungsi login tidak tersedia, restart aplikasi atau rebuild preload.",
-  );
+  return penggunaApi.login(payload);
 }
 
 async function invokeUserHints() {
@@ -97,9 +96,7 @@ async function invokeUserHints() {
   if (w.database?.userHints) return w.database.userHints();
   if (w.ipcRenderer?.invoke) return w.ipcRenderer.invoke("db:userHints");
 
-  throw new Error(
-    "Fungsi userHints tidak tersedia, restart aplikasi atau rebuild preload.",
-  );
+  return penggunaApi.hints();
 }
 
 async function invokeAppInfo() {
@@ -465,3 +462,5 @@ function LoginPage({ onSuccess }: LoginPageProps) {
 }
 
 export default LoginPage;
+
+

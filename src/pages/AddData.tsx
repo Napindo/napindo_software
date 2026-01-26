@@ -620,7 +620,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
         emailText: String(row.email ?? '').toLowerCase(),
         nameText: String(row.name ?? '').toLowerCase(),
         businessText: String(row.business ?? '').toLowerCase(),
-        userNameText: String(row.source ?? '').toLowerCase(),
+        userNameText: String(row.namauser ?? row.source ?? '').toLowerCase(),
       })),
     [dataSearchRows],
   )
@@ -864,7 +864,20 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
       setDataSearchEdits({})
     }
     try {
-      const result = await listGabungRecords({ page, pageSize, q: query })
+      const result = await listGabungRecords({
+        page,
+        pageSize,
+        q: query,
+        fields: 'search',
+        filters: {
+          hp: filters.hp,
+          company: filters.company,
+          email: filters.email,
+          name: filters.name,
+          business: filters.business,
+          userName: filters.userName,
+        },
+      })
       setDataSearchRows(result.items)
       setDataSearchPage(result.pagination.page)
       setDataSearchTotal(result.pagination.total)

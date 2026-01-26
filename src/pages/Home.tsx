@@ -82,7 +82,7 @@ const Home = ({ displayName }: HomeProps) => {
     scheduleIdle(async () => {
       try {
         const [penggunaResult, chartResult] = await Promise.allSettled([
-          listPengguna(),
+          listPengguna({ pageSize: 200 }),
           fetchExpoChartData(),
         ])
 

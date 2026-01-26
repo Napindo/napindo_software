@@ -6,6 +6,20 @@ import { writeAuditLog } from "../services/auditLog";
 import { buildSegmentWhere, SegmentCode } from "../services/gabungSegments";
 import { renderPersonalDatabasePdf } from "../services/personalDatabaseRender";
 
+const CACHE_TTL_MS = 60 * 1000;
+const cacheState = {
+  exhibitorCount: { at: 0, data: null as null | { indoDefence: number; indoWater: number; indoLivestock: number } },
+  expoChart: {
+    at: 0,
+    data: null as null | {
+      indoDefence: Record<number, number>;
+      indoWater: Record<number, number>;
+      indoLivestock: Record<number, number>;
+    },
+  },
+};
+
+
 const GABUNG_FIELDS = [
   "ptCv",
   "company",
@@ -223,6 +237,14 @@ const formatTimestamp = (date: Date) => {
 export async function listGabung(req: Request, res: Response) {
   try {
     const { q, page = "1", pageSize = "50" } = req.query;
+    const fields = String(req.query.fields || "").toLowerCase();
+    const company = String(req.query.company || "").trim();
+    const name = String(req.query.name || "").trim();
+    const email = String(req.query.email || "").trim();
+    const business = String(req.query.business || "").trim();
+    const userName = String(req.query.userName || "").trim();
+    const hp = String(req.query.hp || "").trim();
+    const city = String(req.query.city || "").trim();
 
     const pageNum = Number(page) || 1;
     const sizeNum = Number(pageSize) || 50;
@@ -239,6 +261,60 @@ export async function listGabung(req: Request, res: Response) {
         { city: { contains: keyword, mode: "insensitive" } },
       ];
     }
+    if (company) {
+      where.company = { contains: company, mode: "insensitive" };
+    }
+    if (name) {
+      where.name = { contains: name, mode: "insensitive" };
+    }
+    if (email) {
+      where.email = { contains: email, mode: "insensitive" };
+    }
+    if (business) {
+      where.business = { contains: business, mode: "insensitive" };
+    }
+    if (userName) {
+      where.namauser = { contains: userName, mode: "insensitive" };
+    }
+    if (city) {
+      where.city = { contains: city, mode: "insensitive" };
+    }
+    if (hp) {
+      where.AND = [
+        ...(where.AND ?? []),
+        {
+          OR: [
+            { phone: { contains: hp, mode: "insensitive" } },
+            { handphone: { contains: hp, mode: "insensitive" } },
+          ],
+        },
+      ];
+    }
+
+    const select =
+      fields === "search"
+        ? {
+            nourut: true,
+            ptCv: true,
+            company: true,
+            address1: true,
+            address2: true,
+            city: true,
+            zip: true,
+            propince: true,
+            code: true,
+            phone: true,
+            handphone: true,
+            email: true,
+            name: true,
+            position: true,
+            business: true,
+            source: true,
+            namauser: true,
+            lastupdate: true,
+            tglJamEdit: true,
+          }
+        : undefined;
 
     const [items, total] = await Promise.all([
       prisma.gabung.findMany({
@@ -246,6 +322,7 @@ export async function listGabung(req: Request, res: Response) {
         orderBy: { company: "asc" },
         skip,
         take,
+        select,
       }),
       prisma.gabung.count({ where }),
     ]);
@@ -747,6 +824,8 @@ export async function getTablePreview(req: Request, res: Response) {
 export async function findGabungByCompany(req: Request, res: Response) {
   try {
     const { company } = req.params;
+    const limitInput = Number(req.query.limit ?? 200);
+    const limit = Number.isFinite(limitInput) ? Math.max(Math.floor(limitInput), 1) : 200;
 
     const items = await prisma.gabung.findMany({
       where: {
@@ -756,6 +835,7 @@ export async function findGabungByCompany(req: Request, res: Response) {
         },
       },
       orderBy: { company: "asc" },
+      take: limit,
     });
 
     return res.json(ok({ items }));
@@ -770,41 +850,59 @@ export async function findGabungByCompany(req: Request, res: Response) {
  */
 export async function countExhibitorsByExpo(_req: Request, res: Response) {
   try {
-    const flagValues = ["X", "x", "1", "true", "yes", "Y", "y"];
+    const now = Date.now();
+    if (cacheState.exhibitorCount.data && now - cacheState.exhibitorCount.at < CACHE_TTL_MS) {
+      return res.json(ok(cacheState.exhibitorCount.data));
+    }
 
-    const countByFlags = async (flags: string[]) => {
-      const or = flags.map((flag) => ({ [flag]: { in: flagValues } }));
-      return prisma.gabung.count({ where: { OR: or } });
+    const flagSql = (column: string) =>
+      `LOWER(COALESCE("${column}", '')) IN ('x','1','true','yes','y')`;
+
+    const defence = ["EXHDEFENCE", "EXHAERO", "EXHMARINE"]
+      .map(flagSql)
+      .join(' OR ');
+    const water = [
+      "EXHWATER",
+      "EXHWASTE",
+      "EXHENERGY",
+      "EXHSMART",
+      "EXHSECURE",
+      "EXHFIRE",
+    ]
+      .map(flagSql)
+      .join(' OR ');
+    const livestock = [
+      "EXHLIVES",
+      "EXHAGRITECH",
+      "EXHFISH",
+      "EXHINDOVET",
+      "EXHFEED",
+      "EXHDAIRY",
+      "EXHHORTI",
+    ]
+      .map(flagSql)
+      .join(' OR ');
+
+    const sql = `
+      SELECT
+        SUM(CASE WHEN (${defence}) THEN 1 ELSE 0 END)::int AS "indoDefence",
+        SUM(CASE WHEN (${water}) THEN 1 ELSE 0 END)::int AS "indoWater",
+        SUM(CASE WHEN (${livestock}) THEN 1 ELSE 0 END)::int AS "indoLivestock"
+      FROM "GABUNG"
+    `;
+
+    const rows = await prisma.$queryRawUnsafe<
+      { indoDefence: number | null; indoWater: number | null; indoLivestock: number | null }[]
+    >(sql);
+    const row = rows?.[0] ?? { indoDefence: 0, indoWater: 0, indoLivestock: 0 };
+    const data = {
+      indoDefence: row.indoDefence ?? 0,
+      indoWater: row.indoWater ?? 0,
+      indoLivestock: row.indoLivestock ?? 0,
     };
 
-    const [indoDefence, indoWater, indoLivestock] = await Promise.all([
-      countByFlags(["exhdefence", "exhaero", "exhmarine"]),
-      countByFlags([
-        "exhwater",
-        "exhwaste",
-        "exhenergy",
-        "exhsmart",
-        "exhsecure",
-        "exhfire",
-      ]),
-      countByFlags([
-        "exhlives",
-        "exhagritech",
-        "exhfish",
-        "exhindovet",
-        "exhfeed",
-        "exhdairy",
-        "exhhorti",
-      ]),
-    ]);
-
-    return res.json(
-      ok({
-        indoDefence,
-        indoWater,
-        indoLivestock,
-      }),
-    );
+    cacheState.exhibitorCount = { at: now, data };
+    return res.json(ok(data));
   } catch (err: any) {
     return res.status(500).json(fail(err.message));
   }
@@ -816,67 +914,74 @@ export async function countExhibitorsByExpo(_req: Request, res: Response) {
  */
 export async function getExpoChartData(req: Request, res: Response) {
   try {
-    const flagValues = ["X", "x", "1", "true", "yes", "Y", "y"];
-    const rows = await prisma.gabung.findMany({
-      where: {
-        lastupdate: { gte: new Date("2023-01-01") },
-      },
-      select: {
-        lastupdate: true,
-        exhdefence: true,
-        exhaero: true,
-        exhmarine: true,
-        exhwater: true,
-        exhwaste: true,
-        exhenergy: true,
-        exhsmart: true,
-        exhsecure: true,
-        exhfire: true,
-        exhlives: true,
-        exhagritech: true,
-        exhfish: true,
-        exhindovet: true,
-        exhfeed: true,
-        exhdairy: true,
-        exhhorti: true,
-        visdefence: true,
-        visaero: true,
-        vismarine: true,
-        viswater: true,
-        viswaste: true,
-        visenergy: true,
-        vissmart: true,
-        vissecure: true,
-        visfire: true,
-        vislives: true,
-        visagritech: true,
-        visfish: true,
-        visindovet: true,
-        visfeed: true,
-        visdairy: true,
-        vishorti: true,
-      },
-    });
+    const now = Date.now();
+    if (cacheState.expoChart.data && now - cacheState.expoChart.at < CACHE_TTL_MS) {
+      return res.json(ok(cacheState.expoChart.data));
+    }
 
-    const extractYear = (row: typeof rows[number]) => {
-      if (row.lastupdate instanceof Date) {
-        const year = row.lastupdate.getFullYear();
-        return year >= 2023 ? year : null;
-      }
-      if (row.lastupdate) {
-        const parsed = new Date(String(row.lastupdate));
-        if (!Number.isNaN(parsed.getTime())) {
-          const year = parsed.getFullYear();
-          return year >= 2023 ? year : null;
-        }
-      }
-      return null;
-    };
+    const flagSql = (column: string) =>
+      `LOWER(COALESCE("${column}", '')) IN ('x','1','true','yes','y')`;
 
-    const isFlagSet = (value: unknown) => {
-      if (value === undefined || value === null) return false;
-      return flagValues.includes(String(value).trim());
-    };
+    const defence = [
+      "EXHDEFENCE",
+      "EXHAERO",
+      "EXHMARINE",
+      "VISDEFENCE",
+      "VISAERO",
+      "VISMARINE",
+    ]
+      .map(flagSql)
+      .join(' OR ');
+    const water = [
+      "EXHWATER",
+      "EXHWASTE",
+      "EXHENERGY",
+      "EXHSMART",
+      "EXHSECURE",
+      "EXHFIRE",
+      "VISWATER",
+      "VISWASTE",
+      "VISENERGY",
+      "VISSMART",
+      "VISSECURE",
+      "VISFIRE",
+    ]
+      .map(flagSql)
+      .join(' OR ');
+    const livestock = [
+      "EXHLIVES",
+      "EXHAGRITECH",
+      "EXHFISH",
+      "EXHINDOVET",
+      "EXHFEED",
+      "EXHDAIRY",
+      "EXHHORTI",
+      "VISLIVES",
+      "VISAGRITECH",
+      "VISFISH",
+      "VISINDOVET",
+      "VISFEED",
+      "VISDAIRY",
+      "VISHORTI",
+    ]
+      .map(flagSql)
+      .join(' OR ');
+
+    const sql = `
+      SELECT
+        EXTRACT(YEAR FROM "LASTUPDATE")::int AS "year",
+        SUM(CASE WHEN (${defence}) THEN 1 ELSE 0 END)::int AS "indoDefence",
+        SUM(CASE WHEN (${water}) THEN 1 ELSE 0 END)::int AS "indoWater",
+        SUM(CASE WHEN (${livestock}) THEN 1 ELSE 0 END)::int AS "indoLivestock"
+      FROM "GABUNG"
+      WHERE "LASTUPDATE" >= DATE '2023-01-01'
+      GROUP BY 1
+      ORDER BY 1
+    `;
+
+    const rows = await prisma.$queryRawUnsafe<
+      { year: number; indoDefence: number | null; indoWater: number | null; indoLivestock: number | null }[]
+    >(sql);
 
     const counts: Record<string, Record<number, number>> = {
       indoDefence: {},
@@ -884,51 +989,11 @@ export async function getExpoChartData(req: Request, res: Response) {
       indoLivestock: {},
     };
 
-    rows.forEach((row: (typeof rows)[number]) => {
-      const year = extractYear(row);
-      if (!year) return;
-
-      const defenceHit =
-        isFlagSet(row.exhdefence) ||
-        isFlagSet(row.exhaero) ||
-        isFlagSet(row.exhmarine) ||
-        isFlagSet(row.visdefence) ||
-        isFlagSet(row.visaero) ||
-        isFlagSet(row.vismarine);
-
-      const waterHit =
-        isFlagSet(row.exhwater) ||
-        isFlagSet(row.exhwaste) ||
-        isFlagSet(row.exhenergy) ||
-        isFlagSet(row.exhsmart) ||
-        isFlagSet(row.exhsecure) ||
-        isFlagSet(row.exhfire) ||
-        isFlagSet(row.viswater) ||
-        isFlagSet(row.viswaste) ||
-        isFlagSet(row.visenergy) ||
-        isFlagSet(row.vissmart) ||
-        isFlagSet(row.vissecure) ||
-        isFlagSet(row.visfire);
-
-      const livestockHit =
-        isFlagSet(row.exhlives) ||
-        isFlagSet(row.exhagritech) ||
-        isFlagSet(row.exhfish) ||
-        isFlagSet(row.exhindovet) ||
-        isFlagSet(row.exhfeed) ||
-        isFlagSet(row.exhdairy) ||
-        isFlagSet(row.exhhorti) ||
-        isFlagSet(row.vislives) ||
-        isFlagSet(row.visagritech) ||
-        isFlagSet(row.visfish) ||
-        isFlagSet(row.visindovet) ||
-        isFlagSet(row.visfeed) ||
-        isFlagSet(row.visdairy) ||
-        isFlagSet(row.vishorti);
-
-      if (defenceHit) counts.indoDefence[year] = (counts.indoDefence[year] ?? 0) + 1;
-      if (waterHit) counts.indoWater[year] = (counts.indoWater[year] ?? 0) + 1;
-      if (livestockHit) counts.indoLivestock[year] = (counts.indoLivestock[year] ?? 0) + 1;
+    rows.forEach((row) => {
+      if (!row?.year) return;
+      counts.indoDefence[row.year] = row.indoDefence ?? 0;
+      counts.indoWater[row.year] = row.indoWater ?? 0;
+      counts.indoLivestock[row.year] = row.indoLivestock ?? 0;
     });
 
     const debug = String(req.query.debug || "") === "1";
@@ -944,6 +1009,7 @@ export async function getExpoChartData(req: Request, res: Response) {
       );
     }
 
+    cacheState.expoChart = { at: now, data: counts };
     return res.json(ok(counts));
   } catch (err: any) {
     return res.status(500).json(fail(err.message));

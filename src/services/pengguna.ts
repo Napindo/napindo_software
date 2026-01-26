@@ -132,18 +132,25 @@ export async function logoutPengguna(payload: LogoutPenggunaPayload): Promise<an
   return response.data ?? response.user ?? response
 }
 
-async function invokeListPengguna(): Promise<DatabaseResponse> {
+async function invokeListPengguna(params?: { q?: string; page?: number; pageSize?: number }): Promise<DatabaseResponse> {
   const db = getDatabaseBridge()
   if (db && typeof db.listPengguna === 'function') {
-    return db.listPengguna() as Promise<DatabaseResponse>
+    return db.listPengguna(params) as Promise<DatabaseResponse>
   }
 
   const ipc = getIpcRenderer()
   if (ipc && typeof ipc.invoke === 'function') {
-    return ipc.invoke('db:listPengguna') as Promise<DatabaseResponse>
+    return ipc.invoke('db:listPengguna', params) as Promise<DatabaseResponse>
   }
 
-  const response = await requestJson<ApiResponse<PenggunaRow[]>>(endpoints.pengguna.list, {
+  const search = new URLSearchParams();
+  if (params?.q) search.set('q', params.q);
+  if (params?.page) search.set('page', String(params.page));
+  if (params?.pageSize) search.set('pageSize', String(params.pageSize));
+  const query = search.toString();
+  const path = query ? `${endpoints.pengguna.list}?${query}` : endpoints.pengguna.list;
+
+  const response = await requestJson<ApiResponse<any>>(path, {
     method: 'GET',
   })
 
@@ -151,11 +158,12 @@ async function invokeListPengguna(): Promise<DatabaseResponse> {
     return { success: false, message: response.message }
   }
 
-  return { success: true, data: response.data, rows: response.data, message: response.message }
+  const items = response.data?.items ?? response.data ?? [];
+  return { success: true, data: items, rows: items, message: response.message }
 }
 
-export async function listPengguna(): Promise<PenggunaRow[]> {
-  const response = await invokeListPengguna()
+export async function listPengguna(params?: { q?: string; page?: number; pageSize?: number }): Promise<PenggunaRow[]> {
+  const response = await invokeListPengguna(params)
   if (!response || response.success === false) {
     throw new Error(response?.message ?? 'Gagal memuat daftar pengguna')
   }

@@ -10,7 +10,12 @@ import { validateDivision, validatePassword, validateUsername } from "../utils/v
  */
 export async function listPengguna(req: Request, res: Response) {
   try {
-    const { q } = req.query;
+    const { q, page = "1", pageSize = "200" } = req.query;
+
+    const pageNum = Number(page) || 1;
+    const sizeNum = Number(pageSize) || 200;
+    const skip = (pageNum - 1) * sizeNum;
+    const take = sizeNum;
 
     const where: any = {};
 
@@ -22,13 +27,27 @@ export async function listPengguna(req: Request, res: Response) {
       ];
     }
 
-    const users = await prisma.pengguna.findMany({
-      where,
-      orderBy: { username: "asc" },
-      select: { username: true, division: true, status: true },
-    });
+    const [items, total] = await Promise.all([
+      prisma.pengguna.findMany({
+        where,
+        orderBy: { username: "asc" },
+        skip,
+        take,
+        select: { username: true, division: true, status: true },
+      }),
+      prisma.pengguna.count({ where }),
+    ]);
 
-    return res.json(ok(users));
+    return res.json(
+      ok({
+        items,
+        pagination: {
+          page: pageNum,
+          pageSize: sizeNum,
+          total,
+        },
+      }),
+    );
   } catch (err: any) {
     return res.status(500).json(fail(err.message));
   }

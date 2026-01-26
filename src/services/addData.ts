@@ -165,6 +165,16 @@ export async function listGabungRecords(params?: {
   page?: number
   pageSize?: number
   q?: string
+  fields?: string
+  filters?: {
+    hp?: string
+    company?: string
+    email?: string
+    name?: string
+    business?: string
+    userName?: string
+    city?: string
+  }
 }): Promise<GabungListResult> {
   const db = getDatabaseBridge()
   if (db && typeof db.listGabung === "function") {
@@ -201,6 +211,8 @@ export async function listGabungRecords(params?: {
   const page = params?.page ?? 1
   const pageSize = params?.pageSize ?? 200
   const search = params?.q?.trim()
+  const filters = params?.filters ?? {}
+  const fields = params?.fields
   const searchParams = new URLSearchParams({
     page: String(page),
     pageSize: String(pageSize),
@@ -208,6 +220,16 @@ export async function listGabungRecords(params?: {
   if (search) {
     searchParams.set("q", search)
   }
+  if (fields) {
+    searchParams.set("fields", fields)
+  }
+  if (filters.company) searchParams.set("company", filters.company)
+  if (filters.name) searchParams.set("name", filters.name)
+  if (filters.email) searchParams.set("email", filters.email)
+  if (filters.business) searchParams.set("business", filters.business)
+  if (filters.userName) searchParams.set("userName", filters.userName)
+  if (filters.hp) searchParams.set("hp", filters.hp)
+  if (filters.city) searchParams.set("city", filters.city)
 
   const res = await fetch(buildApiUrl(`/gabung?${searchParams.toString()}`))
   const rawText = await res.text()

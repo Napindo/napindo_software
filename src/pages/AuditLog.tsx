@@ -25,7 +25,7 @@ const AuditLogPage = () => {
       setLoading(true)
       setError(null)
       try {
-        const [logRows, userRows] = await Promise.all([fetchAuditLogs(300), listPengguna()])
+        const [logRows, userRows] = await Promise.all([fetchAuditLogs(300), listPengguna({ pageSize: 200 })])
         if (!active) return
         setLogs(logRows)
         setUsers(userRows)

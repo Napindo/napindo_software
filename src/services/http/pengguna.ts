@@ -65,7 +65,7 @@ export const penggunaApi = {
   },
   hints: async (): Promise<HintsResult> => {
     try {
-      const response = await requestJson<ApiResponse<LoginUser[]>>(endpoints.pengguna.list, {
+      const response = await requestJson<ApiResponse<any>>(endpoints.pengguna.list, {
         method: "GET",
       });
 
@@ -73,16 +73,17 @@ export const penggunaApi = {
         return { success: false, message: response.message };
       }
 
+      const items = response.data?.items ?? response.data ?? [];
       const usernames = Array.from(
         new Set(
-          (response.data || [])
+          (items || [])
             .map((item) => String(item?.username || "").trim())
             .filter(Boolean),
         ),
       );
       const divisions = Array.from(
         new Set(
-          (response.data || [])
+          (items || [])
             .map((item) => String(item?.division || "").trim())
             .filter(Boolean),
         ),

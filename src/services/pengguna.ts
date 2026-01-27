@@ -36,6 +36,13 @@ export type DatabaseResponse<T = unknown> =
   | { success: true; data?: T; rows?: T[]; user?: T; message?: string }
   | { success: false; message: string }
 
+const toPenggunaRows = (value: unknown): PenggunaRow[] => {
+  if (Array.isArray(value)) return value as PenggunaRow[]
+  const items = (value as { items?: unknown })?.items
+  if (Array.isArray(items)) return items as PenggunaRow[]
+  return []
+}
+
 async function invokeCreatePengguna(payload: CreatePenggunaPayload): Promise<DatabaseResponse> {
   const db = getDatabaseBridge()
   if (db && typeof db.createPengguna === 'function') {
@@ -168,5 +175,5 @@ export async function listPengguna(params?: { q?: string; page?: number; pageSiz
     throw new Error(response?.message ?? 'Gagal memuat daftar pengguna')
   }
 
-  return (response.rows ?? response.data ?? []) as PenggunaRow[]
+  return toPenggunaRows(response.rows ?? response.data)
 }

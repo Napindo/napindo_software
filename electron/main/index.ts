@@ -143,6 +143,9 @@ app.whenReady().then(() => {
   registerAppIpcHandlers()
   setupAutoUpdater()
   createMainWindow()
+  if (mainWindow?.webContents) {
+    mainWindow.webContents.openDevTools({ mode: 'detach' })
+  }
   if (IS_DEV) {
     globalShortcut.register('CommandOrControl+Shift+I', () => {
       if (mainWindow?.webContents) {

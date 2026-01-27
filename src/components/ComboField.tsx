@@ -14,12 +14,13 @@ const ComboField = ({ label, name, value, placeholder, options, onChange }: Comb
   const [open, setOpen] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
   const listRef = useRef<HTMLUListElement | null>(null)
+  const optionsList = Array.isArray(options) ? options : []
 
   const filtered = useMemo(() => {
     const term = value.trim().toLowerCase()
-    if (!term) return options
-    return options.filter((opt) => opt.toLowerCase().includes(term))
-  }, [options, value])
+    if (!term) return optionsList
+    return optionsList.filter((opt) => opt.toLowerCase().includes(term))
+  }, [optionsList, value])
 
   useEffect(() => {
     if (!open) {

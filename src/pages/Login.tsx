@@ -45,6 +45,19 @@ const capitalizeFirst = (value: string) =>
     (_, spaces: string, char: string) => `${spaces}${char.toUpperCase()}`,
   );
 
+const toHintList = (value: unknown): string[] => {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => String(item ?? "").trim())
+      .filter(Boolean);
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed ? [trimmed] : [];
+  }
+  return [];
+};
+
 type MarkProps = { className?: string };
 
 const NapindoMark = ({ className }: MarkProps) => (
@@ -200,8 +213,8 @@ function LoginPage({ onSuccess }: LoginPageProps) {
       try {
         const parsed = JSON.parse(cached) as Partial<HintsCache>;
         setHints({
-          usernames: parsed.usernames?.filter(Boolean) ?? [],
-          divisions: parsed.divisions?.filter(Boolean) ?? [],
+          usernames: toHintList(parsed.usernames),
+          divisions: toHintList(parsed.divisions),
         });
       } catch {
         //
@@ -214,8 +227,8 @@ function LoginPage({ onSuccess }: LoginPageProps) {
         const response = await invokeUserHints();
         if (response?.success && response.hints) {
           const next: HintsCache = {
-            usernames: response.hints.usernames?.filter(Boolean) ?? [],
-            divisions: response.hints.divisions?.filter(Boolean) ?? [],
+            usernames: toHintList(response.hints.usernames),
+            divisions: toHintList(response.hints.divisions),
           };
           setHints(next);
           localStorage.setItem(HINTS_KEY, JSON.stringify(next));

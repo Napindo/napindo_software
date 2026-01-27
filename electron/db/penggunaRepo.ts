@@ -1,5 +1,12 @@
 import { apiFetch, isResponseOk, pickData, uniqueClean } from './index.js'
 
+const toUserRows = (value: unknown) => {
+  if (Array.isArray(value)) return value
+  const items = (value as { items?: unknown })?.items
+  if (Array.isArray(items)) return items
+  return []
+}
+
 export async function loginUser(payload: { username: string; password: string; division?: string | null }) {
   const { body, status } = await apiFetch('/pengguna/login', {
     method: 'POST',
@@ -20,7 +27,7 @@ export async function fetchUserHints() {
     throw new Error(body.message || 'Gagal memuat data pengguna')
   }
 
-  const users = (pickData(body) as Array<{ username?: string; division?: string | null }> | undefined) ?? []
+  const users = toUserRows(pickData(body)) as Array<{ username?: string; division?: string | null }>
   const usernames = uniqueClean(users.map((user) => user?.username))
   const divisions = uniqueClean(users.map((user) => user?.division))
 
@@ -46,7 +53,7 @@ export async function listUsers() {
     throw new Error(body.message || 'Gagal memuat daftar pengguna')
   }
 
-  return (pickData(body) as Array<{ username?: string; division?: string | null; status?: string | null }> | undefined) ?? []
+  return toUserRows(pickData(body)) as Array<{ username?: string; division?: string | null; status?: string | null }>
 }
 
 export async function changePassword(payload: {

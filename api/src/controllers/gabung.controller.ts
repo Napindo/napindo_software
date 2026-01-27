@@ -891,9 +891,11 @@ export async function countExhibitorsByExpo(_req: Request, res: Response) {
       FROM "GABUNG"
     `;
 
-    const rows = await prisma.$queryRawUnsafe<
-      { indoDefence: number | null; indoWater: number | null; indoLivestock: number | null }[]
-    >(sql);
+    const rows = (await prisma.$queryRawUnsafe(sql)) as {
+      indoDefence: number | null;
+      indoWater: number | null;
+      indoLivestock: number | null;
+    }[];
     const row = rows?.[0] ?? { indoDefence: 0, indoWater: 0, indoLivestock: 0 };
     const data = {
       indoDefence: row.indoDefence ?? 0,
@@ -979,9 +981,12 @@ export async function getExpoChartData(req: Request, res: Response) {
       ORDER BY 1
     `;
 
-    const rows = await prisma.$queryRawUnsafe<
-      { year: number; indoDefence: number | null; indoWater: number | null; indoLivestock: number | null }[]
-    >(sql);
+    const rows = (await prisma.$queryRawUnsafe(sql)) as {
+      year: number;
+      indoDefence: number | null;
+      indoWater: number | null;
+      indoLivestock: number | null;
+    }[];
 
     const counts: {
       indoDefence: Record<number, number>;
@@ -993,7 +998,7 @@ export async function getExpoChartData(req: Request, res: Response) {
       indoLivestock: {},
     };
 
-    rows.forEach((row) => {
+    rows.forEach((row: { year: number; indoDefence: number | null; indoWater: number | null; indoLivestock: number | null }) => {
       if (!row?.year) return;
       counts.indoDefence[row.year] = row.indoDefence ?? 0;
       counts.indoWater[row.year] = row.indoWater ?? 0;

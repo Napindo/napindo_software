@@ -107,7 +107,7 @@ const ComboField = ({ label, name, value, placeholder, options, onChange }: Comb
           ref={listRef}
           className="absolute z-20 mt-1 w-full max-h-52 overflow-auto rounded-xl border border-slate-200 bg-white shadow-lg"
         >
-          {filtered.map((option, index) => (
+          {(Array.isArray(filtered) ? filtered : []).map((option, index) => (
             <li
               key={option}
               data-index={index}

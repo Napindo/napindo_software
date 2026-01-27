@@ -89,7 +89,8 @@ const Home = ({ displayName }: HomeProps) => {
         if (!active) return
 
         if (penggunaResult.status === 'fulfilled') {
-          setUsers(penggunaResult.value)
+          const nextUsers = Array.isArray(penggunaResult.value) ? penggunaResult.value : []
+          setUsers(nextUsers)
         } else {
           setError(penggunaResult.reason instanceof Error ? penggunaResult.reason.message : 'Gagal memuat data pengguna.')
         }

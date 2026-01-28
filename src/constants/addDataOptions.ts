@@ -188,6 +188,7 @@ export const comboOptions: ComboOptions = {
     'Services',
     'Sewage',
     'Sheep',
+    'Ship',
     'Simulation',
     'Slaughter',
     'Smart',

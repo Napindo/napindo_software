@@ -1,7 +1,7 @@
 {
   "name": "napindo_software",
   "private": true,
-  "version": "0.0.46",
+  "version": "0.0.48",
   "type": "commonjs",
   "scripts": {
     "dev": "vite",

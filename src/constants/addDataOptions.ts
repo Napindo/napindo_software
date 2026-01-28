@@ -13,7 +13,6 @@ export type ComboFieldName =
 export type ComboOptions = Record<ComboFieldName, string[]>
 
 export const comboFields: ComboFieldName[] = [
-  'mainActive',
   'business',
   'exhibitor',
   'visitor',

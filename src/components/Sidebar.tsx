@@ -229,7 +229,7 @@ export const Sidebar = ({ onLogout }: SidebarProps) => {
   }
 
   return (
-    <aside className="relative z-10 w-64 bg-white/95 backdrop-blur-xl border-r border-slate-200 shadow-lg">
+    <aside className="relative z-10 w-56 md:w-60 lg:w-64 xl:w-72 2xl:w-80 bg-white/95 backdrop-blur-xl border-r border-slate-200 shadow-lg min-h-screen">
       <div className="px-6 pt-6 pb-5 flex items-center gap-3">
         <NapindoMark className="w-10 h-10 shrink-0" />
         <div className="leading-tight">

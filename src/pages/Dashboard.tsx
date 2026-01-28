@@ -84,8 +84,8 @@ const DashboardPage = ({ user, onLogout }: DashboardProps) => {
 
       <Sidebar onLogout={onLogout} />
 
-      <main className="flex-1 relative z-10 px-6 lg:px-8 py-6 lg:py-8">
-        <div className="bg-white/90 backdrop-blur-xl border border-white shadow-card rounded-3xl p-6 lg:p-10 dashboard-shell min-h-[calc(100vh-140px)]">
+      <main className="flex-1 min-w-0 relative z-10 px-4 sm:px-6 lg:px-8 2xl:px-10 py-4 sm:py-6 lg:py-8">
+        <div className="bg-white/90 backdrop-blur-xl border border-white shadow-card rounded-3xl p-5 sm:p-6 lg:p-10 2xl:p-12 dashboard-shell min-h-[calc(100vh-120px)] w-full max-w-[1600px] mx-auto">
           <Suspense fallback={<div className="text-sm text-slate-500">Memuat halaman...</div>}>
             {renderContent()}
           </Suspense>

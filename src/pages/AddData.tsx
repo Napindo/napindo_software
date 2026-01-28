@@ -55,7 +55,7 @@ type AddDataForm = {
   position: string
   email: string
   website: string
-  mainActive: string[]
+  mainActive: string
   business: string[]
   source: string
   updateBy: string
@@ -138,7 +138,7 @@ const labelMap: Record<FieldName, string> = {
   position: 'Position',
   email: 'Email',
   website: 'Website',
-  mainActive: 'Main Active (Choose)',
+  mainActive: 'Main Activity',
   business: 'Business',
   source: 'Source',
   updateBy: 'Update By',
@@ -230,7 +230,7 @@ const rightFields: FieldName[] = [
   position: '',
   email: '',
   website: '',
-  mainActive: [],
+  mainActive: '',
   business: [],
   source: '',
   updateBy: '',
@@ -542,6 +542,11 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
     return sourceOptions.filter((opt) => opt.toLowerCase().includes(term))
   }, [form.source, sourceOptions])
 
+  const filteredMainActiveOptions = useMemo(() => {
+    const term = form.mainActive.trim().toLowerCase()
+    if (!term) return comboOptions.mainActive
+    return comboOptions.mainActive.filter((opt) => opt.toLowerCase().includes(term))
+  }, [form.mainActive])
   const filteredCode1Options = useMemo(() => {
     const term = form.code1.trim().toLowerCase()
     if (!term) return code1Options
@@ -1063,6 +1068,13 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
       .map((item) => sanitizeText(item, 'business'))
       .filter(Boolean)
 
+  const normalizeSingleListText = (value: unknown) =>
+    String(value ?? '')
+      .split(',')
+      .map((item) => sanitizeText(item, 'business'))
+      .filter(Boolean)
+      .join(', ')
+
   const exportPdf = async () => {
     const payload = {
       typeOfBusiness: form.typeOfBusiness,
@@ -1124,7 +1136,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
       position: sanitizeText(String(lower['position'] ?? ''), 'position'),
       email: String(lower['email'] ?? ''),
       website: String(lower['website'] ?? ''),
-      mainActive: splitList(pickFirstFilled(lower, ['main_activ', 'mainactiv'])),
+      mainActive: normalizeSingleListText(pickFirstFilled(lower, ['main_activ', 'mainactiv'])),
       business: splitList(pickFirstFilled(lower, ['business'])),
       source: String(lower['code4'] ?? ''),
       updateBy: String(lower['source'] ?? ''),
@@ -1224,7 +1236,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
       name: form.name.trim(),
       position: form.position.trim(),
       email: form.email.trim(),
-      mainActiv: form.mainActive.join(', '),
+      mainActiv: form.mainActive.trim(),
       business: form.business.join(', '),
       code4: form.source.trim(),
       source: form.updateBy.trim(),
@@ -1758,6 +1770,62 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
             ) : null}
           </div>
           <p className="text-xs text-slate-500">Daftar Code 1 mengikuti data yang ada di database.</p>
+        </div>
+      )
+    }
+
+    if (name === 'mainActive') {
+      return (
+        <div className="space-y-2" key={name}>
+          <label className="text-sm font-semibold text-slate-800 flex items-center gap-1">
+            {labelMap[name]}
+            {requiredFields.has(name) ? <span className="text-rose-600">*</span> : null}
+          </label>
+          <div className="relative">
+            <input
+              type="text"
+              value={form.mainActive}
+              onChange={handleChange('mainActive')}
+              onFocus={() => openSingleSelectFor(name)}
+              onKeyDown={handleSingleSelectKeyDown(name)}
+              onBlur={() => closeSingleSelect(name)}
+              maxLength={maxLength}
+              required={requiredFields.has(name)}
+              autoComplete="off"
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-rose-400 focus:ring-4 focus:ring-rose-100 transition"
+              placeholder="Pilih atau ketik"
+            />
+            {openSingleSelect === name ? (
+              <div
+                ref={setSingleSelectListRef(name)}
+                className="absolute z-20 mt-2 w-full rounded-xl border border-slate-200 bg-white shadow-lg p-2 max-h-60 overflow-auto"
+              >
+                {filteredMainActiveOptions.length === 0 ? (
+                  <p className="px-3 py-2 text-xs text-slate-500">Tidak ada hasil.</p>
+                ) : (
+                  filteredMainActiveOptions.map((option, index) => (
+                    <button
+                      key={option}
+                      data-index={index}
+                      type="button"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => {
+                        setForm((prev) => ({ ...prev, mainActive: option }))
+                        setOpenSingleSelect(null)
+                      }}
+                      onMouseEnter={() => setSingleSelectIndex(index)}
+                      className={`w-full text-left px-3 py-2 rounded-lg text-sm text-slate-800 ${
+                        index === singleSelectIndex ? 'bg-rose-50' : 'hover:bg-rose-50'
+                      }`}
+                    >
+                      {option}
+                    </button>
+                  ))
+                )}
+              </div>
+            ) : null}
+          </div>
+          <p className="text-xs text-slate-500">Pilih atau ketik main activity.</p>
         </div>
       )
     }

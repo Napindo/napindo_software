@@ -688,6 +688,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
   const getSingleSelectOptions = (field: FieldName) => {
     if (field === 'province') return filteredProvinceOptions
     if (field === 'city') return filteredCityOptions
+    if (field === 'mainActive') return filteredMainActiveOptions
     if (field === 'source') return filteredSourceOptions
     if (field === 'updateBy') return filteredUpdateByOptions
     if (field === 'code1') return filteredCode1Options
@@ -698,6 +699,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
   const getSingleSelectValue = (field: FieldName) => {
     if (field === 'province') return form.province
     if (field === 'city') return form.city
+    if (field === 'mainActive') return form.mainActive
     if (field === 'source') return form.source
     if (field === 'updateBy') return form.updateBy
     if (field === 'code1') return form.code1
@@ -712,6 +714,10 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
     }
     if (field === 'city') {
       handleCitySelect(value)
+      return
+    }
+    if (field === 'mainActive') {
+      setForm((prev) => ({ ...prev, mainActive: value }))
       return
     }
     if (field === 'source') {
@@ -794,6 +800,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
     openSingleSelect,
     filteredProvinceOptions,
     filteredCityOptions,
+    filteredMainActiveOptions,
     filteredSourceOptions,
     filteredUpdateByOptions,
     filteredCode1Options,
@@ -816,6 +823,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
     singleSelectIndex,
     filteredProvinceOptions,
     filteredCityOptions,
+    filteredMainActiveOptions,
     filteredSourceOptions,
     filteredUpdateByOptions,
     filteredCode1Options,

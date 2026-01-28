@@ -1126,7 +1126,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
       website: String(lower['website'] ?? ''),
       mainActive: splitList(pickFirstFilled(lower, ['main_activ', 'mainactiv'])),
       business: splitList(pickFirstFilled(lower, ['business'])),
-      source: String(lower['code4'] ?? lower['source'] ?? ''),
+      source: String(lower['code4'] ?? ''),
       updateBy: String(lower['source'] ?? ''),
       forum: String(lower['forum'] ?? ''),
       exhibitorTahun: String(lower['exhthn'] ?? ''),

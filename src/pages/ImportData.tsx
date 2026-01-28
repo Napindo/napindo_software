@@ -12,6 +12,7 @@ const quickGuide = [
   'Header boleh berisi spasi/simbol, sistem menormalkan nama kolom.',
   'Untuk tanggal gunakan format yang bisa dibaca Excel (date).',
 ]
+const allowedExtensions = new Set(['xlsx', 'xlsm'])
 
 const formatBytes = (value: number) => {
   if (!Number.isFinite(value) || value <= 0) return '0 KB'
@@ -59,9 +60,9 @@ const ImportDataPage = () => {
   }
 
   const validateFile = (file: File) => {
-    const ext = file.name.split('.').pop()?.toLowerCase()
-    if (ext !== 'xlsx') {
-      setStatus({ type: 'error', message: 'Format file harus .xlsx.' })
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
+    if (!allowedExtensions.has(ext)) {
+      setStatus({ type: 'error', message: 'Format file harus .xlsx atau .xlsm.' })
       return false
     }
     if (file.size > MAX_FILE_BYTES) {
@@ -172,7 +173,7 @@ const ImportDataPage = () => {
         <div className="bg-white border border-slate-200 rounded-3xl p-6 lg:p-8 shadow-sm space-y-6">
           <div>
             <h2 className="text-lg font-bold text-slate-900">File Excel</h2>
-            <p className="text-sm text-slate-500">Format .xlsx, maksimal {MAX_FILE_MB} MB per upload.</p>
+            <p className="text-sm text-slate-500">Format .xlsx / .xlsm, maksimal {MAX_FILE_MB} MB per upload.</p>
           </div>
 
           <label
@@ -201,7 +202,7 @@ const ImportDataPage = () => {
                 <span className="font-semibold">{selectedFile?.name}</span> • {formatBytes(selectedFile?.size || 0)}
               </div>
             ) : null}
-            <input type="file" accept=".xlsx" className="hidden" onChange={onFileChange} />
+            <input type="file" accept=".xlsx,.xlsm" className="hidden" onChange={onFileChange} />
           </label>
 
           <div className="grid gap-4 sm:grid-cols-3">

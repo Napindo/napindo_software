@@ -162,6 +162,12 @@ const GABUNG_FIELD_MAP = new Map<string, string>(
   GABUNG_FIELDS.map((field) => [normalizeHeader(field), field]),
 );
 
+const syncGabungSequence = async () => {
+  await prisma.$executeRawUnsafe(
+    'SELECT setval(pg_get_serial_sequence(\'"GABUNG"\', \'NOURUT\'), (SELECT COALESCE(MAX("NOURUT"), 0) FROM "GABUNG"), true);',
+  );
+};
+
 const excelSerialToDate = (serial: number) => {
   if (!Number.isFinite(serial)) return null;
   const excelEpoch = 25569;
@@ -660,6 +666,7 @@ export async function importGabungExcel(req: Request, res: Response) {
     const dryRun = Boolean(payload.dryRun);
     let inserted = 0;
     if (!dryRun) {
+      await syncGabungSequence();
       for (let i = 0; i < rows.length; i += chunkSize) {
         const batch = rows.slice(i, i + chunkSize);
         const result = await prisma.gabung.createMany({ data: batch });

@@ -186,6 +186,7 @@ function mapDbRowToLabel(row: any) {
     postcode: row?.ZIP ?? row?.POSTCODE ?? "",
     sex: row?.SEX ?? "",
     phone: row?.PHONE ?? "",
+    codePhone: row?.CODE ?? "",
     handphone: row?.HANDPHONE ?? "",
     email: row?.EMAIL ?? "",
     mainActivity: row?.MAIN_ACTIV ?? "",

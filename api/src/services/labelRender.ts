@@ -18,6 +18,7 @@ export type LabelRow = {
   sex?: string
   nourut?: string | number
   phone?: string
+  codePhone?: string
   handphone?: string
   email?: string
   mainActivity?: string

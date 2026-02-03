@@ -7,6 +7,7 @@ import {
   TextRun,
 } from "docx"
 import type { LabelRow } from "./labelRender"
+import { provinceOptions } from "../constants/labelOptions"
 
 // Convert millimeters to twips (1 mm is roughly 56.7 twips)
 const mmToTwip = (mm: number) => Math.round(mm * 56.7)
@@ -21,10 +22,21 @@ const PARAGRAPH_MARGIN_TWIP = mmToTwip(1)
 const LINE_GAP_TWIP = mmToTwip(0.2)
 const LINE_HEIGHT_TWIP = mmToTwip(3.6)
 const BADGE_SHIFT_LEFT_TWIP = mmToTwip(3)
+const normalizeProvince = (value: unknown) => String(value ?? "").trim().toLowerCase()
+const LOCAL_PROVINCES = new Set(provinceOptions.map(normalizeProvince).filter(Boolean))
+const OVERSEAS_PROVINCES = new Set(["asia", "eropa", "usa", "africa"])
 const resolveBadgeNumber = (nourut: string | number | undefined, fallback: number) => {
   if (nourut == null) return fallback
   const trimmed = String(nourut).trim()
   return trimmed ? trimmed : fallback
+}
+const resolveCountry = (row: LabelRow) => {
+  const province = normalizeProvince(row.province)
+  if (!province) return row.country ?? ""
+  if (LOCAL_PROVINCES.size > 0 && LOCAL_PROVINCES.has(province)) return "Indonesia"
+  if (OVERSEAS_PROVINCES.has(province)) return row.city ?? row.country ?? ""
+  if (LOCAL_PROVINCES.size > 0) return row.city ?? row.country ?? ""
+  return row.country ?? ""
 }
 
 export async function buildLabelExcel(rows: LabelRow[]) {
@@ -42,6 +54,7 @@ export async function buildLabelExcel(rows: LabelRow[]) {
     { header: "Province", key: "province", width: 16 },
     { header: "Country", key: "country", width: 16 },
     { header: "Postcode", key: "postcode", width: 12 },
+    { header: "Code Phone", key: "codePhone", width: 12 },
     { header: "Phone", key: "phone", width: 16 },
     { header: "Handphone", key: "handphone", width: 16 },
     { header: "Email", key: "email", width: 28 },
@@ -53,6 +66,7 @@ export async function buildLabelExcel(rows: LabelRow[]) {
     sheet.addRow({
       no: idx + 1,
       ...row,
+      country: resolveCountry(row),
     })
   })
 

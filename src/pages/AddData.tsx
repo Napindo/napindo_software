@@ -412,7 +412,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
       return normalizeSpaces(value)
     }
 
-    if (uppercaseFields.has(field as FieldName)) {
+    if (uppercaseFields.has(field as FieldName) || field === 'code2' || field === 'code3') {
       const text = normalizeSpaces(value)
       return text.toUpperCase()
     }

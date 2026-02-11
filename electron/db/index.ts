@@ -81,7 +81,7 @@ loadEnvFile(path.resolve(process.cwd(), '..', '.env'))
 export const API_BASE_URL =
   process.env.API_BASE_URL ||
   process.env.VITE_API_BASE_URL ||
-  'http://192.168.1.171:8133'
+  'http://192.168.1.240:8133'
 export const API_PREFIX = process.env.API_PREFIX || process.env.VITE_API_PREFIX || '/api'
 
 const ensureNoProxyForLocal = () => {

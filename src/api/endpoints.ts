@@ -7,6 +7,7 @@ export const endpoints = {
     remove: (id: number | string) => `/gabung/${id}`,
     importExcel: "/gabung/import/excel",
     personalPdf: "/gabung/personal-pdf",
+    exportSearchExcel: "/gabung/export/search/excel",
     sourceOptions: "/gabung/source-options",
     code1Options: "/gabung/code1-options",
     findCompany: (company: string) => `/gabung/company/${company}`,

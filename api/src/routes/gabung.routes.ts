@@ -14,6 +14,7 @@ import {
   deleteGabung,
   importGabungExcel,
   exportPersonalDatabasePdf,
+  exportSearchExcel,
 } from "../controllers/gabung.controller";
 
 const router = Router();
@@ -32,6 +33,7 @@ router.get("/:id", getGabung);
 router.post("/", createGabung);
 router.post("/import/excel", importGabungExcel);
 router.post("/personal-pdf", exportPersonalDatabasePdf);
+router.post("/export/search/excel", exportSearchExcel);
 router.put("/:id", updateGabung);
 router.delete("/:id", deleteGabung);
 

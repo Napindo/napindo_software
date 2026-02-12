@@ -5,6 +5,7 @@ import { ok, fail } from "../utils/apiResponse";
 import { writeAuditLog } from "../services/auditLog";
 import { buildSegmentWhere, SegmentCode } from "../services/gabungSegments";
 import { renderPersonalDatabasePdf } from "../services/personalDatabaseRender";
+import { buildLabelExcel } from "../services/labelExport";
 
 const CACHE_TTL_MS = 60 * 1000;
 const cacheState = {
@@ -237,6 +238,26 @@ const formatTimestamp = (date: Date) => {
     date.getHours(),
   )}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 };
+
+const mapGabungToLabelRow = (row: any) => ({
+  companyName: row?.company ?? "",
+  contactName: row?.name ?? "",
+  position: row?.position ?? "",
+  nourut: row?.nourut ?? "",
+  addressLine1: row?.address1 ?? "",
+  addressLine2: row?.address2 ?? "",
+  city: row?.city ?? "",
+  province: row?.propince ?? "",
+  country: row?.country ?? "",
+  postcode: row?.zip ?? "",
+  sex: row?.sex ?? "",
+  phone: row?.phone ?? "",
+  codePhone: row?.code ?? "",
+  handphone: row?.handphone ?? "",
+  email: row?.email ?? "",
+  mainActivity: row?.mainActiv ?? "",
+  business: row?.business ?? "",
+});
 
 // ===================== LIST GABUNG (dengan pencarian & paging) =====================
 
@@ -763,6 +784,102 @@ export async function exportPersonalDatabasePdf(req: Request, res: Response) {
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", 'attachment; filename="database-personal.pdf"');
     const buffer = Buffer.from(await pdf.arrayBuffer());
+    return res.end(buffer);
+  } catch (err: any) {
+    return res.status(500).json(fail(err.message || String(err)));
+  }
+}
+
+// ===================== EXPORT SEARCH RESULT (F3) EXCEL =====================
+
+export async function exportSearchExcel(req: Request, res: Response) {
+  try {
+    const payload = req.body ?? {};
+    const filters = payload?.filters ?? {};
+    const company = String(filters.company || "").trim();
+    const name = String(filters.name || "").trim();
+    const email = String(filters.email || "").trim();
+    const business = String(filters.business || "").trim();
+    const userName = String(filters.userName || "").trim();
+    const hp = String(filters.hp || "").trim();
+    const city = String(filters.city || "").trim();
+    const query = String(payload?.q || "").trim();
+    const limitInput = Number(payload?.limit ?? 10000);
+    const limit = Number.isFinite(limitInput)
+      ? Math.max(1, Math.min(Math.floor(limitInput), 20000))
+      : 10000;
+
+    if (!company) {
+      return res
+        .status(400)
+        .json(fail("Filter company wajib diisi untuk export Excel dari Search (F3)"));
+    }
+
+    const where: any = {};
+
+    if (query) {
+      where.OR = [
+        { company: { contains: query, mode: "insensitive" } },
+        { name: { contains: query, mode: "insensitive" } },
+        { city: { contains: query, mode: "insensitive" } },
+      ];
+    }
+    if (company) where.company = { contains: company, mode: "insensitive" };
+    if (name) where.name = { contains: name, mode: "insensitive" };
+    if (email) where.email = { contains: email, mode: "insensitive" };
+    if (business) where.business = { contains: business, mode: "insensitive" };
+    if (userName) where.namauser = { contains: userName, mode: "insensitive" };
+    if (city) where.city = { contains: city, mode: "insensitive" };
+    if (hp) {
+      where.AND = [
+        ...(where.AND ?? []),
+        {
+          OR: [
+            { phone: { contains: hp, mode: "insensitive" } },
+            { handphone: { contains: hp, mode: "insensitive" } },
+          ],
+        },
+      ];
+    }
+
+    const items = await prisma.gabung.findMany({
+      where,
+      orderBy: { company: "asc" },
+      take: limit,
+    });
+
+    const rows = (items ?? []).map(mapGabungToLabelRow);
+    const buffer = await buildLabelExcel(rows as any);
+
+    const currentUser = String(payload?.currentUser || "").trim() || null;
+    await writeAuditLog({
+      username: currentUser,
+      action: "export_excel",
+      page: "Add Data",
+      summary: `Export Search (F3) by company: ${company} (${rows.length} data)`,
+      data: {
+        company,
+        total: rows.length,
+        filters: {
+          company,
+          hp,
+          name,
+          email,
+          business,
+          userName,
+          city,
+        },
+      },
+    });
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="search-company-label-template.xlsx"',
+    );
     return res.end(buffer);
   } catch (err: any) {
     return res.status(500).json(fail(err.message || String(err)));

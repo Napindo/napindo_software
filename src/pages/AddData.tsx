@@ -26,6 +26,7 @@ import {
   updateAddData,
   findCompanyRecords,
   exportPersonalDatabasePdf,
+  exportSearchExcel,
   listGabungRecords,
   listSourceOptions,
   listCode1Options,
@@ -295,6 +296,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
   })
   const [dataSearchOpen, setDataSearchOpen] = useState(false)
   const [dataSearchLoading, setDataSearchLoading] = useState(false)
+  const [dataSearchExporting, setDataSearchExporting] = useState(false)
   const [dataSearchRows, setDataSearchRows] = useState<Record<string, unknown>[]>([])
   const [dataSearchError, setDataSearchError] = useState<string | null>(null)
   const [dataSearchNotice, setDataSearchNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(
@@ -1118,6 +1120,54 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
         type: 'error',
         message: error instanceof Error ? error.message : 'Gagal mengunduh PDF.',
       })
+    }
+  }
+
+  const exportDataSearchExcel = async () => {
+    const company = dataSearchFilters.company.trim()
+    if (!company) {
+      setDataSearchNotice({
+        type: 'error',
+        message: 'Isi Search By Company terlebih dahulu sebelum Export Excel.',
+      })
+      return
+    }
+
+    setDataSearchNotice(null)
+    setDataSearchExporting(true)
+    try {
+      const { blob, filename } = await exportSearchExcel({
+        q: company || dataSearchFilters.name || '',
+        filters: {
+          hp: dataSearchFilters.hp,
+          company: dataSearchFilters.company,
+          email: dataSearchFilters.email,
+          name: dataSearchFilters.name,
+          business: dataSearchFilters.business,
+          userName: dataSearchFilters.userName,
+        },
+        currentUser: user?.username || user?.name || undefined,
+        limit: 20000,
+      })
+      const url = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = filename || 'search-company-label-template.xlsx'
+      document.body.appendChild(anchor)
+      anchor.click()
+      anchor.remove()
+      URL.revokeObjectURL(url)
+      setDataSearchNotice({
+        type: 'success',
+        message: `Excel tersimpan: ${anchor.download}`,
+      })
+    } catch (error) {
+      setDataSearchNotice({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Gagal mengunduh Excel.',
+      })
+    } finally {
+      setDataSearchExporting(false)
     }
   }
 
@@ -2360,6 +2410,14 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
                   disabled={dataSearchLoading}
                 >
                   Search
+                </button>
+                <button
+                  type="button"
+                  onClick={exportDataSearchExcel}
+                  className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold shadow-sm hover:bg-emerald-700 disabled:opacity-50"
+                  disabled={dataSearchExporting || dataSearchLoading}
+                >
+                  {dataSearchExporting ? 'Exporting...' : 'Export Excel'}
                 </button>
                 <button
                   type="button"

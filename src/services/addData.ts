@@ -436,6 +436,26 @@ export async function exportPersonalDatabasePdf(payload: Record<string, unknown>
   return { blob, filename }
 }
 
+export async function exportSearchExcel(payload: Record<string, unknown>) {
+  const res = await fetch(buildApiUrl(endpoints.gabung.exportSearchExcel), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload ?? {}),
+  })
+
+  if (!res.ok) {
+    const message = await res.text()
+    throw new Error(message || "Gagal mengunduh Excel")
+  }
+
+  const blob = await res.blob()
+  const filename = parseFilename(
+    res.headers.get("content-disposition"),
+    "search-company-label-template.xlsx",
+  )
+  return { blob, filename }
+}
+
 function base64ToBlob(base64: string, contentType: string) {
   const binary = atob(base64)
   const len = binary.length

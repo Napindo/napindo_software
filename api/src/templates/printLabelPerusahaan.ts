@@ -17,7 +17,7 @@ export const printLabelPerusahaanHtml = `<!DOCTYPE html>
 
     body {
       margin: 0;
-      font-size: 9pt;
+      font-size: 8pt;
       line-height: 1.1;
       color: #111;
     }
@@ -66,16 +66,16 @@ export const printLabelPerusahaanHtml = `<!DOCTYPE html>
       padding: 0;
     }
 
-    .greeting   { font-size: 9pt; font-weight: 700; }
-    .name-line  { font-size: 9pt; font-weight: 700; }
-    .position   { font-size: 9pt; font-weight: 700; font-style: italic; }
-    .company    { font-size: 8pt; font-weight: 700; }
+    .greeting   { font-size: 8pt; font-weight: 700; }
+    .name-line  { font-size: 8pt; font-weight: 700; }
+    .position   { font-size: 8pt; font-weight: 700; font-style: italic; }
+    .company    { font-size: 7pt; font-weight: 700; }
     .address1,
-    .address2   { font-size: 9pt; }
-    .city-line  { font-size: 9pt; }
+    .address2   { font-size: 8pt; }
+    .city-line  { font-size: 8pt; }
 
     .label-meta {
-      font-size: 8pt;
+      font-size: 7pt;
       position: absolute;
       right: 1.5mm;
       bottom: 0.5mm;

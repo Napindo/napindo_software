@@ -451,7 +451,7 @@ export async function exportSearchExcel(payload: Record<string, unknown>) {
   const blob = await res.blob()
   const filename = parseFilename(
     res.headers.get("content-disposition"),
-    "search-company-label-template.xlsx",
+    "search-data-f3-export.xlsx",
   )
   return { blob, filename }
 }

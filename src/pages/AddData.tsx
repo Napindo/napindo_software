@@ -1143,7 +1143,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
       const url = URL.createObjectURL(blob)
       const anchor = document.createElement('a')
       anchor.href = url
-      anchor.download = filename || 'search-company-label-template.xlsx'
+      anchor.download = filename || 'search-data-f3-export.xlsx'
       document.body.appendChild(anchor)
       anchor.click()
       anchor.remove()

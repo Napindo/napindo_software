@@ -101,7 +101,21 @@ interface Window {
     logoutPengguna: (payload: { username: string }) => Promise<DatabaseResponse<{ username: string; status?: string | null }>>
     listPengguna: () => Promise<DatabaseResponse<{ username?: string; division?: string | null; status?: string | null }>>
     findCompany: <T = Record<string, unknown>>(company: string) => Promise<DatabaseResponse<T>>
-    listGabung: (params?: { page?: number; pageSize?: number; q?: string }) => Promise<DatabaseResponse>
+    listGabung: (params?: {
+      page?: number
+      pageSize?: number
+      q?: string
+      fields?: string
+      filters?: {
+        hp?: string
+        company?: string
+        email?: string
+        name?: string
+        business?: string
+        userName?: string
+        city?: string
+      }
+    }) => Promise<DatabaseResponse>
     saveAddData: (payload: Record<string, unknown>) => Promise<DatabaseResponse>
     importGabungExcel: (payload: {
       fileBase64: string

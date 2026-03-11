@@ -57,10 +57,26 @@ export async function fetchExpoChartData() {
   }
 }
 
-export async function listGabungRecords(params?: { page?: number; pageSize?: number; q?: string }) {
+export async function listGabungRecords(params?: {
+  page?: number
+  pageSize?: number
+  q?: string
+  fields?: string
+  filters?: {
+    hp?: string
+    company?: string
+    email?: string
+    name?: string
+    business?: string
+    userName?: string
+    city?: string
+  }
+}) {
   const page = params?.page ?? 1
   const pageSize = params?.pageSize ?? 200
   const search = params?.q?.trim()
+  const fields = params?.fields?.trim()
+  const filters = params?.filters ?? {}
   const query = new URLSearchParams({
     page: String(page),
     pageSize: String(pageSize),
@@ -68,6 +84,16 @@ export async function listGabungRecords(params?: { page?: number; pageSize?: num
   if (search) {
     query.set('q', search)
   }
+  if (fields) {
+    query.set('fields', fields)
+  }
+  if (filters.company) query.set('company', filters.company)
+  if (filters.name) query.set('name', filters.name)
+  if (filters.email) query.set('email', filters.email)
+  if (filters.business) query.set('business', filters.business)
+  if (filters.userName) query.set('userName', filters.userName)
+  if (filters.hp) query.set('hp', filters.hp)
+  if (filters.city) query.set('city', filters.city)
 
   const { body } = await apiFetch(`/gabung?${query.toString()}`)
   if (!isResponseOk(body)) {

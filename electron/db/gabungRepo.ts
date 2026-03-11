@@ -326,6 +326,34 @@ export async function renderPersonalDatabasePdf(payload: Record<string, unknown>
   }
 }
 
+export async function renderSearchF3Excel(payload: Record<string, unknown>) {
+  const url = `${API_BASE_URL.replace(/\/$/, '')}${API_PREFIX}/gabung/export/search/excel`
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload || {}),
+  })
+
+  if (!response.ok) {
+    const message = await response.text()
+    throw new Error(message || 'Gagal mengunduh Excel Search (F3)')
+  }
+
+  const arrayBuffer = await response.arrayBuffer()
+  const buffer = Buffer.from(arrayBuffer)
+  const contentDisposition = response.headers.get('content-disposition') || ''
+  const match = /filename="?([^"]+)"?/i.exec(contentDisposition)
+  const filename = match?.[1] || 'search-data-f3-export.xlsx'
+  return {
+    contentType:
+      response.headers.get('content-type') ||
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    filename,
+    buffer,
+    base64: buffer.toString('base64'),
+  }
+}
+
 export async function renderLabelVisitorExcel(filter: unknown) {
   const url = `${API_BASE_URL.replace(/\/$/, '')}${API_PREFIX}/report/labelvisitor/export/excel`
   const response = await fetch(url, {

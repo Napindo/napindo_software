@@ -1127,7 +1127,8 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
     setDataSearchNotice(null)
     setDataSearchExporting(true)
     try {
-      const { blob, filename } = await exportSearchExcel({
+      const result = await exportSearchExcel({
+        action: 'export-save',
         q: dataSearchFilters.company || dataSearchFilters.name || '',
         filters: {
           hp: dataSearchFilters.hp,
@@ -1140,18 +1141,30 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
         currentUser: user?.username || user?.name || undefined,
         limit: 20000,
       })
-      const url = URL.createObjectURL(blob)
-      const anchor = document.createElement('a')
-      anchor.href = url
-      anchor.download = filename || 'search-data-f3-export.xlsx'
-      document.body.appendChild(anchor)
-      anchor.click()
-      anchor.remove()
-      URL.revokeObjectURL(url)
-      setDataSearchNotice({
-        type: 'success',
-        message: `Excel tersimpan: ${anchor.download}`,
-      })
+      if ((result as any)?.saved) {
+        setDataSearchNotice({
+          type: 'success',
+          message: `Excel tersimpan: ${((result as any)?.filename as string) || 'search-data-f3-export.xlsx'}`,
+        })
+      } else if (!(result as any)?.canceled) {
+        const blob = (result as any)?.blob as Blob | undefined
+        const filename = ((result as any)?.filename as string | undefined) || 'search-data-f3-export.xlsx'
+        if (!blob) {
+          throw new Error('Excel tidak tersedia untuk diunduh.')
+        }
+        const url = URL.createObjectURL(blob)
+        const anchor = document.createElement('a')
+        anchor.href = url
+        anchor.download = filename
+        document.body.appendChild(anchor)
+        anchor.click()
+        anchor.remove()
+        URL.revokeObjectURL(url)
+        setDataSearchNotice({
+          type: 'success',
+          message: `Excel tersimpan: ${anchor.download}`,
+        })
+      }
     } catch (error) {
       setDataSearchNotice({
         type: 'error',

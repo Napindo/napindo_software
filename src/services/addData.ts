@@ -437,6 +437,27 @@ export async function exportPersonalDatabasePdf(payload: Record<string, unknown>
 }
 
 export async function exportSearchExcel(payload: Record<string, unknown>) {
+  const action = String(payload?.action ?? "").toLowerCase()
+  if (action === "export-save") {
+    const db = getDatabaseBridge()
+    if (db && typeof db.exportSearchF3Save === "function") {
+      const response: any = await db.exportSearchF3Save(payload)
+      if (response?.success === false && !response?.canceled) {
+        throw new Error(response?.message ?? "Gagal menyimpan Excel")
+      }
+      return { saved: Boolean(response?.success), canceled: Boolean(response?.canceled), filename: response?.filename }
+    }
+
+    const ipc = getIpcRenderer()
+    if (ipc && typeof ipc.invoke === "function") {
+      const response: any = await ipc.invoke("db:search-f3:export-save", payload)
+      if (response?.success === false && !response?.canceled) {
+        throw new Error(response?.message ?? "Gagal menyimpan Excel")
+      }
+      return { saved: Boolean(response?.success), canceled: Boolean(response?.canceled), filename: response?.filename }
+    }
+  }
+
   const res = await fetch(buildApiUrl(endpoints.gabung.exportSearchExcel), {
     method: "POST",
     headers: { "Content-Type": "application/json" },

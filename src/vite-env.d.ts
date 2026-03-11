@@ -95,6 +95,7 @@ interface Window {
     exportPersonalDatabasePdf: (
       payload: Record<string, unknown>,
     ) => Promise<RendererDatabaseResponse<{ base64?: string; contentType?: string; filename?: string }>>
+    exportSearchF3Save: (payload: Record<string, unknown>) => Promise<RendererDatabaseResponse>
   }
 }
 

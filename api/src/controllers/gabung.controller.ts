@@ -809,12 +809,6 @@ export async function exportSearchExcel(req: Request, res: Response) {
       ? Math.max(1, Math.min(Math.floor(limitInput), 20000))
       : 10000;
 
-    if (!company) {
-      return res
-        .status(400)
-        .json(fail("Filter company wajib diisi untuk export Excel dari Search (F3)"));
-    }
-
     const where: any = {};
 
     if (query) {
@@ -852,11 +846,23 @@ export async function exportSearchExcel(req: Request, res: Response) {
     const buffer = await buildLabelExcel(rows as any);
 
     const currentUser = String(payload?.currentUser || "").trim() || null;
+    const activeFilters = [
+      company ? `company=${company}` : null,
+      hp ? `hp=${hp}` : null,
+      name ? `name=${name}` : null,
+      email ? `email=${email}` : null,
+      business ? `business=${business}` : null,
+      userName ? `userName=${userName}` : null,
+      city ? `city=${city}` : null,
+      query ? `q=${query}` : null,
+    ]
+      .filter(Boolean)
+      .join(", ");
     await writeAuditLog({
       username: currentUser,
       action: "export_excel",
       page: "Add Data",
-      summary: `Export Search (F3) by company: ${company} (${rows.length} data)`,
+      summary: `Export Search (F3): ${activeFilters || "all"} (${rows.length} data)`,
       data: {
         company,
         total: rows.length,

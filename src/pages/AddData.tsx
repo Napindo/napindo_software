@@ -1124,20 +1124,11 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
   }
 
   const exportDataSearchExcel = async () => {
-    const company = dataSearchFilters.company.trim()
-    if (!company) {
-      setDataSearchNotice({
-        type: 'error',
-        message: 'Isi Search By Company terlebih dahulu sebelum Export Excel.',
-      })
-      return
-    }
-
     setDataSearchNotice(null)
     setDataSearchExporting(true)
     try {
       const { blob, filename } = await exportSearchExcel({
-        q: company || dataSearchFilters.name || '',
+        q: dataSearchFilters.company || dataSearchFilters.name || '',
         filters: {
           hp: dataSearchFilters.hp,
           company: dataSearchFilters.company,

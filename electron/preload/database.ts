@@ -70,6 +70,8 @@ contextBridge.exposeInMainWorld('database', {
   deleteAddData: (ids: Array<string | number>) => ipcRenderer.invoke('db:deleteAddData', ids),
   exportPersonalDatabasePdf: (payload: Record<string, unknown>) =>
     ipcRenderer.invoke('db:personalDatabasePdf', payload),
+  exportSearchF3Save: (payload: Record<string, unknown>) =>
+    ipcRenderer.invoke('db:search-f3:export-save', payload),
 
   reportLabelVisitor: (filter: unknown) => ipcRenderer.invoke('report:labelvisitor', filter),
   reportLabelGover: (filter: unknown) => ipcRenderer.invoke('report:labelgover', filter),

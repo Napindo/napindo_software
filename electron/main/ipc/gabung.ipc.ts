@@ -1,4 +1,7 @@
 import { ipcMain } from 'electron'
+import { dialog } from 'electron'
+import fs from 'node:fs/promises'
+import path from 'node:path'
 import {
   deleteAddData,
   fetchExhibitorsBySegment,
@@ -20,6 +23,7 @@ import {
   reportJumlahPerusahaan,
   reportJumlahGovernment,
   renderPersonalDatabasePdf,
+  renderSearchF3Excel,
 } from '../../db/gabungRepo.js'
 import { testConnection } from '../../db/index.js'
 
@@ -213,6 +217,32 @@ ipcMain.handle('db:fetchExhibitors', async (_event, segment, limit = 0, person =
     try {
       const data = await renderPersonalDatabasePdf(payload)
       return { success: true, data }
+    } catch (error) {
+      return errorResponse(error)
+    }
+  })
+
+  ipcMain.handle('db:search-f3:export-save', async (_event, payload) => {
+    try {
+      const { canceled, filePath } = await dialog.showSaveDialog({
+        title: 'Simpan Search Data (F3)',
+        defaultPath: 'search-data-f3-export.xlsx',
+        filters: [
+          { name: 'Microsoft Excel Workbook (*.xlsx)', extensions: ['xlsx'] },
+          { name: 'Microsoft Excel 97-2003 (*.xls)', extensions: ['xls'] },
+        ],
+        properties: ['createDirectory', 'showOverwriteConfirmation'],
+      })
+
+      if (canceled || !filePath) return { success: false, canceled: true }
+
+      const ext = path.extname(filePath).toLowerCase()
+      const excelPayload = await renderSearchF3Excel(payload || {})
+      const contentType =
+        ext === '.xls' ? 'application/vnd.ms-excel' : excelPayload.contentType
+
+      await fs.writeFile(filePath, excelPayload.buffer)
+      return { success: true, path: filePath, filename: path.basename(filePath), contentType }
     } catch (error) {
       return errorResponse(error)
     }

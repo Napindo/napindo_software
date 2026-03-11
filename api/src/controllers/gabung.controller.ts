@@ -5,7 +5,6 @@ import { ok, fail } from "../utils/apiResponse";
 import { writeAuditLog } from "../services/auditLog";
 import { buildSegmentWhere, SegmentCode } from "../services/gabungSegments";
 import { renderPersonalDatabasePdf } from "../services/personalDatabaseRender";
-import { buildLabelExcel } from "../services/labelExport";
 
 const CACHE_TTL_MS = 60 * 1000;
 const cacheState = {
@@ -153,6 +152,119 @@ const GABUNG_FIELDS = [
   "ochorti",
 ];
 
+const SEARCH_EXPORT_FIELDS = ["nourut", ...GABUNG_FIELDS];
+
+const prettyFieldName = (field: string) =>
+  field
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/_/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+
+const toExcelText = (value: unknown) => {
+  if (value === null || typeof value === "undefined") return "";
+  if (value instanceof Date) return value.toISOString().replace("T", " ").slice(0, 19);
+  if (typeof value === "object") {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value);
+    }
+  }
+  return String(value);
+};
+
+async function buildSearchExcelWorkbook(options: {
+  items: Record<string, unknown>[];
+  filters: Record<string, string>;
+  query: string;
+}) {
+  const wb = new ExcelJS.Workbook();
+  const sheet = wb.addWorksheet("Search F3");
+
+  const titleRow = sheet.addRow(["Search Data (F3) Export"]);
+  const subtitleFilters = Object.entries(options.filters)
+    .filter(([, value]) => String(value || "").trim() !== "")
+    .map(([key, value]) => `${key}=${value}`)
+    .join(", ");
+  const subtitleRow = sheet.addRow([
+    `Generated: ${new Date().toISOString().replace("T", " ").slice(0, 19)} | Query: ${
+      options.query || "-"
+    } | Filters: ${subtitleFilters || "all"}`,
+  ]);
+  sheet.addRow([]);
+
+  const headerLabels = SEARCH_EXPORT_FIELDS.map((field) => prettyFieldName(field));
+  const headerRow = sheet.addRow(headerLabels);
+
+  for (const item of options.items) {
+    const rowValues = SEARCH_EXPORT_FIELDS.map((field) => toExcelText(item?.[field]));
+    sheet.addRow(rowValues);
+  }
+
+  const lastColumn = SEARCH_EXPORT_FIELDS.length;
+  const lastColumnLetter = sheet.getColumn(lastColumn).letter;
+  sheet.mergeCells(`A1:${lastColumnLetter}1`);
+  sheet.mergeCells(`A2:${lastColumnLetter}2`);
+
+  titleRow.font = { bold: true, size: 14, color: { argb: "FFFFFFFF" } };
+  titleRow.alignment = { vertical: "middle", horizontal: "left" };
+  titleRow.height = 24;
+  titleRow.eachCell((cell) => {
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1E3A8A" } };
+  });
+
+  subtitleRow.font = { italic: true, size: 10, color: { argb: "FF334155" } };
+  subtitleRow.alignment = { vertical: "middle", horizontal: "left", wrapText: true };
+  subtitleRow.height = 36;
+
+  headerRow.font = { bold: true, color: { argb: "FF0F172A" } };
+  headerRow.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+  headerRow.height = 22;
+  headerRow.eachCell((cell) => {
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE2E8F0" } };
+    cell.border = {
+      top: { style: "thin", color: { argb: "FFCBD5E1" } },
+      left: { style: "thin", color: { argb: "FFCBD5E1" } },
+      bottom: { style: "thin", color: { argb: "FFCBD5E1" } },
+      right: { style: "thin", color: { argb: "FFCBD5E1" } },
+    };
+  });
+
+  const firstDataRow = headerRow.number + 1;
+  for (let rowIndex = firstDataRow; rowIndex <= sheet.rowCount; rowIndex += 1) {
+    const row = sheet.getRow(rowIndex);
+    row.alignment = { vertical: "top", horizontal: "left", wrapText: true };
+    if ((rowIndex - firstDataRow) % 2 === 1) {
+      row.eachCell((cell) => {
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF8FAFC" } };
+      });
+    }
+  }
+
+  sheet.views = [{ state: "frozen", ySplit: headerRow.number }];
+  sheet.autoFilter = {
+    from: { row: headerRow.number, column: 1 },
+    to: { row: headerRow.number, column: SEARCH_EXPORT_FIELDS.length },
+  };
+
+  for (let columnIndex = 1; columnIndex <= SEARCH_EXPORT_FIELDS.length; columnIndex += 1) {
+    const column = sheet.getColumn(columnIndex);
+    const headerLength = String(headerLabels[columnIndex - 1] || "").length;
+    const sampleLimit = Math.min(sheet.rowCount, firstDataRow + 500);
+    let maxLength = headerLength;
+    for (let rowIndex = firstDataRow; rowIndex <= sampleLimit; rowIndex += 1) {
+      const value = toExcelText(sheet.getRow(rowIndex).getCell(columnIndex).value);
+      if (value.length > maxLength) maxLength = value.length;
+    }
+    column.width = Math.min(Math.max(maxLength + 2, 10), 48);
+  }
+
+  const buffer = await wb.xlsx.writeBuffer();
+  return Buffer.from(buffer);
+}
+
 const normalizeHeader = (value: unknown) =>
   String(value ?? "")
     .trim()
@@ -238,26 +350,6 @@ const formatTimestamp = (date: Date) => {
     date.getHours(),
   )}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 };
-
-const mapGabungToLabelRow = (row: any) => ({
-  companyName: row?.company ?? "",
-  contactName: row?.name ?? "",
-  position: row?.position ?? "",
-  nourut: row?.nourut ?? "",
-  addressLine1: row?.address1 ?? "",
-  addressLine2: row?.address2 ?? "",
-  city: row?.city ?? "",
-  province: row?.propince ?? "",
-  country: row?.country ?? "",
-  postcode: row?.zip ?? "",
-  sex: row?.sex ?? "",
-  phone: row?.phone ?? "",
-  codePhone: row?.code ?? "",
-  handphone: row?.handphone ?? "",
-  email: row?.email ?? "",
-  mainActivity: row?.mainActiv ?? "",
-  business: row?.business ?? "",
-});
 
 // ===================== LIST GABUNG (dengan pencarian & paging) =====================
 
@@ -842,8 +934,20 @@ export async function exportSearchExcel(req: Request, res: Response) {
       take: limit,
     });
 
-    const rows = (items ?? []).map(mapGabungToLabelRow);
-    const buffer = await buildLabelExcel(rows as any);
+    const rows = (items ?? []) as Record<string, unknown>[];
+    const buffer = await buildSearchExcelWorkbook({
+      items: rows,
+      query,
+      filters: {
+        company,
+        hp,
+        name,
+        email,
+        business,
+        userName,
+        city,
+      },
+    });
 
     const currentUser = String(payload?.currentUser || "").trim() || null;
     const activeFilters = [
@@ -884,7 +988,7 @@ export async function exportSearchExcel(req: Request, res: Response) {
     );
     res.setHeader(
       "Content-Disposition",
-      'attachment; filename="search-company-label-template.xlsx"',
+      'attachment; filename="search-data-f3-export.xlsx"',
     );
     return res.end(buffer);
   } catch (err: any) {

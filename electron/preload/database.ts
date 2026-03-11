@@ -41,7 +41,21 @@ contextBridge.exposeInMainWorld('database', {
   listPengguna: () => ipcRenderer.invoke('db:listPengguna'),
 
   findCompany: (company: string) => ipcRenderer.invoke('db:findCompany', company),
-  listGabung: (params?: { page?: number; pageSize?: number; q?: string }) =>
+  listGabung: (params?: {
+    page?: number
+    pageSize?: number
+    q?: string
+    fields?: string
+    filters?: {
+      hp?: string
+      company?: string
+      email?: string
+      name?: string
+      business?: string
+      userName?: string
+      city?: string
+    }
+  }) =>
     ipcRenderer.invoke('db:listGabung', params),
   listSourceOptions: () => ipcRenderer.invoke('db:listSourceOptions'),
   listCode1Options: () => ipcRenderer.invoke('db:listCode1Options'),

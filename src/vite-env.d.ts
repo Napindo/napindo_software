@@ -61,7 +61,21 @@ interface Window {
     }) => Promise<RendererDatabaseResponse<{ username: string; division?: string | null; status?: string | null }>>
     logoutPengguna: (payload: { username: string }) => Promise<RendererDatabaseResponse<{ username: string; status?: string | null }>>
     listPengguna: () => Promise<RendererDatabaseResponse<{ username?: string; division?: string | null; status?: string | null }>>
-    listGabung: (params?: { page?: number; pageSize?: number; q?: string }) => Promise<RendererDatabaseResponse>
+    listGabung: (params?: {
+      page?: number
+      pageSize?: number
+      q?: string
+      fields?: string
+      filters?: {
+        hp?: string
+        company?: string
+        email?: string
+        name?: string
+        business?: string
+        userName?: string
+        city?: string
+      }
+    }) => Promise<RendererDatabaseResponse>
     listSourceOptions: () => Promise<RendererDatabaseResponse<string[]>>
     listCode1Options: () => Promise<RendererDatabaseResponse<string[]>>
     saveAddData: (payload: Record<string, unknown>) => Promise<RendererDatabaseResponse>

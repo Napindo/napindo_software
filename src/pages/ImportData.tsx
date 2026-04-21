@@ -3,6 +3,7 @@ import { importGabungExcel, type ImportResult } from '../services/importData'
 import { arrayBufferToBase64 } from '../utils/base64'
 import { useAppStore } from '../store/appStore'
 import { extractErrorMessage } from '../utils/api'
+import { publicAssetUrl } from '../utils/publicAssets'
 
 const MAX_FILE_MB = 25
 const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024
@@ -14,6 +15,7 @@ const quickGuide = [
   'Untuk tanggal gunakan format yang bisa dibaca Excel (date).',
 ]
 const allowedExtensions = new Set(['xlsx', 'xlsm'])
+const templateUrl = publicAssetUrl('template-import-data.xlsm')
 
 const formatBytes = (value: number) => {
   if (!Number.isFinite(value) || value <= 0) return '0 KB'
@@ -137,6 +139,28 @@ const ImportDataPage = () => {
       })
     } finally {
       setIsImporting(false)
+    }
+  }
+
+  const downloadTemplate = async () => {
+    try {
+      const response = await fetch(templateUrl)
+      if (!response.ok) throw new Error('Template Excel tidak ditemukan.')
+
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = 'TEMPLATE SQL 1.xlsm'
+      document.body.appendChild(anchor)
+      anchor.click()
+      anchor.remove()
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      setStatus({
+        type: 'error',
+        message: extractErrorMessage(error, 'Gagal mengunduh template Excel.'),
+      })
     }
   }
 
@@ -322,13 +346,13 @@ const ImportDataPage = () => {
                 </span>
               ))}
             </div>
-            <a
-              href="/assets/template-import-data.xlsm"
-              download="TEMPLATE SQL 1.xlsm"
+            <button
+              type="button"
+              onClick={downloadTemplate}
               className="mt-5 inline-flex items-center justify-center rounded-lg bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-100"
             >
               Download Template Excel
-            </a>
+            </button>
           </div>
         </div>
       </div>

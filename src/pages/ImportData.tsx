@@ -144,18 +144,12 @@ const ImportDataPage = () => {
 
   const downloadTemplate = async () => {
     try {
-      const response = await fetch(templateUrl)
-      if (!response.ok) throw new Error('Template Excel tidak ditemukan.')
-
-      const blob = await response.blob()
-      const url = URL.createObjectURL(blob)
       const anchor = document.createElement('a')
-      anchor.href = url
+      anchor.href = templateUrl
       anchor.download = 'TEMPLATE SQL 1.xlsm'
       document.body.appendChild(anchor)
       anchor.click()
       anchor.remove()
-      URL.revokeObjectURL(url)
     } catch (error) {
       setStatus({
         type: 'error',

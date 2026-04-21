@@ -146,6 +146,10 @@ type ExhibitorTableProps = {
   canDelete: boolean
 }
 
+type SortKey = 'type' | 'city' | 'updatedAt'
+type SortDirection = 'asc' | 'desc'
+type SortState = { key: SortKey; direction: SortDirection } | null
+
 const ExhibitorTable = ({
   segment,
   rows,
@@ -164,6 +168,7 @@ const ExhibitorTable = ({
   const [page, setPage] = useState(1)
   const [selectedIds, setSelectedIds] = useState<(string | number)[]>([])
   const [tableError, setTableError] = useState<string | null>(null)
+  const [sort, setSort] = useState<SortState>(null)
 
   useEffect(() => {
     setSelectedIds([])
@@ -183,10 +188,31 @@ const ExhibitorTable = ({
     )
   }, [rows, deferredSearch, segment])
 
-  const totalPages = Math.max(1, Math.ceil(filteredRows.length / rowsPerPage))
+  const sortedRows = useMemo(() => {
+    if (!sort) return filteredRows
+
+    const getValue = (row: ExhibitorRow) => {
+      if (sort.key === 'updatedAt') {
+        const time = row.updatedAt ? new Date(row.updatedAt).getTime() : 0
+        return Number.isNaN(time) ? 0 : time
+      }
+      return String(row[sort.key] ?? '').toLowerCase()
+    }
+
+    return [...filteredRows].sort((a, b) => {
+      const aValue = getValue(a)
+      const bValue = getValue(b)
+      const result = typeof aValue === 'number' && typeof bValue === 'number'
+        ? aValue - bValue
+        : String(aValue).localeCompare(String(bValue))
+      return sort.direction === 'asc' ? result : -result
+    })
+  }, [filteredRows, sort])
+
+  const totalPages = Math.max(1, Math.ceil(sortedRows.length / rowsPerPage))
   const currentPage = Math.min(page, totalPages)
   const startIndex = (currentPage - 1) * rowsPerPage
-  const paginatedRows = filteredRows.slice(startIndex, startIndex + rowsPerPage)
+  const paginatedRows = sortedRows.slice(startIndex, startIndex + rowsPerPage)
   const allSelected = paginatedRows.length > 0 && paginatedRows.every((row) => selectedIds.includes(row.id))
   const tabOptions = segmentTabs[segment] ?? [segment]
 
@@ -206,6 +232,29 @@ const ExhibitorTable = ({
     setRowsPerPage(value)
     setPage(1)
   }
+
+  const toggleSort = (key: SortKey) => {
+    setSort((prev) => {
+      if (!prev || prev.key !== key) return { key, direction: 'asc' }
+      return { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' }
+    })
+    setPage(1)
+  }
+
+  const sortMark = (key: SortKey) => (sort?.key === key ? (sort.direction === 'asc' ? ' ^' : ' v') : '')
+
+  const renderSortHeader = (key: SortKey, label: string, className = 'px-4 py-3 border-b border-slate-200') => (
+    <th className={className}>
+      <button
+        type="button"
+        onClick={() => toggleSort(key)}
+        className="inline-flex items-center gap-1 font-semibold text-slate-700 hover:text-rose-600"
+      >
+        {label}
+        <span className="text-[10px]">{sortMark(key)}</span>
+      </button>
+    </th>
+  )
 
   const handleEdit = () => {
     if (selectedIds.length === 0) {
@@ -369,11 +418,11 @@ const ExhibitorTable = ({
                 <th className="px-4 py-3 border-b border-slate-200">Company</th>
                 <th className="px-4 py-3 border-b border-slate-200">PIC</th>
                 <th className="px-4 py-3 border-b border-slate-200">Position</th>
-                <th className="px-4 py-3 border-b border-slate-200">Type</th>
+                {renderSortHeader('type', 'Type')}
                 <th className="px-4 py-3 border-b border-slate-200">Email</th>
                 <th className="px-4 py-3 border-b border-slate-200">Phone</th>
-                <th className="px-4 py-3 border-b border-slate-200">City</th>
-                <th className="px-4 py-3 border-b border-slate-200 whitespace-nowrap">Last Update</th>
+                {renderSortHeader('city', 'City')}
+                {renderSortHeader('updatedAt', 'Last Update', 'px-4 py-3 border-b border-slate-200 whitespace-nowrap')}
               </tr>
             </thead>
             <tbody>
@@ -422,8 +471,8 @@ const ExhibitorTable = ({
 
         <div className="flex items-center justify-between mt-4 text-sm font-semibold text-slate-700">
           <div>
-            {filteredRows.length > 0
-              ? `${startIndex + 1}-${Math.min(startIndex + paginatedRows.length, filteredRows.length)} dari ${filteredRows.length}`
+            {sortedRows.length > 0
+              ? `${startIndex + 1}-${Math.min(startIndex + paginatedRows.length, sortedRows.length)} dari ${sortedRows.length}`
               : '0 data'}
           </div>
           <div className="flex items-center gap-3">

@@ -2,6 +2,7 @@ import { useMemo, useState, type ChangeEvent, type DragEvent } from 'react'
 import { importGabungExcel, type ImportResult } from '../services/importData'
 import { arrayBufferToBase64 } from '../utils/base64'
 import { useAppStore } from '../store/appStore'
+import { extractErrorMessage } from '../utils/api'
 
 const MAX_FILE_MB = 25
 const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024
@@ -132,7 +133,7 @@ const ImportDataPage = () => {
     } catch (error) {
       setStatus({
         type: 'error',
-        message: error instanceof Error ? error.message : 'Gagal mengimpor data.',
+        message: extractErrorMessage(error, 'Gagal mengimpor data.'),
       })
     } finally {
       setIsImporting(false)
@@ -255,14 +256,14 @@ const ImportDataPage = () => {
               type="button"
               onClick={startImport}
               disabled={isImporting}
-              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-rose-600 text-white font-semibold shadow-md hover:shadow-lg disabled:opacity-60"
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-slate-900 text-white font-semibold shadow-md hover:bg-slate-800 hover:shadow-lg disabled:opacity-60"
             >
               {isImporting ? 'Mengimpor...' : 'Mulai Import'}
             </button>
             <button
               type="button"
               onClick={resetForm}
-              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg border border-slate-200 text-slate-600 font-semibold hover:bg-slate-50"
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-rose-600 text-white font-semibold hover:bg-rose-700"
             >
               Reset
             </button>
@@ -321,6 +322,13 @@ const ImportDataPage = () => {
                 </span>
               ))}
             </div>
+            <a
+              href="/assets/template-import-data.xlsm"
+              download="TEMPLATE SQL 1.xlsm"
+              className="mt-5 inline-flex items-center justify-center rounded-lg bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-100"
+            >
+              Download Template Excel
+            </a>
           </div>
         </div>
       </div>

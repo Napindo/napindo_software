@@ -58,35 +58,7 @@ const toHintList = (value: unknown): string[] => {
   return [];
 };
 
-type MarkProps = { className?: string };
-
-const NapindoMark = ({ className }: MarkProps) => (
-  <svg
-    className={`napindo-icon ${className ?? ""}`}
-    viewBox="0 0 160 150"
-    role="presentation"
-    aria-hidden="true"
-  >
-    <defs>
-      <linearGradient id="napindoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#e63946" />
-        <stop offset="100%" stopColor="#9f0f0f" />
-      </linearGradient>
-    </defs>
-    <path
-      d="M10 20c0-6.6 5.4-12 12-12h16c4.4 0 8.3 2.4 10.4 6.3L80 90 51 142.5c-2.2 3.8-6.1 6.1-10.5 6.1H22c-6.6 0-12-5.4-12-12V20Z"
-      fill="url(#napindoGradient)"
-    />
-    <path
-      d="M60 20c0-6.6 5.4-12 12-12h16c4.4 0 8.3 2.4 10.4 6.3L130 90l-29 52.5c-2.2 3.8-6.1 6.1-10.5 6.1H72c-6.6 0-12-5.4-12-12V20Z"
-      fill="url(#napindoGradient)"
-    />
-    <path
-      d="M110 20c0-6.6 5.4-12 12-12h16c6.6 0 12 5.4 12 12v116.5c0 10.8-12.9 15.8-20.2 8.1l-19.3-19.6c-2.4-2.5-3.8-5.9-3.8-9.4V20Z"
-      fill="url(#napindoGradient)"
-    />
-  </svg>
-);
+const NAPINDO_LOGO = "/assets/napindo.png";
 
 // ===== BRIDGE LOGIN & HINTS KE ELECTRON/API =====
 
@@ -332,7 +304,11 @@ function LoginPage({ onSuccess }: LoginPageProps) {
         {/* Panel kiri (brand) */}
         <div className="bg-gradient-to-br from-white via-rose-50 to-slate-50 flex items-center justify-center p-8 md:p-10">
           <div className="flex items-center gap-6 float-soft">
-            <NapindoMark className="w-28 h-28 md:w-32 md:h-32 shrink-0" />
+            <img
+              src={NAPINDO_LOGO}
+              alt="Napindo"
+              className="w-28 h-28 md:w-32 md:h-32 shrink-0 object-contain"
+            />
             <div className="relative">
               <h1 className="text-5xl font-bold text-slate-900 mt-2">
                 Napindo

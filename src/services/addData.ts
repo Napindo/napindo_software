@@ -1,6 +1,6 @@
 import { requestJson } from "../api/client"
 import { endpoints } from "../api/endpoints"
-import { buildApiUrl, isApiOk, pickApiData } from "../utils/api"
+import { buildApiUrl, extractErrorMessage, isApiOk, pickApiData } from "../utils/api"
 import { getDatabaseBridge, getIpcRenderer } from "../utils/bridge"
 
 export type AddDataPayload = Record<string, string | number | boolean | null | undefined>
@@ -154,7 +154,7 @@ export async function findCompanyRecords(company: string): Promise<any[]> {
   const response = await invokeFindCompany(company)
 
   if (!response || response.success === false) {
-    throw new Error(response?.message ?? "Gagal mengambil data perusahaan")
+    throw new Error(extractErrorMessage(response?.message, "Gagal mengambil data perusahaan"))
   }
 
   // Beberapa endpoint bisa pakai `rows` atau `data`
@@ -180,7 +180,7 @@ export async function listGabungRecords(params?: {
   if (db && typeof db.listGabung === "function") {
     const response = await db.listGabung(params)
     if (!response || response.success === false) {
-      throw new Error(response?.message ?? "Gagal memuat data gabung")
+      throw new Error(extractErrorMessage(response?.message, "Gagal memuat data gabung"))
     }
     const data: any = response.data ?? response
     const items = (data.items ?? data.rows ?? data ?? []) as Record<string, unknown>[]
@@ -196,7 +196,7 @@ export async function listGabungRecords(params?: {
   if (ipc?.invoke) {
     const response = await ipc.invoke("db:listGabung", params)
     if (!response || response.success === false) {
-      throw new Error(response?.message ?? "Gagal memuat data gabung")
+      throw new Error(extractErrorMessage(response?.message, "Gagal memuat data gabung"))
     }
     const data: any = response.data ?? response
     const items = (data.items ?? data.rows ?? data ?? []) as Record<string, unknown>[]
@@ -245,7 +245,7 @@ export async function listGabungRecords(params?: {
     const message =
       body?.message ??
       (rawText?.trim()
-        ? `Gagal memuat data gabung: ${rawText.slice(0, 120)}`
+        ? `Gagal memuat data gabung: ${extractErrorMessage(rawText, rawText.slice(0, 120))}`
         : "Gagal memuat data gabung")
     throw new Error(message)
   }
@@ -264,7 +264,7 @@ export async function listSourceOptions(): Promise<string[]> {
   if (db && typeof db.listSourceOptions === "function") {
     const response = await db.listSourceOptions()
     if (!response || response.success === false) {
-      throw new Error(response?.message ?? "Gagal memuat source options")
+      throw new Error(extractErrorMessage(response?.message, "Gagal memuat source options"))
     }
     const data: any = response.data ?? response
     return (data.options ?? data.rows ?? data ?? []) as string[]
@@ -274,7 +274,7 @@ export async function listSourceOptions(): Promise<string[]> {
   if (ipc?.invoke) {
     const response = await ipc.invoke("db:listSourceOptions")
     if (!response || response.success === false) {
-      throw new Error(response?.message ?? "Gagal memuat source options")
+      throw new Error(extractErrorMessage(response?.message, "Gagal memuat source options"))
     }
     const data: any = response.data ?? response
     return (data.options ?? data.rows ?? data ?? []) as string[]
@@ -294,7 +294,7 @@ export async function listSourceOptions(): Promise<string[]> {
     const message =
       body?.message ??
       (rawText?.trim()
-        ? `Gagal memuat source options: ${rawText.slice(0, 120)}`
+        ? `Gagal memuat source options: ${extractErrorMessage(rawText, rawText.slice(0, 120))}`
         : "Gagal memuat source options")
     throw new Error(message)
   }
@@ -307,7 +307,7 @@ export async function listCode1Options(): Promise<string[]> {
   if (db && typeof db.listCode1Options === "function") {
     const response = await db.listCode1Options()
     if (!response || response.success === false) {
-      throw new Error(response?.message ?? "Gagal memuat code1 options")
+      throw new Error(extractErrorMessage(response?.message, "Gagal memuat code1 options"))
     }
     const data: any = response.data ?? response
     return (data.options ?? data.rows ?? data ?? []) as string[]
@@ -317,7 +317,7 @@ export async function listCode1Options(): Promise<string[]> {
   if (ipc?.invoke) {
     const response = await ipc.invoke("db:listCode1Options")
     if (!response || response.success === false) {
-      throw new Error(response?.message ?? "Gagal memuat code1 options")
+      throw new Error(extractErrorMessage(response?.message, "Gagal memuat code1 options"))
     }
     const data: any = response.data ?? response
     return (data.options ?? data.rows ?? data ?? []) as string[]
@@ -337,7 +337,7 @@ export async function listCode1Options(): Promise<string[]> {
     const message =
       body?.message ??
       (rawText?.trim()
-        ? `Gagal memuat code1 options: ${rawText.slice(0, 120)}`
+        ? `Gagal memuat code1 options: ${extractErrorMessage(rawText, rawText.slice(0, 120))}`
         : "Gagal memuat code1 options")
     throw new Error(message)
   }
@@ -353,7 +353,7 @@ export async function saveAddData(payload: AddDataPayload): Promise<any> {
   const response = await invokeSaveAddData(payload)
 
   if (!response || response.success === false) {
-    throw new Error(response?.message ?? "Gagal menyimpan data")
+    throw new Error(extractErrorMessage(response?.message, "Gagal menyimpan data"))
   }
 
   // API biasanya mengembalikan 1 objek tunggal sebagai `data`
@@ -367,7 +367,7 @@ export async function updateAddData(id: string | number, payload: AddDataPayload
   const response = await invokeUpdateAddData(id, payload)
 
   if (!response || response.success === false) {
-    throw new Error(response?.message ?? "Gagal memperbarui data")
+    throw new Error(extractErrorMessage(response?.message, "Gagal memperbarui data"))
   }
 
   return response.data ?? response
@@ -377,7 +377,7 @@ export async function deleteAddData(ids: Array<string | number>): Promise<any> {
   const response = await invokeDeleteAddData(ids)
 
   if (!response || response.success === false) {
-    throw new Error(response?.message ?? "Gagal menghapus data")
+    throw new Error(extractErrorMessage(response?.message, "Gagal menghapus data"))
   }
 
   return response.data ?? response
@@ -396,7 +396,7 @@ export async function exportPersonalDatabasePdf(payload: Record<string, unknown>
   if (db && typeof db.exportPersonalDatabasePdf === "function") {
     const response = await db.exportPersonalDatabasePdf(payload)
     if (!response || response.success === false) {
-      throw new Error(response?.message ?? "Gagal mengunduh PDF")
+      throw new Error(extractErrorMessage(response?.message, "Gagal mengunduh PDF"))
     }
     const data = response.data ?? response
     const base64 = data?.base64 as string | undefined
@@ -410,7 +410,7 @@ export async function exportPersonalDatabasePdf(payload: Record<string, unknown>
   if (ipc && typeof ipc.invoke === "function") {
     const response = await ipc.invoke("db:personalDatabasePdf", payload)
     if (!response || response.success === false) {
-      throw new Error(response?.message ?? "Gagal mengunduh PDF")
+      throw new Error(extractErrorMessage(response?.message, "Gagal mengunduh PDF"))
     }
     const data = response.data ?? response
     const base64 = data?.base64 as string | undefined
@@ -428,7 +428,7 @@ export async function exportPersonalDatabasePdf(payload: Record<string, unknown>
 
   if (!res.ok) {
     const message = await res.text()
-    throw new Error(message || "Gagal mengunduh PDF")
+    throw new Error(extractErrorMessage(message, "Gagal mengunduh PDF"))
   }
 
   const blob = await res.blob()
@@ -443,7 +443,7 @@ export async function exportSearchExcel(payload: Record<string, unknown>) {
     if (db && typeof db.exportSearchF3Save === "function") {
       const response: any = await db.exportSearchF3Save(payload)
       if (response?.success === false && !response?.canceled) {
-        throw new Error(response?.message ?? "Gagal menyimpan Excel")
+        throw new Error(extractErrorMessage(response?.message, "Gagal menyimpan Excel"))
       }
       return { saved: Boolean(response?.success), canceled: Boolean(response?.canceled), filename: response?.filename }
     }
@@ -452,7 +452,7 @@ export async function exportSearchExcel(payload: Record<string, unknown>) {
     if (ipc && typeof ipc.invoke === "function") {
       const response: any = await ipc.invoke("db:search-f3:export-save", payload)
       if (response?.success === false && !response?.canceled) {
-        throw new Error(response?.message ?? "Gagal menyimpan Excel")
+        throw new Error(extractErrorMessage(response?.message, "Gagal menyimpan Excel"))
       }
       return { saved: Boolean(response?.success), canceled: Boolean(response?.canceled), filename: response?.filename }
     }
@@ -466,7 +466,7 @@ export async function exportSearchExcel(payload: Record<string, unknown>) {
 
   if (!res.ok) {
     const message = await res.text()
-    throw new Error(message || "Gagal mengunduh Excel")
+    throw new Error(extractErrorMessage(message, "Gagal mengunduh Excel"))
   }
 
   const blob = await res.blob()

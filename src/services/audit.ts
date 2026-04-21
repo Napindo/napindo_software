@@ -1,6 +1,7 @@
 import { getDatabaseBridge, getIpcRenderer } from '../utils/bridge'
 import { requestJson } from '../api/client'
 import { endpoints } from '../api/endpoints'
+import { extractErrorMessage } from '../utils/api'
 
 export type AuditLogRow = {
   id: number
@@ -48,7 +49,7 @@ async function invokeFetchAuditLogs(limit = 200): Promise<DatabaseResponse> {
 export async function fetchAuditLogs(limit = 200): Promise<AuditLogRow[]> {
   const response = await invokeFetchAuditLogs(limit)
   if (!response || response.success === false) {
-    throw new Error(response?.message ?? 'Gagal memuat audit log')
+    throw new Error(extractErrorMessage(response?.message, 'Gagal memuat audit log'))
   }
 
   return (response.rows ?? response.data ?? []) as AuditLogRow[]
@@ -65,7 +66,7 @@ export async function createAuditLog(payload: {
   if (db && typeof db.createAuditLog === 'function') {
     const response = await db.createAuditLog(payload)
     if (!response || response.success === false) {
-      throw new Error(response?.message ?? 'Gagal menyimpan audit log')
+      throw new Error(extractErrorMessage(response?.message, 'Gagal menyimpan audit log'))
     }
     return response.data ?? response
   }
@@ -74,7 +75,7 @@ export async function createAuditLog(payload: {
   if (ipc && typeof ipc.invoke === 'function') {
     const response = await ipc.invoke('db:createAuditLog', payload)
     if (!response || response.success === false) {
-      throw new Error(response?.message ?? 'Gagal menyimpan audit log')
+      throw new Error(extractErrorMessage(response?.message, 'Gagal menyimpan audit log'))
     }
     return response.data ?? response
   }
@@ -85,7 +86,7 @@ export async function createAuditLog(payload: {
   })
 
   if (!response.ok) {
-    throw new Error(response.message || 'Gagal menyimpan audit log')
+    throw new Error(extractErrorMessage(response.message, 'Gagal menyimpan audit log'))
   }
 
   return response.data

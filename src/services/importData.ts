@@ -1,4 +1,4 @@
-import { buildApiUrl, isApiOk, pickApiData } from '../utils/api'
+import { buildApiUrl, extractErrorMessage, isApiOk, pickApiData } from '../utils/api'
 import { getDatabaseBridge, getIpcRenderer } from '../utils/bridge'
 
 export type ImportPayload = {
@@ -26,7 +26,7 @@ export async function importGabungExcel(payload: ImportPayload): Promise<ImportR
   if (bridge && typeof bridge.importGabungExcel === 'function') {
     const response = await bridge.importGabungExcel(payload)
     if (response?.success === false) {
-      throw new Error(response?.message ?? 'Gagal mengimpor Excel')
+      throw new Error(extractErrorMessage(response?.message, 'Gagal mengimpor Excel'))
     }
     return (response?.data ?? response) as ImportResult
   }
@@ -35,7 +35,7 @@ export async function importGabungExcel(payload: ImportPayload): Promise<ImportR
   if (ipc?.invoke) {
     const response = await ipc.invoke('db:importGabungExcel', payload)
     if (response?.success === false) {
-      throw new Error(response?.message ?? 'Gagal mengimpor Excel')
+      throw new Error(extractErrorMessage(response?.message, 'Gagal mengimpor Excel'))
     }
     return (response?.data ?? response) as ImportResult
   }
@@ -45,9 +45,17 @@ export async function importGabungExcel(payload: ImportPayload): Promise<ImportR
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   })
-  const body = await res.json()
+  const rawText = await res.text()
+  let body: any = null
+  if (rawText) {
+    try {
+      body = JSON.parse(rawText)
+    } catch {
+      body = null
+    }
+  }
   if (!isApiOk(body)) {
-    throw new Error(body?.message ?? 'Gagal mengimpor Excel')
+    throw new Error(extractErrorMessage(body?.message ?? rawText, 'Gagal mengimpor Excel'))
   }
   return pickApiData(body) as ImportResult
 }

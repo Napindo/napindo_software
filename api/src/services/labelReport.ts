@@ -249,10 +249,17 @@ export function buildLabelQuery(filter: LabelFilterPayload, extraConditions: Sql
   const addNotEqualsOrNull = (field: string, value: string) => {
     const safeField = raw(`"${field}"`)
     const sqlOp = raw("<>")
-    conditions.push(sql`(${safeField} IS NULL OR ${safeField} ${sqlOp} ${value})`)
+    conditions.push(sql`(${safeField} IS NULL OR BTRIM(${safeField}::text) = '' OR ${safeField} ${sqlOp} ${value})`)
 
     const esc = value.replace(/'/g, "''")
-    crystals.push(`({vnongover.${field}} <> '${esc}' OR IsNull({vnongover.${field}}))`)
+    crystals.push(`({vnongover.${field}} <> '${esc}' OR IsNull({vnongover.${field}}) OR Trim({vnongover.${field}}) = '')`)
+  }
+
+  const addEmptyOrNull = (field: string) => {
+    const safeField = raw(`"${field}"`)
+    conditions.push(sql`(${safeField} IS NULL OR BTRIM(${safeField}::text) = '')`)
+
+    crystals.push(`(IsNull({vnongover.${field}}) OR Trim({vnongover.${field}}) = '')`)
   }
 
   const addNotLikeOrNull = (field: string, value: string) => {
@@ -271,30 +278,30 @@ export function buildLabelQuery(filter: LabelFilterPayload, extraConditions: Sql
 
   // <> 'X'
   neXFlags.forEach(({ key, field }) => {
-    if (isOn(key)) addCond(field, "<>", "X")
+    if (isOn(key)) addNotEqualsOrNull(field, "X")
   })
 
   // Non email / HP kosong
-  if (isOn("cnonemail")) addCond("EMAIL", "=", " ")
-  if (isOn("cnonhp")) addCond("HANDPHONE", "=", " ")
+  if (isOn("cnonemail")) addEmptyOrNull("EMAIL")
+  if (isOn("cnonhp")) addEmptyOrNull("HANDPHONE")
 
   // Non overseas
   if (isOn("cnonoverseas")) {
-    ;["Asia", "Eropa", "USA", "Africa"].forEach((val) => addCond("PROPINCE", "<>", val))
+    ;["Asia", "Eropa", "USA", "Africa"].forEach((val) => addNotEqualsOrNull("PROPINCE", val))
   }
 
   // Non error / resign / tdk / blm
-  if (isOn("cnonerror")) addCond("CODE2", "<>", "ERROR")
-  if (isOn("cnonresign")) addCond("CODE2", "<>", "RESIGN")
-  if (isOn("cnontdkwater")) addCond("CODE3", "<>", "TDK")
-  if (isOn("cnonblmlivestock")) addCond("CODE3", "<>", "BLM")
+  if (isOn("cnonerror")) addNotEqualsOrNull("CODE2", "ERROR")
+  if (isOn("cnonresign")) addNotEqualsOrNull("CODE2", "RESIGN")
+  if (isOn("cnontdkwater")) addNotEqualsOrNull("CODE3", "TDK")
+  if (isOn("cnonblmlivestock")) addNotEqualsOrNull("CODE3", "BLM")
 
   // Tidak kirim
-  if (isOn("ctdkkrmidd")) addCond("TDKKRMIDD", "<>", "X")
-  if (isOn("ctdkkrmidwjkt")) addCond("TDKKRMIDWJKT", "<>", "X")
-  if (isOn("ctdkkrmidwsby")) addCond("TDKKRMIDWSBY", "<>", "X")
-  if (isOn("ctdkkrmidljkt")) addCond("TDKKRMIDLJKT", "<>", "X")
-  if (isOn("ctdkkrmidlsby")) addCond("TDKKRMIDLSBY", "<>", "X")
+  if (isOn("ctdkkrmidd")) addNotEqualsOrNull("TDKKRMIDD", "X")
+  if (isOn("ctdkkrmidwjkt")) addNotEqualsOrNull("TDKKRMIDWJKT", "X")
+  if (isOn("ctdkkrmidwsby")) addNotEqualsOrNull("TDKKRMIDWSBY", "X")
+  if (isOn("ctdkkrmidljkt")) addNotEqualsOrNull("TDKKRMIDLJKT", "X")
+  if (isOn("ctdkkrmidlsby")) addNotEqualsOrNull("TDKKRMIDLSBY", "X")
 
   // Value equals
   valueEquals.forEach(({ toggle, valueKey, field }) => {

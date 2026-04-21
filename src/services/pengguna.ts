@@ -1,6 +1,7 @@
 import { getDatabaseBridge, getIpcRenderer } from '../utils/bridge'
 import { requestJson } from '../api/client'
 import { endpoints } from '../api/endpoints'
+import { extractErrorMessage } from '../utils/api'
 
 export type CreatePenggunaPayload = {
   username: string
@@ -69,7 +70,7 @@ async function invokeCreatePengguna(payload: CreatePenggunaPayload): Promise<Dat
 export async function createPengguna(payload: CreatePenggunaPayload): Promise<any> {
   const response = await invokeCreatePengguna(payload)
   if (!response || response.success === false) {
-    throw new Error(response?.message ?? 'Gagal menambahkan user')
+    throw new Error(extractErrorMessage(response?.message, 'Gagal menambahkan user'))
   }
 
   return response.data ?? response.user ?? response
@@ -101,7 +102,7 @@ async function invokeChangePassword(payload: ChangePenggunaPasswordPayload): Pro
 export async function changePenggunaPassword(payload: ChangePenggunaPasswordPayload): Promise<any> {
   const response = await invokeChangePassword(payload)
   if (!response || response.success === false) {
-    throw new Error(response?.message ?? 'Gagal memperbarui password')
+    throw new Error(extractErrorMessage(response?.message, 'Gagal memperbarui password'))
   }
 
   return response.data ?? response.user ?? response
@@ -133,7 +134,7 @@ async function invokeLogoutPengguna(payload: LogoutPenggunaPayload): Promise<Dat
 export async function logoutPengguna(payload: LogoutPenggunaPayload): Promise<any> {
   const response = await invokeLogoutPengguna(payload)
   if (!response || response.success === false) {
-    throw new Error(response?.message ?? 'Gagal logout user')
+    throw new Error(extractErrorMessage(response?.message, 'Gagal logout user'))
   }
 
   return response.data ?? response.user ?? response
@@ -172,7 +173,7 @@ async function invokeListPengguna(params?: { q?: string; page?: number; pageSize
 export async function listPengguna(params?: { q?: string; page?: number; pageSize?: number }): Promise<PenggunaRow[]> {
   const response = await invokeListPengguna(params)
   if (!response || response.success === false) {
-    throw new Error(response?.message ?? 'Gagal memuat daftar pengguna')
+    throw new Error(extractErrorMessage(response?.message, 'Gagal memuat daftar pengguna'))
   }
 
   return toPenggunaRows(response.rows ?? response.data)

@@ -36,6 +36,7 @@ import { useAppStore } from '../store/appStore'
 import { getUserAccess } from '../utils/access'
 import { normalizeSpaces, toTitleCaseLoose } from '../utils/text'
 import { createAuditLog } from '../services/audit'
+import { extractErrorMessage } from '../utils/api'
 
 type AddDataVariant = 'exhibitor' | 'visitor'
 
@@ -376,7 +377,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
       })
       .catch((error) => {
         if (!active) return
-        setSourceOptionsError(error instanceof Error ? error.message : 'Gagal memuat source options')
+        setSourceOptionsError(extractErrorMessage(error, 'Gagal memuat source options'))
       })
       .finally(() => {
         if (!active) return
@@ -398,7 +399,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
       })
       .catch((error) => {
         if (!active) return
-        setCode1OptionsError(error instanceof Error ? error.message : 'Gagal memuat code1 options')
+        setCode1OptionsError(extractErrorMessage(error, 'Gagal memuat code1 options'))
       })
       .finally(() => {
         if (!active) return
@@ -899,7 +900,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
       setDataSearchPageSize(pageSize)
       setDataSearchNotice(null)
     } catch (error) {
-      setDataSearchError(error instanceof Error ? error.message : 'Gagal memuat data gabung')
+      setDataSearchError(extractErrorMessage(error, 'Gagal memuat data gabung'))
     } finally {
       setDataSearchLoading(false)
     }
@@ -1006,7 +1007,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
     } catch (error) {
       setDataSearchNotice({
         type: 'error',
-        message: error instanceof Error ? error.message : 'Gagal menyimpan perubahan.',
+        message: extractErrorMessage(error, 'Gagal menyimpan perubahan.'),
       })
     } finally {
       setDataSearchSavingId(null)
@@ -1034,7 +1035,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
       setHighlightIndex(0)
     } catch (error) {
       setCompanyLookup((prev) => ({ ...prev, loading: false }))
-      setFeedback({ type: 'error', message: error instanceof Error ? error.message : 'Gagal mencari company' })
+      setFeedback({ type: 'error', message: extractErrorMessage(error, 'Gagal mencari company') })
     }
   }
 
@@ -1118,7 +1119,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
     } catch (error) {
       setFeedback({
         type: 'error',
-        message: error instanceof Error ? error.message : 'Gagal mengunduh PDF.',
+        message: extractErrorMessage(error, 'Gagal mengunduh PDF.'),
       })
     }
   }
@@ -1168,7 +1169,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
     } catch (error) {
       setDataSearchNotice({
         type: 'error',
-        message: error instanceof Error ? error.message : 'Gagal mengunduh Excel.',
+        message: extractErrorMessage(error, 'Gagal mengunduh Excel.'),
       })
     } finally {
       setDataSearchExporting(false)
@@ -1425,12 +1426,14 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
           setSelectedId(null)
           setCompanyLookup((prev) => ({ ...prev, open: false, rows: [], query: '' }))
         } else {
-          setFeedback({ type: 'error', message: response?.message ?? `${actionLabel} gagal.` })
-          setGlobalMessage({ type: 'error', text: response?.message ?? `${actionLabel} gagal.` })
+          const message = extractErrorMessage(response?.message, `${actionLabel} gagal.`)
+          setFeedback({ type: 'error', message })
+          setGlobalMessage({ type: 'error', text: message })
         }
       } catch (error) {
-        setFeedback({ type: 'error', message: error instanceof Error ? error.message : `${actionLabel} gagal.` })
-        setGlobalMessage({ type: 'error', text: error instanceof Error ? error.message : `${actionLabel} gagal.` })
+        const message = extractErrorMessage(error, `${actionLabel} gagal.`)
+        setFeedback({ type: 'error', message })
+        setGlobalMessage({ type: 'error', text: message })
       } finally {
         setSaving(false)
       }
@@ -2172,10 +2175,10 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
         <button
           type="button"
           onClick={exportPdf}
-          className="inline-flex items-center justify-center w-9 h-9 rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50"
+          className="inline-flex items-center justify-center w-11 h-11 rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50"
           aria-label="Export PDF"
         >
-          <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M6 9V4h12v5" />
             <path d="M6 18h12" />
             <path d="M6 14h12v7H6z" />
@@ -2209,7 +2212,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
           {!isEditingFromSearch ? (
             <button
               type="submit"
-              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-gradient-to-r from-rose-500 to-rose-600 text-white font-semibold shadow-md hover:shadow-lg"
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-sky-600 text-white font-semibold shadow-md hover:bg-sky-700 hover:shadow-lg"
             >
               {saving ? 'Saving...' : 'Add/Save (F5)'}
             </button>
@@ -2217,7 +2220,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
           <button
             type="button"
             onClick={submitUpdate}
-            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-slate-800 text-white font-semibold shadow-sm hover:bg-slate-900"
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-emerald-600 text-white font-semibold shadow-sm hover:bg-emerald-700"
           >
             {saving ? 'Saving...' : 'Update/Edit (F2)'}
           </button>
@@ -2225,7 +2228,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
             <button
               type="button"
               onClick={openDataSearch}
-              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-700 font-semibold hover:bg-slate-50"
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-slate-900 text-white font-semibold hover:bg-slate-800"
             >
               Search (F3)
             </button>
@@ -2233,7 +2236,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
           <button
             type="button"
             onClick={handleCancel}
-            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-slate-200 text-slate-700 font-semibold hover:bg-slate-300"
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-rose-600 text-white font-semibold hover:bg-rose-700"
           >
             Cancel (ESC)
           </button>

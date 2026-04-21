@@ -115,28 +115,7 @@ const NavIcon = ({ name }: { name: IconName }) => {
   }
 }
 
-const NapindoMark = ({ className }: { className?: string }) => (
-  <svg className={`napindo-icon ${className ?? ''}`} viewBox="0 0 160 150" role="presentation" aria-hidden="true">
-    <defs>
-      <linearGradient id="napindoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#e63946" />
-        <stop offset="100%" stopColor="#9f0f0f" />
-      </linearGradient>
-    </defs>
-    <path
-      d="M10 20c0-6.6 5.4-12 12-12h16c4.4 0 8.3 2.4 10.4 6.3L80 90 51 142.5c-2.2 3.8-6.1 6.1-10.5 6.1H22c-6.6 0-12-5.4-12-12V20Z"
-      fill="url(#napindoGradient)"
-    />
-    <path
-      d="M60 20c0-6.6 5.4-12 12-12h16c4.4 0 8.3 2.4 10.4 6.3L130 90l-29 52.5c-2.2 3.8-6.1 6.1-10.5 6.1H72c-6.6 0-12-5.4-12-12V20Z"
-      fill="url(#napindoGradient)"
-    />
-    <path
-      d="M110 20c0-6.6 5.4-12 12-12h16c6.6 0 12 5.4 12 12v116.5c0 10.8-12.9 15.8-20.2 8.1l-19.3-19.6c-2.4-2.5-3.8-5.9-3.8-9.4V20Z"
-      fill="url(#napindoGradient)"
-    />
-  </svg>
-)
+const NAPINDO_LOGO = '/assets/napindo.png'
 
 const navStructure: { title?: string; items: NavItem[] }[] = [
   {
@@ -231,7 +210,7 @@ export const Sidebar = ({ onLogout }: SidebarProps) => {
   return (
     <aside className="relative z-10 w-56 md:w-60 lg:w-64 xl:w-72 2xl:w-80 bg-white/95 backdrop-blur-xl border-r border-slate-200 shadow-lg min-h-screen">
       <div className="px-6 pt-6 pb-5 flex items-center gap-3">
-        <NapindoMark className="w-10 h-10 shrink-0" />
+        <img src={NAPINDO_LOGO} alt="Napindo" className="w-10 h-10 shrink-0 object-contain" />
         <div className="leading-tight">
           <span className="block text-xs font-semibold text-rose-600">Data Entry Application</span>
           <span className="block text-lg font-bold tracking-tight text-slate-900">Napindo</span>

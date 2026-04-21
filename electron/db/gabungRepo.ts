@@ -4,6 +4,7 @@ import {
   pickData,
   API_BASE_URL,
   API_PREFIX,
+  extractErrorMessage,
   type Gabung,
   type PersonType,
 } from './index.js'
@@ -12,7 +13,7 @@ export async function fetchTopRows(tableName: string, top = 10) {
   const safe = tableName.replace(/[^\w.]/g, '')
   const params = new URLSearchParams({ limit: String(top) })
   const { body } = await apiFetch(`/gabung/table-preview/${safe}?${params.toString()}`)
-  if (!isResponseOk(body)) throw new Error(body.message || 'Gagal mengambil preview data')
+  if (!isResponseOk(body)) throw new Error(extractErrorMessage(body.message, 'Gagal mengambil preview data'))
   const data = pickData(body) as any
   return data?.rows ?? data ?? []
 }
@@ -28,7 +29,7 @@ export async function fetchExhibitorsBySegment(
   )
 
   if (!isResponseOk(body)) {
-    throw new Error(body.message || 'Gagal mengambil data gabung')
+    throw new Error(extractErrorMessage(body.message, 'Gagal mengambil data gabung'))
   }
 
   const data: any = pickData(body) ?? {}
@@ -38,7 +39,7 @@ export async function fetchExhibitorsBySegment(
 export async function fetchExhibitorCountByExpo() {
   const { body } = await apiFetch('/gabung/exhibitor-count')
   if (!isResponseOk(body)) {
-    throw new Error(body.message || 'Gagal mengambil jumlah exhibitor per pameran')
+    throw new Error(extractErrorMessage(body.message, 'Gagal mengambil jumlah exhibitor per pameran'))
   }
 
   return pickData(body) as { indoDefence?: number; indoWater?: number; indoLivestock?: number }
@@ -47,7 +48,7 @@ export async function fetchExhibitorCountByExpo() {
 export async function fetchExpoChartData() {
   const { body } = await apiFetch('/gabung/expo-chart')
   if (!isResponseOk(body)) {
-    throw new Error(body.message || 'Gagal mengambil data grafik pameran')
+    throw new Error(extractErrorMessage(body.message, 'Gagal mengambil data grafik pameran'))
   }
 
   return pickData(body) as {
@@ -97,7 +98,7 @@ export async function listGabungRecords(params?: {
 
   const { body } = await apiFetch(`/gabung?${query.toString()}`)
   if (!isResponseOk(body)) {
-    throw new Error(body.message || 'Gagal memuat data gabung')
+    throw new Error(extractErrorMessage(body.message, 'Gagal memuat data gabung'))
   }
   return pickData(body) ?? body
 }
@@ -105,7 +106,7 @@ export async function listGabungRecords(params?: {
 export async function fetchSourceOptions() {
   const { body } = await apiFetch("/gabung/source-options")
   if (!isResponseOk(body)) {
-    throw new Error(body.message || "Gagal memuat source options")
+    throw new Error(extractErrorMessage(body.message, "Gagal memuat source options"))
   }
   const data: any = pickData(body) ?? {}
   return (data.options ?? data.rows ?? data ?? []) as string[]
@@ -114,7 +115,7 @@ export async function fetchSourceOptions() {
 export async function fetchCode1Options() {
   const { body } = await apiFetch("/gabung/code1-options")
   if (!isResponseOk(body)) {
-    throw new Error(body.message || "Gagal memuat code1 options")
+    throw new Error(extractErrorMessage(body.message, "Gagal memuat code1 options"))
   }
   const data: any = pickData(body) ?? {}
   return (data.options ?? data.rows ?? data ?? []) as string[]
@@ -124,7 +125,7 @@ export async function findCompanyByName(company: string) {
   const trimmed = company.trim()
   const encoded = encodeURIComponent(trimmed)
   const { body } = await apiFetch(`/gabung/company/${encoded}`)
-  if (!isResponseOk(body)) throw new Error(body.message || 'Gagal mencari perusahaan')
+  if (!isResponseOk(body)) throw new Error(extractErrorMessage(body.message, 'Gagal mencari perusahaan'))
   const data: any = pickData(body) ?? {}
   return data.items ?? data.rows ?? data ?? []
 }
@@ -134,7 +135,7 @@ export async function saveAddData(payload: Record<string, unknown>) {
     method: 'POST',
     body: JSON.stringify(payload),
   })
-  if (!isResponseOk(body)) throw new Error(body.message || 'Gagal menyimpan data')
+  if (!isResponseOk(body)) throw new Error(extractErrorMessage(body.message, 'Gagal menyimpan data'))
   return pickData(body) ?? body
 }
 
@@ -151,7 +152,7 @@ export async function importGabungExcel(payload: {
     body: JSON.stringify(payload),
     timeoutMs: 7000,
   })
-  if (!isResponseOk(body)) throw new Error(body.message || 'Gagal mengimpor data Excel')
+  if (!isResponseOk(body)) throw new Error(extractErrorMessage(body.message, 'Gagal mengimpor data Excel'))
   return pickData(body) ?? body
 }
 
@@ -161,7 +162,7 @@ export async function updateAddData(id: number | string, payload: Record<string,
     method: 'PUT',
     body: JSON.stringify(payload),
   })
-  if (!isResponseOk(body)) throw new Error(body.message || 'Gagal memperbarui data')
+  if (!isResponseOk(body)) throw new Error(extractErrorMessage(body.message, 'Gagal memperbarui data'))
   return pickData(body) ?? body
 }
 
@@ -175,7 +176,7 @@ export async function deleteAddData(ids: Array<string | number>) {
     const ok = isResponseOk(body)
     results.push({ id, success: ok, message: body.message })
     if (!ok) {
-      throw new Error(body.message || `Gagal menghapus data ${id}`)
+      throw new Error(extractErrorMessage(body.message, `Gagal menghapus data ${id}`))
     }
   }
 
@@ -188,7 +189,7 @@ export async function reportLabelVisitor(filter: unknown) {
     body: JSON.stringify(filter),
   })
 
-  if (!isResponseOk(body)) throw new Error(body.message || 'Gagal memuat label visitor')
+  if (!isResponseOk(body)) throw new Error(extractErrorMessage(body.message, 'Gagal memuat label visitor'))
   return pickData(body) ?? body.data
 }
 
@@ -198,7 +199,7 @@ export async function reportLabelGover(filter: unknown) {
     body: JSON.stringify(filter),
   })
 
-  if (!isResponseOk(body)) throw new Error(body.message || 'Gagal memuat label gover')
+  if (!isResponseOk(body)) throw new Error(extractErrorMessage(body.message, 'Gagal memuat label gover'))
   return pickData(body) ?? body.data
 }
 
@@ -208,7 +209,7 @@ export async function reportPerusahaan(filter: unknown) {
     body: JSON.stringify(filter),
   })
 
-  if (!isResponseOk(body)) throw new Error(body.message || 'Gagal memuat report perusahaan')
+  if (!isResponseOk(body)) throw new Error(extractErrorMessage(body.message, 'Gagal memuat report perusahaan'))
   return pickData(body) ?? body.data
 }
 
@@ -218,7 +219,7 @@ export async function reportGovernment(filter: unknown) {
     body: JSON.stringify(filter),
   })
 
-  if (!isResponseOk(body)) throw new Error(body.message || 'Gagal memuat report government')
+  if (!isResponseOk(body)) throw new Error(extractErrorMessage(body.message, 'Gagal memuat report government'))
   return pickData(body) ?? body.data
 }
 
@@ -228,7 +229,7 @@ export async function reportJumlahPerusahaan(filter: unknown) {
     body: JSON.stringify(filter),
   })
 
-  if (!isResponseOk(body)) throw new Error(body.message || 'Gagal memuat report jumlah perusahaan')
+  if (!isResponseOk(body)) throw new Error(extractErrorMessage(body.message, 'Gagal memuat report jumlah perusahaan'))
   return pickData(body) ?? body.data
 }
 
@@ -238,13 +239,13 @@ export async function reportJumlahGovernment(filter: unknown) {
     body: JSON.stringify(filter),
   })
 
-  if (!isResponseOk(body)) throw new Error(body.message || 'Gagal memuat report jumlah government')
+  if (!isResponseOk(body)) throw new Error(extractErrorMessage(body.message, 'Gagal memuat report jumlah government'))
   return pickData(body) ?? body.data
 }
 
 export async function reportLabelOptions() {
   const { body } = await apiFetch('/report/label/options')
-  if (!isResponseOk(body)) throw new Error(body.message || 'Gagal memuat opsi label')
+  if (!isResponseOk(body)) throw new Error(extractErrorMessage(body.message, 'Gagal memuat opsi label'))
   return pickData(body) ?? body.data
 }
 
@@ -260,7 +261,7 @@ export async function renderLabelVisitorPdf(filter: unknown) {
 
   if (!response.ok) {
     const message = await response.text()
-    throw new Error(message || 'Gagal mencetak label perusahaan')
+    throw new Error(extractErrorMessage(message, 'Gagal mencetak label perusahaan'))
   }
 
   const arrayBuffer = await response.arrayBuffer()
@@ -285,7 +286,7 @@ export async function renderLabelGoverPdf(filter: unknown) {
 
   if (!response.ok) {
     const message = await response.text()
-    throw new Error(message || 'Gagal mencetak label government')
+    throw new Error(extractErrorMessage(message, 'Gagal mencetak label government'))
   }
 
   const arrayBuffer = await response.arrayBuffer()
@@ -310,7 +311,7 @@ export async function renderPersonalDatabasePdf(payload: Record<string, unknown>
 
   if (!response.ok) {
     const message = await response.text()
-    throw new Error(message || 'Gagal mengunduh PDF')
+    throw new Error(extractErrorMessage(message, 'Gagal mengunduh PDF'))
   }
 
   const arrayBuffer = await response.arrayBuffer()
@@ -336,7 +337,7 @@ export async function renderSearchF3Excel(payload: Record<string, unknown>) {
 
   if (!response.ok) {
     const message = await response.text()
-    throw new Error(message || 'Gagal mengunduh Excel Search (F3)')
+    throw new Error(extractErrorMessage(message, 'Gagal mengunduh Excel Search (F3)'))
   }
 
   const arrayBuffer = await response.arrayBuffer()
@@ -363,7 +364,7 @@ export async function renderLabelVisitorExcel(filter: unknown) {
   })
   if (!response.ok) {
     const message = await response.text()
-    throw new Error(message || 'Gagal mengunduh Excel')
+    throw new Error(extractErrorMessage(message, 'Gagal mengunduh Excel'))
   }
   const arrayBuffer = await response.arrayBuffer()
   const buffer = Buffer.from(arrayBuffer)
@@ -384,7 +385,7 @@ export async function renderLabelGoverExcel(filter: unknown) {
   })
   if (!response.ok) {
     const message = await response.text()
-    throw new Error(message || 'Gagal mengunduh Excel government')
+    throw new Error(extractErrorMessage(message, 'Gagal mengunduh Excel government'))
   }
   const arrayBuffer = await response.arrayBuffer()
   const buffer = Buffer.from(arrayBuffer)
@@ -405,7 +406,7 @@ export async function renderLabelVisitorWord(filter: unknown) {
   })
   if (!response.ok) {
     const message = await response.text()
-    throw new Error(message || 'Gagal mengunduh Word')
+    throw new Error(extractErrorMessage(message, 'Gagal mengunduh Word'))
   }
   const arrayBuffer = await response.arrayBuffer()
   const buffer = Buffer.from(arrayBuffer)
@@ -426,7 +427,7 @@ export async function renderLabelGoverWord(filter: unknown) {
   })
   if (!response.ok) {
     const message = await response.text()
-    throw new Error(message || 'Gagal mengunduh Word government')
+    throw new Error(extractErrorMessage(message, 'Gagal mengunduh Word government'))
   }
   const arrayBuffer = await response.arrayBuffer()
   const buffer = Buffer.from(arrayBuffer)
@@ -450,7 +451,7 @@ export async function renderReportPerusahaanPdf(filter: unknown) {
 
   if (!response.ok) {
     const message = await response.text()
-    throw new Error(message || 'Gagal mencetak report perusahaan')
+    throw new Error(extractErrorMessage(message, 'Gagal mencetak report perusahaan'))
   }
 
   const arrayBuffer = await response.arrayBuffer()
@@ -475,7 +476,7 @@ export async function renderReportGovernmentPdf(filter: unknown) {
 
   if (!response.ok) {
     const message = await response.text()
-    throw new Error(message || 'Gagal mencetak report government')
+    throw new Error(extractErrorMessage(message, 'Gagal mencetak report government'))
   }
 
   const arrayBuffer = await response.arrayBuffer()
@@ -500,7 +501,7 @@ export async function renderReportJumlahPerusahaanPdf(filter: unknown) {
 
   if (!response.ok) {
     const message = await response.text()
-    throw new Error(message || 'Gagal mencetak report jumlah perusahaan')
+    throw new Error(extractErrorMessage(message, 'Gagal mencetak report jumlah perusahaan'))
   }
 
   const arrayBuffer = await response.arrayBuffer()
@@ -525,7 +526,7 @@ export async function renderReportJumlahGovernmentPdf(filter: unknown) {
 
   if (!response.ok) {
     const message = await response.text()
-    throw new Error(message || 'Gagal mencetak report jumlah government')
+    throw new Error(extractErrorMessage(message, 'Gagal mencetak report jumlah government'))
   }
 
   const arrayBuffer = await response.arrayBuffer()
@@ -547,7 +548,7 @@ export async function renderReportJumlahPerusahaanExcel(filter: unknown) {
   })
   if (!response.ok) {
     const message = await response.text()
-    throw new Error(message || 'Gagal mengunduh Excel report jumlah perusahaan')
+    throw new Error(extractErrorMessage(message, 'Gagal mengunduh Excel report jumlah perusahaan'))
   }
   const arrayBuffer = await response.arrayBuffer()
   const buffer = Buffer.from(arrayBuffer)
@@ -568,7 +569,7 @@ export async function renderReportJumlahGovernmentExcel(filter: unknown) {
   })
   if (!response.ok) {
     const message = await response.text()
-    throw new Error(message || 'Gagal mengunduh Excel report jumlah government')
+    throw new Error(extractErrorMessage(message, 'Gagal mengunduh Excel report jumlah government'))
   }
   const arrayBuffer = await response.arrayBuffer()
   const buffer = Buffer.from(arrayBuffer)
@@ -589,7 +590,7 @@ export async function renderReportPerusahaanExcel(filter: unknown) {
   })
   if (!response.ok) {
     const message = await response.text()
-    throw new Error(message || 'Gagal mengunduh Excel report perusahaan')
+    throw new Error(extractErrorMessage(message, 'Gagal mengunduh Excel report perusahaan'))
   }
   const arrayBuffer = await response.arrayBuffer()
   const buffer = Buffer.from(arrayBuffer)
@@ -610,7 +611,7 @@ export async function renderReportGovernmentExcel(filter: unknown) {
   })
   if (!response.ok) {
     const message = await response.text()
-    throw new Error(message || 'Gagal mengunduh Excel report government')
+    throw new Error(extractErrorMessage(message, 'Gagal mengunduh Excel report government'))
   }
   const arrayBuffer = await response.arrayBuffer()
   const buffer = Buffer.from(arrayBuffer)
@@ -631,7 +632,7 @@ export async function renderReportPerusahaanWord(filter: unknown) {
   })
   if (!response.ok) {
     const message = await response.text()
-    throw new Error(message || 'Gagal mengunduh Word report perusahaan')
+    throw new Error(extractErrorMessage(message, 'Gagal mengunduh Word report perusahaan'))
   }
   const arrayBuffer = await response.arrayBuffer()
   const buffer = Buffer.from(arrayBuffer)
@@ -652,7 +653,7 @@ export async function renderReportGovernmentWord(filter: unknown) {
   })
   if (!response.ok) {
     const message = await response.text()
-    throw new Error(message || 'Gagal mengunduh Word report government')
+    throw new Error(extractErrorMessage(message, 'Gagal mengunduh Word report government'))
   }
   const arrayBuffer = await response.arrayBuffer()
   const buffer = Buffer.from(arrayBuffer)
@@ -673,7 +674,7 @@ export async function renderReportJumlahPerusahaanWord(filter: unknown) {
   })
   if (!response.ok) {
     const message = await response.text()
-    throw new Error(message || 'Gagal mengunduh Word report jumlah perusahaan')
+    throw new Error(extractErrorMessage(message, 'Gagal mengunduh Word report jumlah perusahaan'))
   }
   const arrayBuffer = await response.arrayBuffer()
   const buffer = Buffer.from(arrayBuffer)
@@ -694,7 +695,7 @@ export async function renderReportJumlahGovernmentWord(filter: unknown) {
   })
   if (!response.ok) {
     const message = await response.text()
-    throw new Error(message || 'Gagal mengunduh Word report jumlah government')
+    throw new Error(extractErrorMessage(message, 'Gagal mengunduh Word report jumlah government'))
   }
   const arrayBuffer = await response.arrayBuffer()
   const buffer = Buffer.from(arrayBuffer)

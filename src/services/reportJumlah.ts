@@ -1,5 +1,5 @@
 import { arrayBufferToBase64, normalizeBase64 } from '../utils/base64'
-import { buildApiUrl, isApiOk, pickApiData } from '../utils/api'
+import { buildApiUrl, extractErrorMessage, isApiOk, pickApiData } from '../utils/api'
 import { getDatabaseBridge, getIpcRenderer, unwrapBridgeResponse } from '../utils/bridge'
 import { extractCount } from '../utils/reporting'
 
@@ -16,7 +16,7 @@ const fetchBinaryAsBase64 = async (
   })
   if (!res.ok) {
     const message = await res.text()
-    throw new Error(message || 'Gagal mengunduh file')
+    throw new Error(extractErrorMessage(message, 'Gagal mengunduh file'))
   }
   const buffer = await res.arrayBuffer()
   const base64 = arrayBufferToBase64(buffer)
@@ -45,7 +45,7 @@ async function invokeReport(
     if (typeof bridge[fnName] === 'function') {
       const response = await bridge[fnName](filter)
       if (response?.success === false) {
-        throw new Error(response?.message ?? 'Gagal memuat report jumlah')
+        throw new Error(extractErrorMessage(response?.message, 'Gagal memuat report jumlah'))
       }
       const data = unwrapBridgeResponse(response)
       return { data, total: extractCount(data) }
@@ -56,7 +56,7 @@ async function invokeReport(
   if (ipc?.invoke) {
     const response = await ipc.invoke(channel, filter)
     if (response?.success === false) {
-      throw new Error(response?.message ?? 'Gagal memuat report jumlah')
+      throw new Error(extractErrorMessage(response?.message, 'Gagal memuat report jumlah'))
     }
     const data = response?.data ?? response
     return { data, total: extractCount(data) }
@@ -70,7 +70,7 @@ async function invokeReport(
   })
   const body = await res.json()
   if (!isApiOk(body)) {
-    throw new Error(body?.message ?? 'Gagal memuat report jumlah')
+    throw new Error(extractErrorMessage(body?.message, 'Gagal memuat report jumlah'))
   }
   const data = pickApiData(body)
   return { data, total: extractCount(data) }
@@ -84,7 +84,7 @@ export async function requestReportJumlahPerusahaan(filter: unknown): Promise<Re
     if (bridge && typeof bridge.reportJumlahPerusahaanExportSave === 'function') {
       const resp = await bridge.reportJumlahPerusahaanExportSave(filter)
       if (resp?.success === false && !resp?.canceled) {
-        throw new Error(resp?.message || 'Gagal menyimpan file')
+        throw new Error(extractErrorMessage(resp?.message, 'Gagal menyimpan file'))
       }
       return { data: resp, total: payload?.total }
     }
@@ -93,7 +93,7 @@ export async function requestReportJumlahPerusahaan(filter: unknown): Promise<Re
     if (ipc?.invoke) {
       const response = await ipc.invoke('report:jumlah-perusahaan:export-save', filter)
       if (response?.success === false && !response?.canceled) {
-        throw new Error(response?.message ?? 'Gagal menyimpan file')
+        throw new Error(extractErrorMessage(response?.message, 'Gagal menyimpan file'))
       }
       return { data: response, total: payload?.total }
     }
@@ -111,7 +111,7 @@ export async function requestReportJumlahPerusahaan(filter: unknown): Promise<Re
     const bridge = getDatabaseBridge()
     if (bridge && typeof bridge.reportJumlahPerusahaanWord === 'function') {
       const resp = await bridge.reportJumlahPerusahaanWord(filter)
-      if (resp?.success === false) throw new Error(resp?.message ?? 'Gagal memuat preview Word')
+      if (resp?.success === false) throw new Error(extractErrorMessage(resp?.message, 'Gagal memuat preview Word'))
       const data = unwrapBridgeResponse(resp)
       const base64 = normalizeBase64(data?.base64 ?? data?.buffer)
       return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
@@ -120,7 +120,7 @@ export async function requestReportJumlahPerusahaan(filter: unknown): Promise<Re
     const ipc = getIpcRenderer()
     if (ipc?.invoke) {
       const response = await ipc.invoke('report:jumlah-perusahaan:word', filter)
-      if (response?.success === false) throw new Error(response?.message ?? 'Gagal memuat preview Word')
+      if (response?.success === false) throw new Error(extractErrorMessage(response?.message, 'Gagal memuat preview Word'))
       const data = response?.data ?? response
       const base64 = normalizeBase64(data?.base64 ?? data?.buffer)
       return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
@@ -133,7 +133,7 @@ export async function requestReportJumlahPerusahaan(filter: unknown): Promise<Re
     })
     if (!res.ok) {
       const message = await res.text()
-      throw new Error(message || 'Gagal memuat preview Word')
+      throw new Error(extractErrorMessage(message, 'Gagal memuat preview Word'))
     }
     const buffer = await res.arrayBuffer()
     const base64 = arrayBufferToBase64(buffer)
@@ -153,7 +153,7 @@ export async function requestReportJumlahPerusahaan(filter: unknown): Promise<Re
     const bridge = getDatabaseBridge()
     if (bridge && typeof bridge.reportJumlahPerusahaanPdf === 'function') {
       const resp = await bridge.reportJumlahPerusahaanPdf(filter)
-      if (resp?.success === false) throw new Error(resp?.message ?? 'Gagal memuat preview PDF')
+      if (resp?.success === false) throw new Error(extractErrorMessage(resp?.message, 'Gagal memuat preview PDF'))
       const data = unwrapBridgeResponse(resp)
       const base64 = normalizeBase64(data?.base64 ?? data?.buffer)
       return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
@@ -162,7 +162,7 @@ export async function requestReportJumlahPerusahaan(filter: unknown): Promise<Re
     const ipc = getIpcRenderer()
     if (ipc?.invoke) {
       const response = await ipc.invoke('report:jumlah-perusahaan:pdf', filter)
-      if (response?.success === false) throw new Error(response?.message ?? 'Gagal memuat preview PDF')
+      if (response?.success === false) throw new Error(extractErrorMessage(response?.message, 'Gagal memuat preview PDF'))
       const data = response?.data ?? response
       const base64 = normalizeBase64(data?.base64 ?? data?.buffer)
       return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
@@ -175,7 +175,7 @@ export async function requestReportJumlahPerusahaan(filter: unknown): Promise<Re
     })
     if (!res.ok) {
       const message = await res.text()
-      throw new Error(message || 'Gagal memuat preview PDF')
+      throw new Error(extractErrorMessage(message, 'Gagal memuat preview PDF'))
     }
     const buffer = await res.arrayBuffer()
     const base64 = arrayBufferToBase64(buffer)
@@ -193,7 +193,7 @@ export async function requestReportJumlahPerusahaan(filter: unknown): Promise<Re
     const bridge = getDatabaseBridge()
     if (bridge && typeof bridge.reportJumlahPerusahaanPdf === 'function') {
       const resp = await bridge.reportJumlahPerusahaanPdf(filter)
-      if (resp?.success === false) throw new Error(resp?.message ?? 'Gagal mencetak report jumlah')
+      if (resp?.success === false) throw new Error(extractErrorMessage(resp?.message, 'Gagal mencetak report jumlah'))
       const data = unwrapBridgeResponse(resp)
       const base64 = normalizeBase64(data?.base64 ?? data?.buffer)
       return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
@@ -202,7 +202,7 @@ export async function requestReportJumlahPerusahaan(filter: unknown): Promise<Re
     const ipc = getIpcRenderer()
     if (ipc?.invoke) {
       const response = await ipc.invoke('report:jumlah-perusahaan:pdf', filter)
-      if (response?.success === false) throw new Error(response?.message ?? 'Gagal mencetak report jumlah')
+      if (response?.success === false) throw new Error(extractErrorMessage(response?.message, 'Gagal mencetak report jumlah'))
       const data = response?.data ?? response
       const base64 = normalizeBase64(data?.base64 ?? data?.buffer)
       return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
@@ -221,7 +221,7 @@ export async function requestReportJumlahPerusahaan(filter: unknown): Promise<Re
     const bridge = getDatabaseBridge()
     if (bridge && typeof bridge.reportJumlahPerusahaanExcel === 'function') {
       const resp = await bridge.reportJumlahPerusahaanExcel(filter)
-      if (resp?.success === false) throw new Error(resp?.message ?? 'Gagal mencetak report jumlah (Excel)')
+      if (resp?.success === false) throw new Error(extractErrorMessage(resp?.message, 'Gagal mencetak report jumlah (Excel)'))
       const data = unwrapBridgeResponse(resp)
       const base64 = normalizeBase64(data?.base64 ?? data?.buffer)
       return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
@@ -230,7 +230,7 @@ export async function requestReportJumlahPerusahaan(filter: unknown): Promise<Re
     const ipc = getIpcRenderer()
     if (ipc?.invoke) {
       const response = await ipc.invoke('report:jumlah-perusahaan:excel', filter)
-      if (response?.success === false) throw new Error(response?.message ?? 'Gagal mencetak report jumlah (Excel)')
+      if (response?.success === false) throw new Error(extractErrorMessage(response?.message, 'Gagal mencetak report jumlah (Excel)'))
       const data = response?.data ?? response
       const base64 = normalizeBase64(data?.base64 ?? data?.buffer)
       return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
@@ -249,7 +249,7 @@ export async function requestReportJumlahPerusahaan(filter: unknown): Promise<Re
     const bridge = getDatabaseBridge()
     if (bridge && typeof bridge.reportJumlahPerusahaanWord === 'function') {
       const resp = await bridge.reportJumlahPerusahaanWord(filter)
-      if (resp?.success === false) throw new Error(resp?.message ?? 'Gagal mencetak report jumlah (Word)')
+      if (resp?.success === false) throw new Error(extractErrorMessage(resp?.message, 'Gagal mencetak report jumlah (Word)'))
       const data = unwrapBridgeResponse(resp)
       const base64 = normalizeBase64(data?.base64 ?? data?.buffer)
       return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
@@ -258,7 +258,7 @@ export async function requestReportJumlahPerusahaan(filter: unknown): Promise<Re
     const ipc = getIpcRenderer()
     if (ipc?.invoke) {
       const response = await ipc.invoke('report:jumlah-perusahaan:word', filter)
-      if (response?.success === false) throw new Error(response?.message ?? 'Gagal mencetak report jumlah (Word)')
+      if (response?.success === false) throw new Error(extractErrorMessage(response?.message, 'Gagal mencetak report jumlah (Word)'))
       const data = response?.data ?? response
       const base64 = normalizeBase64(data?.base64 ?? data?.buffer)
       return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
@@ -284,7 +284,7 @@ export async function requestReportJumlahGovernment(filter: unknown): Promise<Re
     if (bridge && typeof bridge.reportJumlahGovernmentExportSave === 'function') {
       const resp = await bridge.reportJumlahGovernmentExportSave(filter)
       if (resp?.success === false && !resp?.canceled) {
-        throw new Error(resp?.message || 'Gagal menyimpan file')
+        throw new Error(extractErrorMessage(resp?.message, 'Gagal menyimpan file'))
       }
       return { data: resp, total: payload?.total }
     }
@@ -293,7 +293,7 @@ export async function requestReportJumlahGovernment(filter: unknown): Promise<Re
     if (ipc?.invoke) {
       const response = await ipc.invoke('report:jumlah-government:export-save', filter)
       if (response?.success === false && !response?.canceled) {
-        throw new Error(response?.message ?? 'Gagal menyimpan file')
+        throw new Error(extractErrorMessage(response?.message, 'Gagal menyimpan file'))
       }
       return { data: response, total: payload?.total }
     }
@@ -311,7 +311,7 @@ export async function requestReportJumlahGovernment(filter: unknown): Promise<Re
     const bridge = getDatabaseBridge()
     if (bridge && typeof bridge.reportJumlahGovernmentWord === 'function') {
       const resp = await bridge.reportJumlahGovernmentWord(filter)
-      if (resp?.success === false) throw new Error(resp?.message ?? 'Gagal memuat preview Word')
+      if (resp?.success === false) throw new Error(extractErrorMessage(resp?.message, 'Gagal memuat preview Word'))
       const data = unwrapBridgeResponse(resp)
       const base64 = normalizeBase64(data?.base64 ?? data?.buffer)
       return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
@@ -320,7 +320,7 @@ export async function requestReportJumlahGovernment(filter: unknown): Promise<Re
     const ipc = getIpcRenderer()
     if (ipc?.invoke) {
       const response = await ipc.invoke('report:jumlah-government:word', filter)
-      if (response?.success === false) throw new Error(response?.message ?? 'Gagal memuat preview Word')
+      if (response?.success === false) throw new Error(extractErrorMessage(response?.message, 'Gagal memuat preview Word'))
       const data = response?.data ?? response
       const base64 = normalizeBase64(data?.base64 ?? data?.buffer)
       return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
@@ -333,7 +333,7 @@ export async function requestReportJumlahGovernment(filter: unknown): Promise<Re
     })
     if (!res.ok) {
       const message = await res.text()
-      throw new Error(message || 'Gagal memuat preview Word')
+      throw new Error(extractErrorMessage(message, 'Gagal memuat preview Word'))
     }
     const buffer = await res.arrayBuffer()
     const base64 = arrayBufferToBase64(buffer)
@@ -353,7 +353,7 @@ export async function requestReportJumlahGovernment(filter: unknown): Promise<Re
     const bridge = getDatabaseBridge()
     if (bridge && typeof bridge.reportJumlahGovernmentPdf === 'function') {
       const resp = await bridge.reportJumlahGovernmentPdf(filter)
-      if (resp?.success === false) throw new Error(resp?.message ?? 'Gagal memuat preview PDF')
+      if (resp?.success === false) throw new Error(extractErrorMessage(resp?.message, 'Gagal memuat preview PDF'))
       const data = unwrapBridgeResponse(resp)
       const base64 = normalizeBase64(data?.base64 ?? data?.buffer)
       return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
@@ -362,7 +362,7 @@ export async function requestReportJumlahGovernment(filter: unknown): Promise<Re
     const ipc = getIpcRenderer()
     if (ipc?.invoke) {
       const response = await ipc.invoke('report:jumlah-government:pdf', filter)
-      if (response?.success === false) throw new Error(response?.message ?? 'Gagal memuat preview PDF')
+      if (response?.success === false) throw new Error(extractErrorMessage(response?.message, 'Gagal memuat preview PDF'))
       const data = response?.data ?? response
       const base64 = normalizeBase64(data?.base64 ?? data?.buffer)
       return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
@@ -375,7 +375,7 @@ export async function requestReportJumlahGovernment(filter: unknown): Promise<Re
     })
     if (!res.ok) {
       const message = await res.text()
-      throw new Error(message || 'Gagal memuat preview PDF')
+      throw new Error(extractErrorMessage(message, 'Gagal memuat preview PDF'))
     }
     const buffer = await res.arrayBuffer()
     const base64 = arrayBufferToBase64(buffer)
@@ -393,7 +393,7 @@ export async function requestReportJumlahGovernment(filter: unknown): Promise<Re
     const bridge = getDatabaseBridge()
     if (bridge && typeof bridge.reportJumlahGovernmentPdf === 'function') {
       const resp = await bridge.reportJumlahGovernmentPdf(filter)
-      if (resp?.success === false) throw new Error(resp?.message ?? 'Gagal mencetak report jumlah')
+      if (resp?.success === false) throw new Error(extractErrorMessage(resp?.message, 'Gagal mencetak report jumlah'))
       const data = unwrapBridgeResponse(resp)
       const base64 = normalizeBase64(data?.base64 ?? data?.buffer)
       return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
@@ -402,7 +402,7 @@ export async function requestReportJumlahGovernment(filter: unknown): Promise<Re
     const ipc = getIpcRenderer()
     if (ipc?.invoke) {
       const response = await ipc.invoke('report:jumlah-government:pdf', filter)
-      if (response?.success === false) throw new Error(response?.message ?? 'Gagal mencetak report jumlah')
+      if (response?.success === false) throw new Error(extractErrorMessage(response?.message, 'Gagal mencetak report jumlah'))
       const data = response?.data ?? response
       const base64 = normalizeBase64(data?.base64 ?? data?.buffer)
       return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
@@ -421,7 +421,7 @@ export async function requestReportJumlahGovernment(filter: unknown): Promise<Re
     const bridge = getDatabaseBridge()
     if (bridge && typeof bridge.reportJumlahGovernmentExcel === 'function') {
       const resp = await bridge.reportJumlahGovernmentExcel(filter)
-      if (resp?.success === false) throw new Error(resp?.message ?? 'Gagal mencetak report jumlah (Excel)')
+      if (resp?.success === false) throw new Error(extractErrorMessage(resp?.message, 'Gagal mencetak report jumlah (Excel)'))
       const data = unwrapBridgeResponse(resp)
       const base64 = normalizeBase64(data?.base64 ?? data?.buffer)
       return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
@@ -430,7 +430,7 @@ export async function requestReportJumlahGovernment(filter: unknown): Promise<Re
     const ipc = getIpcRenderer()
     if (ipc?.invoke) {
       const response = await ipc.invoke('report:jumlah-government:excel', filter)
-      if (response?.success === false) throw new Error(response?.message ?? 'Gagal mencetak report jumlah (Excel)')
+      if (response?.success === false) throw new Error(extractErrorMessage(response?.message, 'Gagal mencetak report jumlah (Excel)'))
       const data = response?.data ?? response
       const base64 = normalizeBase64(data?.base64 ?? data?.buffer)
       return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
@@ -449,7 +449,7 @@ export async function requestReportJumlahGovernment(filter: unknown): Promise<Re
     const bridge = getDatabaseBridge()
     if (bridge && typeof bridge.reportJumlahGovernmentWord === 'function') {
       const resp = await bridge.reportJumlahGovernmentWord(filter)
-      if (resp?.success === false) throw new Error(resp?.message ?? 'Gagal mencetak report jumlah (Word)')
+      if (resp?.success === false) throw new Error(extractErrorMessage(resp?.message, 'Gagal mencetak report jumlah (Word)'))
       const data = unwrapBridgeResponse(resp)
       const base64 = normalizeBase64(data?.base64 ?? data?.buffer)
       return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }
@@ -458,7 +458,7 @@ export async function requestReportJumlahGovernment(filter: unknown): Promise<Re
     const ipc = getIpcRenderer()
     if (ipc?.invoke) {
       const response = await ipc.invoke('report:jumlah-government:word', filter)
-      if (response?.success === false) throw new Error(response?.message ?? 'Gagal mencetak report jumlah (Word)')
+      if (response?.success === false) throw new Error(extractErrorMessage(response?.message, 'Gagal mencetak report jumlah (Word)'))
       const data = response?.data ?? response
       const base64 = normalizeBase64(data?.base64 ?? data?.buffer)
       return { data: { base64, contentType: data?.contentType, filename: data?.filename }, total: payload?.total }

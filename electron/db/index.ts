@@ -49,6 +49,26 @@ export const pickData = <T = unknown>(body?: ApiResponse<T>) => {
   return undefined
 }
 
+export const extractErrorMessage = (value: unknown, fallback = 'Terjadi kesalahan'): string => {
+  if (value == null) return fallback
+  if (value instanceof Error) return extractErrorMessage(value.message, fallback)
+  if (typeof value === 'object') {
+    const payload = value as { message?: unknown; error?: unknown }
+    if (typeof payload.message === 'string' && payload.message.trim()) return payload.message.trim()
+    if (typeof payload.error === 'string' && payload.error.trim()) return payload.error.trim()
+    return fallback
+  }
+
+  const text = String(value).trim()
+  if (!text) return fallback
+  try {
+    const parsed = JSON.parse(text)
+    return extractErrorMessage(parsed, text)
+  } catch {
+    return text
+  }
+}
+
 export const uniqueClean = (values: Array<string | null | undefined>) =>
   Array.from(
     new Set(
@@ -140,7 +160,7 @@ export async function apiFetch<T = unknown>(pathName: string, init: ApiFetchOpti
         body = (await response.json()) as ApiResponse<T>
       } else {
         const text = await response.text()
-        body = { success: false, ok: false, message: text }
+        body = { success: false, ok: false, message: extractErrorMessage(text, response.statusText) }
       }
 
       return { status: response.status, body }

@@ -1,4 +1,4 @@
-import { apiFetch, isResponseOk, pickData, uniqueClean } from './index.js'
+import { apiFetch, extractErrorMessage, isResponseOk, pickData, uniqueClean } from './index.js'
 
 const toUserRows = (value: unknown) => {
   if (Array.isArray(value)) return value
@@ -15,7 +15,7 @@ export async function loginUser(payload: { username: string; password: string; d
 
   if (!isResponseOk(body)) {
     if (status === 401) return null
-    throw new Error(body.message || 'Login gagal')
+    throw new Error(extractErrorMessage(body.message, 'Login gagal'))
   }
 
   return pickData(body)
@@ -24,7 +24,7 @@ export async function loginUser(payload: { username: string; password: string; d
 export async function fetchUserHints() {
   const { body } = await apiFetch<Array<{ username?: string; division?: string | null }>>('/pengguna')
   if (!isResponseOk(body)) {
-    throw new Error(body.message || 'Gagal memuat data pengguna')
+    throw new Error(extractErrorMessage(body.message, 'Gagal memuat data pengguna'))
   }
 
   const users = toUserRows(pickData(body)) as Array<{ username?: string; division?: string | null }>
@@ -41,7 +41,7 @@ export async function createUser(payload: { username: string; password: string; 
   })
 
   if (!isResponseOk(body)) {
-    throw new Error(body.message || 'Gagal membuat user')
+    throw new Error(extractErrorMessage(body.message, 'Gagal membuat user'))
   }
 
   return pickData(body)
@@ -50,7 +50,7 @@ export async function createUser(payload: { username: string; password: string; 
 export async function listUsers() {
   const { body } = await apiFetch<Array<{ username?: string; division?: string | null; status?: string | null }>>('/pengguna')
   if (!isResponseOk(body)) {
-    throw new Error(body.message || 'Gagal memuat daftar pengguna')
+    throw new Error(extractErrorMessage(body.message, 'Gagal memuat daftar pengguna'))
   }
 
   return toUserRows(pickData(body)) as Array<{ username?: string; division?: string | null; status?: string | null }>
@@ -76,7 +76,7 @@ export async function changePassword(payload: {
     if (loginResult.status === 401) {
       throw new Error('Password saat ini salah.')
     }
-    throw new Error(loginResult.body.message || 'Gagal memverifikasi password.')
+    throw new Error(extractErrorMessage(loginResult.body.message, 'Gagal memverifikasi password.'))
   }
 
   const { body } = await apiFetch(`/pengguna/${encodeURIComponent(payload.username)}`, {
@@ -88,7 +88,7 @@ export async function changePassword(payload: {
   })
 
   if (!isResponseOk(body)) {
-    throw new Error(body.message || 'Gagal memperbarui password.')
+    throw new Error(extractErrorMessage(body.message, 'Gagal memperbarui password.'))
   }
 
   return pickData(body)
@@ -101,7 +101,7 @@ export async function logoutUser(payload: { username: string }) {
   })
 
   if (!isResponseOk(body)) {
-    throw new Error(body.message || 'Gagal logout user')
+    throw new Error(extractErrorMessage(body.message, 'Gagal logout user'))
   }
 
   return pickData(body)

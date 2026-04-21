@@ -16,7 +16,7 @@ export type ExhibitorSegment =
   | "dairy"
   | "horticulture"
 
-import { buildApiUrl, isApiOk, pickApiData } from '../utils/api'
+import { buildApiUrl, extractErrorMessage, isApiOk, pickApiData } from '../utils/api'
 import { getDatabaseBridge, getIpcRenderer } from '../utils/bridge'
 
 export type DatabaseResponse<T = unknown> =
@@ -75,7 +75,7 @@ async function invokeFetchExhibitorCountByExpo(): Promise<DatabaseResponse> {
   const res = await fetch(buildApiUrl('/gabung/exhibitor-count'))
   const body = await res.json()
   if (!isApiOk(body)) {
-    throw new Error(body?.message ?? 'Gagal mengambil jumlah exhibitor per pameran')
+    throw new Error(extractErrorMessage(body?.message, 'Gagal mengambil jumlah exhibitor per pameran'))
   }
   const data = pickApiData(body)
   return { success: true, data }
@@ -95,7 +95,7 @@ async function invokeFetchExpoChartData(): Promise<DatabaseResponse> {
   const res = await fetch(buildApiUrl('/gabung/expo-chart'))
   const body = await res.json()
   if (!isApiOk(body)) {
-    throw new Error(body?.message ?? 'Gagal mengambil data grafik pameran')
+    throw new Error(extractErrorMessage(body?.message, 'Gagal mengambil data grafik pameran'))
   }
   const data = pickApiData(body)
   return { success: true, data }
@@ -276,7 +276,7 @@ async function invokeFetchExhibitors(
   const res = await fetch(buildApiUrl(`/gabung/segment/${encodeURIComponent(backendSegment)}?${search.toString()}`))
   const body = await res.json()
   if (!isApiOk(body)) {
-    return { success: false, message: body?.message ?? 'Gagal mengambil data exhibitor' }
+    return { success: false, message: extractErrorMessage(body?.message, 'Gagal mengambil data exhibitor') }
   }
   const data = pickApiData(body)
   const items = (data?.items ?? data?.rows ?? data ?? [])
@@ -294,7 +294,7 @@ export async function fetchExhibitors(
   const response = await invokeFetchExhibitors(segment, limit, person)
 
   if (!response || response.success === false) {
-    throw new Error(response?.message ?? "Gagal mengambil data exhibitor")
+    throw new Error(extractErrorMessage(response?.message, "Gagal mengambil data exhibitor"))
   }
 
   const rows = (response.rows ?? []) as Record<string, any>[]
@@ -331,7 +331,7 @@ export async function fetchExhibitorCountByExpo(): Promise<{
 }> {
   const response = await invokeFetchExhibitorCountByExpo()
   if (!response || response.success === false) {
-    throw new Error(response?.message ?? 'Gagal mengambil jumlah exhibitor per pameran')
+    throw new Error(extractErrorMessage(response?.message, 'Gagal mengambil jumlah exhibitor per pameran'))
   }
 
   return (response.data ?? {}) as {
@@ -348,7 +348,7 @@ export async function fetchExpoChartData(): Promise<{
 }> {
   const response = await invokeFetchExpoChartData()
   if (!response || response.success === false) {
-    throw new Error(response?.message ?? 'Gagal mengambil data grafik pameran')
+    throw new Error(extractErrorMessage(response?.message, 'Gagal mengambil data grafik pameran'))
   }
 
   return (response.data ?? {}) as {

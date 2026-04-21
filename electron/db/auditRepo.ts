@@ -1,10 +1,10 @@
-import { apiFetch, isResponseOk, pickData } from "./index.js"
+import { apiFetch, extractErrorMessage, isResponseOk, pickData } from "./index.js"
 
 export async function fetchAuditLogs(limit = 200) {
   const params = new URLSearchParams({ limit: String(limit) })
   const { body } = await apiFetch(`/audit/logs?${params.toString()}`)
   if (!isResponseOk(body)) {
-    throw new Error(body.message || "Gagal memuat audit log")
+    throw new Error(extractErrorMessage(body.message, "Gagal memuat audit log"))
   }
 
   return (pickData(body) as any[]) ?? []
@@ -22,7 +22,7 @@ export async function createAuditLog(payload: {
     body: JSON.stringify(payload ?? {}),
   })
   if (!isResponseOk(body)) {
-    throw new Error(body.message || "Gagal menyimpan audit log")
+    throw new Error(extractErrorMessage(body.message, "Gagal menyimpan audit log"))
   }
   return pickData(body) ?? body
 }

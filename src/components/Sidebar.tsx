@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import type { PageKey } from '../types/navigation'
 import { useAppStore } from '../store/appStore'
 import { getUserAccess, type UserAccess } from '../utils/access'
+import { publicAssetUrl } from '../utils/publicAssets'
 
 type IconName =
   | 'grid'
@@ -115,7 +116,7 @@ const NavIcon = ({ name }: { name: IconName }) => {
   }
 }
 
-const NAPINDO_LOGO = '/assets/napindo.png'
+const NAPINDO_LOGO = publicAssetUrl('napindo.png')
 
 const navStructure: { title?: string; items: NavItem[] }[] = [
   {
@@ -209,12 +210,8 @@ export const Sidebar = ({ onLogout }: SidebarProps) => {
 
   return (
     <aside className="relative z-10 w-56 md:w-60 lg:w-64 xl:w-72 2xl:w-80 bg-white/95 backdrop-blur-xl border-r border-slate-200 shadow-lg min-h-screen">
-      <div className="px-6 pt-6 pb-5 flex items-center gap-3">
-        <img src={NAPINDO_LOGO} alt="Napindo" className="w-10 h-10 shrink-0 object-contain" />
-        <div className="leading-tight">
-          <span className="block text-xs font-semibold text-rose-600">Data Entry Application</span>
-          <span className="block text-lg font-bold tracking-tight text-slate-900">Napindo</span>
-        </div>
+      <div className="px-6 pt-6 pb-5 flex items-center justify-center">
+        <img src={NAPINDO_LOGO} alt="Napindo" className="max-h-16 w-full object-contain" />
       </div>
 
       <nav className="mt-4 h-[calc(100vh-170px)] overflow-y-auto px-3 pb-4">

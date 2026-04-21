@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import ComboField from "../components/ComboField";
 import { penggunaApi } from "../services/http/pengguna";
 import { useAppStore, type AppUser } from "../store/appStore";
+import { publicAssetUrl } from "../utils/publicAssets";
 
 type LoginStatus = "idle" | "loading" | "success" | "error";
 
@@ -58,7 +59,7 @@ const toHintList = (value: unknown): string[] => {
   return [];
 };
 
-const NAPINDO_LOGO = "/assets/napindo.png";
+const NAPINDO_LOGO = publicAssetUrl("napindo.png");
 
 // ===== BRIDGE LOGIN & HINTS KE ELECTRON/API =====
 
@@ -303,20 +304,12 @@ function LoginPage({ onSuccess }: LoginPageProps) {
       <div className="w-full max-w-5xl bg-white/90 backdrop-blur-md shadow-card rounded-3xl border border-white overflow-hidden grid md:grid-cols-2">
         {/* Panel kiri (brand) */}
         <div className="bg-gradient-to-br from-white via-rose-50 to-slate-50 flex items-center justify-center p-8 md:p-10">
-          <div className="flex items-center gap-6 float-soft">
+          <div className="flex items-center justify-center float-soft">
             <img
               src={NAPINDO_LOGO}
               alt="Napindo"
-              className="w-28 h-28 md:w-32 md:h-32 shrink-0 object-contain"
+              className="w-56 max-w-full md:w-72 shrink-0 object-contain"
             />
-            <div className="relative">
-              <h1 className="text-5xl font-bold text-slate-900 mt-2">
-                Napindo
-              </h1>
-              <span className="block text-rose-600 text-lg font-semibold italic tagline-underline">
-                Data Entry Application
-              </span>
-            </div>
           </div>
         </div>
 

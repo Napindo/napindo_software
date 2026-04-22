@@ -32,6 +32,11 @@ const errorResponse = (error: unknown) => ({
   message: error instanceof Error ? error.message : String(error),
 })
 
+const resolvePublicAsset = (filename: string) => {
+  const baseDir = process.env.VITE_PUBLIC ?? process.cwd()
+  return path.join(baseDir, 'assets', filename)
+}
+
 export function registerGabungIpcHandlers() {
   ipcMain.handle('db:testConnection', async () => {
     try {
@@ -127,6 +132,28 @@ ipcMain.handle('db:fetchExhibitors', async (_event, segment, limit = 0, person =
     try {
       const result = await importGabungExcel(payload)
       return { success: true, data: result }
+    } catch (error) {
+      return errorResponse(error)
+    }
+  })
+
+  ipcMain.handle('db:import-template:export-save', async () => {
+    try {
+      const { canceled, filePath } = await dialog.showSaveDialog({
+        title: 'Simpan Template Import Data',
+        defaultPath: 'TEMPLATE SQL 1.xlsm',
+        filters: [{ name: 'Microsoft Excel Macro-Enabled Workbook (*.xlsm)', extensions: ['xlsm'] }],
+        properties: ['createDirectory', 'showOverwriteConfirmation'],
+      })
+
+      if (canceled || !filePath) return { success: false, canceled: true }
+
+      const targetPath = path.extname(filePath) ? filePath : `${filePath}.xlsm`
+      const sourcePath = resolvePublicAsset('template-import-data.xlsm')
+      const buffer = await fs.readFile(sourcePath)
+      await fs.writeFile(targetPath, buffer)
+
+      return { success: true, path: targetPath, filename: path.basename(targetPath) }
     } catch (error) {
       return errorResponse(error)
     }

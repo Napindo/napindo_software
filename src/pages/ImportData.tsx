@@ -1,5 +1,5 @@
 import { useMemo, useState, type ChangeEvent, type DragEvent } from 'react'
-import { importGabungExcel, type ImportResult } from '../services/importData'
+import { exportImportTemplate, importGabungExcel, type ImportResult } from '../services/importData'
 import { arrayBufferToBase64 } from '../utils/base64'
 import { useAppStore } from '../store/appStore'
 import { extractErrorMessage } from '../utils/api'
@@ -144,12 +144,16 @@ const ImportDataPage = () => {
 
   const downloadTemplate = async () => {
     try {
-      const anchor = document.createElement('a')
-      anchor.href = templateUrl
-      anchor.download = 'TEMPLATE SQL 1.xlsm'
-      document.body.appendChild(anchor)
-      anchor.click()
-      anchor.remove()
+      const result = await exportImportTemplate(templateUrl)
+      if (result.canceled) {
+        setStatus({ type: 'info', message: 'Download template dibatalkan.' })
+        return
+      }
+
+      setStatus({
+        type: 'success',
+        message: `Template Excel tersimpan${result.filename ? `: ${result.filename}` : '.'}`,
+      })
     } catch (error) {
       setStatus({
         type: 'error',

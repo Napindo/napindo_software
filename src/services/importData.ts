@@ -59,3 +59,42 @@ export async function importGabungExcel(payload: ImportPayload): Promise<ImportR
   }
   return pickApiData(body) as ImportResult
 }
+
+export async function exportImportTemplate(
+  templateUrl: string,
+): Promise<{ saved?: boolean; canceled?: boolean; filename?: string }> {
+  const bridge = getDatabaseBridge()
+  if (bridge && typeof bridge.exportImportTemplateSave === 'function') {
+    const response = await bridge.exportImportTemplateSave()
+    if (response?.success === false && !response?.canceled) {
+      throw new Error(extractErrorMessage(response?.message, 'Gagal menyimpan template Excel'))
+    }
+    return {
+      saved: Boolean(response?.success),
+      canceled: Boolean(response?.canceled),
+      filename: (response?.data as any)?.filename ?? (response as any)?.filename,
+    }
+  }
+
+  const ipc = getIpcRenderer()
+  if (ipc?.invoke) {
+    const response = await ipc.invoke('db:import-template:export-save')
+    if (response?.success === false && !response?.canceled) {
+      throw new Error(extractErrorMessage(response?.message, 'Gagal menyimpan template Excel'))
+    }
+    return {
+      saved: Boolean(response?.success),
+      canceled: Boolean(response?.canceled),
+      filename: response?.data?.filename ?? response?.filename,
+    }
+  }
+
+  const anchor = document.createElement('a')
+  anchor.href = templateUrl
+  anchor.download = 'TEMPLATE SQL 1.xlsm'
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+
+  return { saved: true, filename: anchor.download }
+}

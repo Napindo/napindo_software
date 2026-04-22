@@ -89,6 +89,7 @@ interface Window {
       dryRun?: boolean
       currentUser?: string
     }) => Promise<RendererDatabaseResponse>
+    exportImportTemplateSave: () => Promise<RendererDatabaseResponse<{ path?: string; filename?: string; canceled?: boolean }>>
     updateAddData: (id: string | number, payload: Record<string, unknown>) => Promise<RendererDatabaseResponse>
     deleteAddData: (ids: Array<string | number>) => Promise<RendererDatabaseResponse>
     findCompany: <T = Record<string, unknown>>(company: string) => Promise<RendererDatabaseResponse<T>>

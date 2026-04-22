@@ -1,5 +1,10 @@
 import { useMemo, useState, type ChangeEvent, type DragEvent } from 'react'
-import { exportImportTemplate, importGabungExcel, type ImportResult } from '../services/importData'
+import {
+  exportBusinessList,
+  exportImportTemplate,
+  importGabungExcel,
+  type ImportResult,
+} from '../services/importData'
 import { arrayBufferToBase64 } from '../utils/base64'
 import { useAppStore } from '../store/appStore'
 import { extractErrorMessage } from '../utils/api'
@@ -8,14 +13,32 @@ import { publicAssetUrl } from '../utils/publicAssets'
 const MAX_FILE_MB = 25
 const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024
 
-const sampleColumns = ['COMPANY', 'NAME', 'CITY', 'EMAIL', 'PHONE', 'POSITION', 'LASTUPDATE']
+const sampleColumns = [
+  'COMPANY',
+  'ADDRESS',
+  'CITY',
+  'ZIP',
+  'PROPINCE',
+  'CODE',
+  'PHONE',
+  'HANDPHONE',
+  'NAME',
+  'EMAIL',
+  'MAIN_ACTIV',
+  'BUSINESS',
+  'SOURCE',
+]
 const quickGuide = [
   'Pastikan kolom di Excel sesuai field database GABUNG.',
-  'Header boleh berisi spasi/simbol, sistem menormalkan nama kolom.',
-  'Untuk tanggal gunakan format yang bisa dibaca Excel (date).',
+  'Header harus sesuai dengan Template Excel.',
+  'Tidak perlu mengisi kolom Last Update, Namauser, Tgl_Jam_Edit',
+  'Kolom Province, City, Main_Activ, dan Source, isi dengan list yang ada di menu Add Data.',
+  'Untuk kolom ceklis isi dengan simbol "X" Capital.',
+  'Kolom Business harus di sesuaikan dengan salah satu list Business di bawah:',
 ]
 const allowedExtensions = new Set(['xlsx', 'xlsm'])
 const templateUrl = publicAssetUrl('template-import-data.xlsm')
+const businessListUrl = publicAssetUrl('list-business-all-series.docx')
 
 const formatBytes = (value: number) => {
   if (!Number.isFinite(value) || value <= 0) return '0 KB'
@@ -158,6 +181,26 @@ const ImportDataPage = () => {
       setStatus({
         type: 'error',
         message: extractErrorMessage(error, 'Gagal mengunduh template Excel.'),
+      })
+    }
+  }
+
+  const downloadBusinessList = async () => {
+    try {
+      const result = await exportBusinessList(businessListUrl)
+      if (result.canceled) {
+        setStatus({ type: 'info', message: 'Download List Business dibatalkan.' })
+        return
+      }
+
+      setStatus({
+        type: 'success',
+        message: `List Business tersimpan${result.filename ? `: ${result.filename}` : '.'}`,
+      })
+    } catch (error) {
+      setStatus({
+        type: 'error',
+        message: extractErrorMessage(error, 'Gagal mengunduh List Business.'),
       })
     }
   }
@@ -329,11 +372,18 @@ const ImportDataPage = () => {
                 </li>
               ))}
             </ol>
+            <button
+              type="button"
+              onClick={downloadBusinessList}
+              className="inline-flex items-center justify-center rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700"
+            >
+              Download List Business
+            </button>
           </div>
 
           <div className="bg-slate-900 text-white rounded-3xl p-6 shadow-lg">
             <h3 className="text-lg font-bold">Kolom contoh</h3>
-            <p className="text-sm text-slate-200 mt-2">Beberapa kolom yang umum digunakan:</p>
+            <p className="text-sm text-slate-200 mt-2">Beberapa kolom yang sering digunakan:</p>
             <div className="flex flex-wrap gap-2 mt-4">
               {sampleColumns.map((column) => (
                 <span

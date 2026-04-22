@@ -98,3 +98,42 @@ export async function exportImportTemplate(
 
   return { saved: true, filename: anchor.download }
 }
+
+export async function exportBusinessList(
+  businessListUrl: string,
+): Promise<{ saved?: boolean; canceled?: boolean; filename?: string }> {
+  const bridge = getDatabaseBridge()
+  if (bridge && typeof bridge.exportBusinessListSave === 'function') {
+    const response = await bridge.exportBusinessListSave()
+    if (response?.success === false && !response?.canceled) {
+      throw new Error(extractErrorMessage(response?.message, 'Gagal menyimpan List Business'))
+    }
+    return {
+      saved: Boolean(response?.success),
+      canceled: Boolean(response?.canceled),
+      filename: (response?.data as any)?.filename ?? (response as any)?.filename,
+    }
+  }
+
+  const ipc = getIpcRenderer()
+  if (ipc?.invoke) {
+    const response = await ipc.invoke('db:business-list:export-save')
+    if (response?.success === false && !response?.canceled) {
+      throw new Error(extractErrorMessage(response?.message, 'Gagal menyimpan List Business'))
+    }
+    return {
+      saved: Boolean(response?.success),
+      canceled: Boolean(response?.canceled),
+      filename: response?.data?.filename ?? response?.filename,
+    }
+  }
+
+  const anchor = document.createElement('a')
+  anchor.href = businessListUrl
+  anchor.download = 'LIST_BUSINESS_ALL_SERIES.docx'
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+
+  return { saved: true, filename: anchor.download }
+}

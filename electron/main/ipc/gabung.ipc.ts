@@ -159,6 +159,28 @@ ipcMain.handle('db:fetchExhibitors', async (_event, segment, limit = 0, person =
     }
   })
 
+  ipcMain.handle('db:business-list:export-save', async () => {
+    try {
+      const { canceled, filePath } = await dialog.showSaveDialog({
+        title: 'Simpan List Business',
+        defaultPath: 'LIST_BUSINESS_ALL_SERIES.docx',
+        filters: [{ name: 'Microsoft Word (*.docx)', extensions: ['docx'] }],
+        properties: ['createDirectory', 'showOverwriteConfirmation'],
+      })
+
+      if (canceled || !filePath) return { success: false, canceled: true }
+
+      const targetPath = path.extname(filePath) ? filePath : `${filePath}.docx`
+      const sourcePath = resolvePublicAsset('list-business-all-series.docx')
+      const buffer = await fs.readFile(sourcePath)
+      await fs.writeFile(targetPath, buffer)
+
+      return { success: true, path: targetPath, filename: path.basename(targetPath) }
+    } catch (error) {
+      return errorResponse(error)
+    }
+  })
+
   ipcMain.handle('db:updateAddData', async (_event, id, payload) => {
     try {
       const result = await updateAddData(id, payload)

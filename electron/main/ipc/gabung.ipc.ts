@@ -37,6 +37,18 @@ const resolvePublicAsset = (filename: string) => {
   return path.join(baseDir, 'assets', filename)
 }
 
+const readPublicAsset = async (filenames: string[]) => {
+  let lastError: unknown = null
+  for (const filename of filenames) {
+    try {
+      return await fs.readFile(resolvePublicAsset(filename))
+    } catch (error) {
+      lastError = error
+    }
+  }
+  throw lastError
+}
+
 export function registerGabungIpcHandlers() {
   ipcMain.handle('db:testConnection', async () => {
     try {
@@ -171,8 +183,7 @@ ipcMain.handle('db:fetchExhibitors', async (_event, segment, limit = 0, person =
       if (canceled || !filePath) return { success: false, canceled: true }
 
       const targetPath = path.extname(filePath) ? filePath : `${filePath}.docx`
-      const sourcePath = resolvePublicAsset('list-business-all-series.docx')
-      const buffer = await fs.readFile(sourcePath)
+      const buffer = await readPublicAsset(['list-business-all-series.docx', 'LIST_BUSINESS_ALL_SERIES[1].docx'])
       await fs.writeFile(targetPath, buffer)
 
       return { success: true, path: targetPath, filename: path.basename(targetPath) }

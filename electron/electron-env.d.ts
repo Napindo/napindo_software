@@ -128,6 +128,7 @@ interface Window {
       currentUser?: string
     }) => Promise<DatabaseResponse>
     exportImportTemplateSave: () => Promise<DatabaseResponse<{ path?: string; filename?: string; canceled?: boolean }>>
+    exportBusinessListSave: () => Promise<DatabaseResponse<{ path?: string; filename?: string; canceled?: boolean }>>
     updateAddData: (id: string | number, payload: Record<string, unknown>) => Promise<DatabaseResponse>
     deleteAddData: (ids: Array<string | number>) => Promise<DatabaseResponse>
     exportSearchF3Save: (payload: Record<string, unknown>) => Promise<DatabaseResponse>

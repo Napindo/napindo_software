@@ -64,6 +64,7 @@ contextBridge.exposeInMainWorld('database', {
 
   importGabungExcel: (payload: any) => ipcRenderer.invoke('db:importGabungExcel', payload),
   exportImportTemplateSave: () => ipcRenderer.invoke('db:import-template:export-save'),
+  exportBusinessListSave: () => ipcRenderer.invoke('db:business-list:export-save'),
 
   updateAddData: (id: string | number, payload: any) =>
     ipcRenderer.invoke('db:updateAddData', id, payload),

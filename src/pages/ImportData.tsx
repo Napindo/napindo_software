@@ -316,7 +316,7 @@ const ImportDataPage = () => {
             <p className="text-xs text-slate-500">Batasi jumlah baris yang diimpor. Kosongkan untuk semua baris.</p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 pt-2">
+          <div className="flex flex-wrap items-center gap-3 pt-8">
             <button
               type="button"
               onClick={startImport}
@@ -364,11 +364,11 @@ const ImportDataPage = () => {
             <h3 className="text-lg font-bold text-slate-900">Panduan cepat</h3>
             <ol className="space-y-3 text-sm text-slate-600">
               {quickGuide.map((item, index) => (
-                <li key={item} className="flex gap-3">
-                  <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-rose-100 text-rose-600 font-semibold">
+                <li key={item} className="grid grid-cols-[1.75rem_1fr] items-start gap-3">
+                  <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-rose-100 text-xs font-semibold leading-none text-rose-600">
                     {index + 1}
                   </span>
-                  <span>{item}</span>
+                  <span className="pt-0.5 leading-relaxed">{item}</span>
                 </li>
               ))}
             </ol>

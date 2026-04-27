@@ -330,6 +330,10 @@ type TemplateProps = {
   titleKey?: string
 }
 
+const PREVIEW_TEMPLATE_LIMIT = 120
+const LARGE_EXPORT_HINT =
+  'Untuk data besar, gunakan Excel. Preview template tetap tersedia, tetapi export PDF/Word dibatasi agar proses tidak crash atau lambat.'
+
 export function PrintLabelTemplate({
   title,
   onSubmit,
@@ -430,13 +434,19 @@ export function PrintLabelTemplate({
     setLoading(true)
     setError(null)
     try {
-      const countResult = await onSubmit(payload)
+      const countResult = await onSubmit({ ...payload, limit: 1, offset: 0 })
       const total = countResult.total ?? countResult.totalCount ?? countResult.count ?? 0
       setCount(total)
-      setMessage(`Data dihitung. Total data: ${total}. Memuat preview (PDF agar bisa dilihat)...`)
+      setMessage(
+        `Data dihitung. Total data: ${total}. Memuat preview template dengan sample maksimal ${PREVIEW_TEMPLATE_LIMIT} data...`,
+      )
 
       // Muat preview PDF (tampilan setara Word, lebih mudah dirender)
-      const pdfResult = await onSubmit({ ...payload, action: 'preview-pdf' })
+      const pdfResult = await onSubmit({
+        ...payload,
+        action: 'preview-pdf',
+        previewLimit: PREVIEW_TEMPLATE_LIMIT,
+      })
       const base64 = extractBase64(pdfResult?.data)
       if (base64) {
         const mime = (pdfResult?.data as any)?.contentType || 'application/pdf'
@@ -446,7 +456,9 @@ export function PrintLabelTemplate({
           if (prev) URL.revokeObjectURL(prev)
           return url
         })
-        setMessage(`Preview (tampilan setara) siap. Total data: ${total}.`)
+        setMessage(
+          `Preview template siap. Total data hasil filter: ${total}. Preview dibatasi ke ${PREVIEW_TEMPLATE_LIMIT} data pertama agar tetap cepat.`,
+        )
       } else {
         setPreviewUrl((prev) => {
           if (prev) URL.revokeObjectURL(prev)
@@ -499,8 +511,9 @@ export function PrintLabelTemplate({
         setMessage('Export selesai. File disimpan sesuai pilihan Anda.')
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Gagal mengekspor file')
-      setMessage('Export gagal, coba lagi.')
+      const messageText = err instanceof Error ? err.message : 'Gagal mengekspor file'
+      setError(messageText)
+      setMessage(messageText.includes('Gunakan Excel') ? LARGE_EXPORT_HINT : 'Export gagal, coba lagi.')
     } finally {
       setLoading(false)
     }
@@ -544,8 +557,9 @@ export function PrintLabelTemplate({
         setMessage('File siap dicetak. Izinkan pop-up untuk mencetak otomatis.')
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Gagal mencetak')
-      setMessage('Print gagal, coba lagi.')
+      const messageText = err instanceof Error ? err.message : 'Gagal mencetak'
+      setError(messageText)
+      setMessage(messageText.includes('Gunakan Excel') ? LARGE_EXPORT_HINT : 'Print gagal, coba lagi.')
     } finally {
       setLoading(false)
     }
@@ -706,8 +720,11 @@ export function PrintLabelTemplate({
                 {message}
                 <br />
                 <span className="text-xs text-slate-500">
-                  Pratinjau ditampilkan sebagai PDF agar langsung terlihat, namun layout mengikuti Word utama.
+                  Pratinjau ditampilkan sebagai PDF agar langsung terlihat. Preview hanya memakai sample terbatas, tetapi jumlah data tetap dihitung dari seluruh hasil filter.
                 </span>
+              </p>
+              <p className="text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                {LARGE_EXPORT_HINT}
               </p>
               {error ? <p className="text-sm font-semibold text-rose-600">{error}</p> : null}
               <div className="relative h-[400px] rounded-xl border border-dashed border-slate-300 bg-white overflow-hidden">

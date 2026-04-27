@@ -225,6 +225,7 @@ const valueNotEquals: ValueDef[] = [
 ]
 
 const TRIM = (val: unknown) => (val == null ? "" : String(val).trim())
+const EMPTY_SOURCE_VALUE = "__EMPTY_SOURCE__"
 
 export function buildLabelQuery(filter: LabelFilterPayload, extraConditions: Sql[] = []): BuildResult {
   const conditions: Sql[] = [...extraConditions]
@@ -307,7 +308,12 @@ export function buildLabelQuery(filter: LabelFilterPayload, extraConditions: Sql
   valueEquals.forEach(({ toggle, valueKey, field }) => {
     if (!isOn(toggle)) return
     const value = TRIM(filter?.[valueKey])
-    if (value) addCond(field, "=", value)
+    if (!value) return
+    if (toggle === "cksource" && field === "CODE4" && value === EMPTY_SOURCE_VALUE) {
+      addEmptyOrNull(field)
+      return
+    }
+    addCond(field, "=", value)
   })
 
   // Value not equals

@@ -24,6 +24,7 @@ import {
 import {
   saveAddData,
   updateAddData,
+  deleteAddData,
   findCompanyRecords,
   exportPersonalDatabasePdf,
   exportSearchExcel,
@@ -316,6 +317,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
   })
   const [dataSearchEdits, setDataSearchEdits] = useState<Record<string, Record<string, string>>>({})
   const [dataSearchSavingId, setDataSearchSavingId] = useState<string | number | null>(null)
+  const [dataSearchDeletingId, setDataSearchDeletingId] = useState<string | number | null>(null)
   const deferredDataSearchFilters = useDeferredValue(dataSearchFilters)
   const [comboSearch, setComboSearch] = useState<Record<ComboFieldName, string>>({
     mainActive: '',
@@ -426,6 +428,12 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
       const isAllCaps = text === text.toUpperCase()
       const result = isAllCaps ? text : toTitleCaseLoose(text)
       return result
+    }
+
+    if (field === 'source') {
+      const text = normalizeSpaces(value)
+      if (!text) return ''
+      return text.charAt(0).toUpperCase() + text.slice(1)
     }
 
     const text = normalizeSpaces(value)
@@ -1011,6 +1019,39 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
       })
     } finally {
       setDataSearchSavingId(null)
+    }
+  }
+
+  const deleteDataSearchRow = async (row: Record<string, unknown>) => {
+    const rowId = getRowId(row)
+    if (rowId === null) {
+      setDataSearchNotice({ type: 'error', message: 'NOURUT tidak ditemukan untuk baris ini.' })
+      return
+    }
+
+    const rowLabel = String(row.company ?? row.COMPANY ?? row.name ?? row.NAME ?? rowId).trim() || String(rowId)
+    const confirmed = window.confirm(`Hapus data ${rowLabel} (NOURUT ${rowId})?`)
+    if (!confirmed) return
+
+    setDataSearchDeletingId(rowId)
+    setDataSearchNotice(null)
+    try {
+      await deleteAddData([rowId])
+      setDataSearchRows((prev) => prev.filter((item) => getRowId(item) !== rowId))
+      clearDataSearchEdit(rowId)
+      setDataSearchTotal((prev) => Math.max(0, prev - 1))
+      if (String(selectedId ?? '') === String(rowId)) {
+        setForm(defaultForm())
+        setSelectedId(null)
+      }
+      setDataSearchNotice({ type: 'success', message: `Data NOURUT ${rowId} berhasil dihapus.` })
+    } catch (error) {
+      setDataSearchNotice({
+        type: 'error',
+        message: extractErrorMessage(error, 'Gagal menghapus data.'),
+      })
+    } finally {
+      setDataSearchDeletingId(null)
     }
   }
 
@@ -2538,11 +2579,11 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
                               </button>
                               <button
                                 type="button"
-                                onClick={() => rowId !== null && clearDataSearchEdit(rowId)}
-                                disabled={!rowEdits}
-                                className="inline-flex items-center justify-center px-3 py-1 rounded-md border border-slate-200 text-slate-700 text-xs font-semibold disabled:opacity-50"
+                                onClick={() => deleteDataSearchRow(row)}
+                                disabled={rowId === null || String(dataSearchDeletingId ?? '') === rowKey}
+                                className="inline-flex items-center justify-center px-3 py-1 rounded-md border border-rose-200 text-rose-700 text-xs font-semibold disabled:opacity-50"
                               >
-                                Reset
+                                {String(dataSearchDeletingId ?? '') === rowKey ? 'Deleting...' : 'Delete'}
                               </button>
                             </div>
                           </td>

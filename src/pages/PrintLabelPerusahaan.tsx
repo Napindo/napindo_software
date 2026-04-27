@@ -25,6 +25,9 @@ type LabelOptions = {
   nonBusiness: string[]
 }
 
+const EMPTY_SOURCE_VALUE = '__EMPTY_SOURCE__'
+const EMPTY_SOURCE_LABEL = '(Kosong)'
+
 const selectFilters: SelectFilter[] = [
   { key: 'cmbcode1', activeKey: 'ckcode1', label: 'Code 1' },
   { key: 'cmbcode2', activeKey: 'ckcode2', label: 'Code 2' },
@@ -371,14 +374,18 @@ export function PrintLabelTemplate({
     requestLabelOptions()
       .then((data) => {
         if (cancelled || !data) return
-        setOptions((prev) => ({
+        setOptions((prev) => {
+          const sourceList = data?.source ?? prev.source
+          return {
           ...prev,
           ...data,
+          source: sourceList.includes(EMPTY_SOURCE_VALUE) ? sourceList : [EMPTY_SOURCE_VALUE, ...sourceList],
           nonSource: data?.nonSource ?? data?.source ?? prev.nonSource,
           province: [...new Set([...(data?.province ?? []), ...provinceOptions])],
           business: comboOptions.business,
           nonBusiness: comboOptions.business,
-        }))
+          }
+        })
       })
       .catch((err) => {
         setError(err instanceof Error ? err.message : 'Gagal memuat opsi filter')
@@ -638,7 +645,7 @@ export function PrintLabelTemplate({
                 <option value="">Pilih {filter.label}</option>
                 {(options[optionKeyMap[filter.key]] ?? []).map((opt) => (
                   <option key={opt} value={opt}>
-                    {opt}
+                    {opt === EMPTY_SOURCE_VALUE ? EMPTY_SOURCE_LABEL : opt}
                   </option>
                 ))}
               </select>

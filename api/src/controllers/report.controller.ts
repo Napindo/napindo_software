@@ -31,6 +31,60 @@ const queryRawUnsafe = prisma.$queryRawUnsafe.bind(prisma) as <T = unknown>(
   ...values: any[]
 ) => Promise<T>
 
+const PREVIEW_TEMPLATE_ROW_LIMIT = 120
+const MAX_PREVIEW_ROWS = 2000
+const MAX_PDF_EXPORT_ROWS = 1500
+const MAX_WORD_EXPORT_ROWS = 5000
+
+const LABEL_SELECT_COLUMNS = raw(`
+  "COMPANY",
+  "NAME",
+  "POSITION",
+  "TITLE",
+  "NOURUT",
+  "NO_URUT",
+  "NO",
+  "ADDRESS1",
+  "ALAMAT",
+  "ADDRESS",
+  "ADDRESS2",
+  "ALAMAT2",
+  "CITY",
+  "PROPINCE",
+  "COUNTRY",
+  "ZIP",
+  "POSTCODE",
+  "SEX",
+  "PHONE",
+  "CODE",
+  "HANDPHONE",
+  "EMAIL",
+  "MAIN_ACTIV",
+  "BUSINESS"
+`)
+
+const REPORT_SELECT_COLUMNS = raw(`
+  "COMPANY",
+  "ADDRESS1",
+  "ALAMAT",
+  "ADDRESS",
+  "ADDRESS2",
+  "ALAMAT2",
+  "CITY",
+  "ZIP",
+  "POSTCODE",
+  "SEX",
+  "NAME",
+  "POSITION",
+  "TITLE",
+  "PHONE",
+  "FACSIMILE",
+  "BUSINESS",
+  "EMAIL",
+  "HANDPHONE",
+  "LASTUPDATE"
+`)
+
 function clamp(num: number, min: number, max: number) {
   return Math.min(Math.max(num, min), max)
 }
@@ -81,6 +135,54 @@ function buildBusinessCounts(items: any[]) {
     .sort((a, b) => a.business.localeCompare(b.business))
 }
 
+function formatCountLabel(value: number) {
+  return new Intl.NumberFormat("id-ID").format(value)
+}
+
+function isPreviewAction(payload: any) {
+  const action = String(payload?.action || "").trim().toLowerCase()
+  return action === "preview" || action === "preview-pdf" || action === "preview-word"
+}
+
+function getPreviewLimit(payload: any) {
+  return clamp(Number(payload?.previewLimit) || PREVIEW_TEMPLATE_ROW_LIMIT, 1, MAX_PREVIEW_ROWS)
+}
+
+function ensureDocumentLimit(total: number, format: "PDF" | "Word", maxRows: number) {
+  if (total <= maxRows) return
+  throw new Error(
+    `Export ${format} dibatasi sampai ${formatCountLabel(maxRows)} data. Total hasil filter ${formatCountLabel(total)} data. Gunakan Excel untuk data besar agar proses tetap cepat dan tidak crash.`,
+  )
+}
+
+async function fetchCount(tableSql: Sql, where: Sql) {
+  const rows = await queryRaw<{ count: bigint }[]>(
+    sql`SELECT COUNT(*)::bigint as count FROM ${tableSql} ${where}`,
+  )
+  return rows?.[0]?.count ? Number(rows[0].count) : 0
+}
+
+async function fetchOrderedRows(
+  tableSql: Sql,
+  selectColumns: Sql,
+  where: Sql,
+  options?: { limit?: number; offset?: number },
+) {
+  if (typeof options?.limit === "number") {
+    return queryRaw<any[]>(
+      sql`SELECT ${selectColumns} FROM ${tableSql} ${where} ORDER BY "COMPANY" LIMIT ${options.limit} OFFSET ${options.offset ?? 0}`,
+    )
+  }
+
+  return queryRaw<any[]>(
+    sql`SELECT ${selectColumns} FROM ${tableSql} ${where} ORDER BY "COMPANY"`,
+  )
+}
+
+async function fetchBusinessRows(tableSql: Sql, where: Sql) {
+  return queryRaw<any[]>(sql`SELECT "BUSINESS" FROM ${tableSql} ${where}`)
+}
+
 function getCurrentUser(payload: any) {
   const username = String(payload?.currentUser || "").trim()
   return username || null
@@ -118,21 +220,16 @@ async function runLabelReport(
   try {
     const payload = req.body ?? {}
     const { where, selectionFormula } = buildLabelQuery(payload, baseConditions)
-
     const limit = clamp(Number(payload.limit) || 500, 1, 2000)
     const offset = Math.max(Number(payload.offset) || 0, 0)
-
     const tableSql = target === "gabung" ? raw(`"GABUNG"`) : raw(`"${target}"`)
+    const previewLimit = isPreviewAction(payload) ? getPreviewLimit(payload) : limit
+    const items = await fetchOrderedRows(tableSql, LABEL_SELECT_COLUMNS, where, {
+      limit: previewLimit,
+      offset: isPreviewAction(payload) ? 0 : offset,
+    })
+    const total = await fetchCount(tableSql, where)
 
-    const items = await queryRaw<any[]>(
-      sql`SELECT * FROM ${tableSql} ${where} ORDER BY "COMPANY" LIMIT ${limit} OFFSET ${offset}`,
-    )
-
-    const countRows = await queryRaw<{ count: bigint }[]>(
-      sql`SELECT COUNT(*)::bigint as count FROM ${tableSql} ${where}`,
-    )
-
-    const total = countRows?.[0]?.count ? Number(countRows[0].count) : 0
     if (auditMeta) {
       const title = String(payload?.[auditMeta.titleKey] || "").trim() || auditMeta.fallbackTitle
       await logAudit(payload, { action: auditMeta.action, page: auditMeta.page, title, total })
@@ -219,26 +316,31 @@ export async function exportLabelPerusahaanPdf(req: Request, res: Response) {
     const goverField = raw(`"GOVER"`)
     const nonGoverCondition = sql`(${goverField} IS NULL OR ${goverField} <> 'X')`
     const { where } = buildLabelQuery(payload, [nonGoverCondition])
-
     const tableSql = raw(`"GABUNG"`)
-    const items = await queryRaw<any[]>(sql`SELECT * FROM ${tableSql} ${where} ORDER BY "COMPANY"`)
+    const total = await fetchCount(tableSql, where)
+    const preview = isPreviewAction(payload)
+    if (!preview) {
+      ensureDocumentLimit(total, "PDF", MAX_PDF_EXPORT_ROWS)
+    }
+    const items = await fetchOrderedRows(tableSql, LABEL_SELECT_COLUMNS, where, preview
+      ? { limit: getPreviewLimit(payload), offset: 0 }
+      : undefined)
     const rows = (items ?? []).map(mapDbRowToLabel)
-
     const data = {
       title: (payload?.judul_label as string) || "Print Label Perusahaan",
-      totalCount: rows.length,
+      totalCount: total,
       rows,
     }
-
     const pdf = await renderLabelPerusahaanPdf(data)
-
-    await logAudit(payload, {
-      action: "print_label",
-      page: "Print Label",
-      title: data.title,
-      total: rows.length,
-      format: "pdf",
-    })
+    if (!preview) {
+      await logAudit(payload, {
+        action: "print_label",
+        page: "Print Label",
+        title: data.title,
+        total,
+        format: "pdf",
+      })
+    }
 
     res.setHeader("Content-Type", "application/pdf")
     res.setHeader("Content-Disposition", 'inline; filename="print-label-perusahaan.pdf"')
@@ -255,27 +357,32 @@ export async function exportLabelGoverPdf(req: Request, res: Response) {
     const goverField = raw(`"GOVER"`)
     const goverCondition = sql`${goverField} = 'X'`
     const { where } = buildLabelQuery(payload, [goverCondition])
-
     const tableSql = raw(`"vgabung"`)
-    const items = await queryRaw<any[]>(sql`SELECT * FROM ${tableSql} ${where} ORDER BY "COMPANY"`)
+    const total = await fetchCount(tableSql, where)
+    const preview = isPreviewAction(payload)
+    if (!preview) {
+      ensureDocumentLimit(total, "PDF", MAX_PDF_EXPORT_ROWS)
+    }
+    const items = await fetchOrderedRows(tableSql, LABEL_SELECT_COLUMNS, where, preview
+      ? { limit: getPreviewLimit(payload), offset: 0 }
+      : undefined)
     const rows = (items ?? []).map(mapDbRowToLabel)
-
     const data = {
       title: (payload?.judul_label as string) || "Print Label Government",
-      totalCount: rows.length,
+      totalCount: total,
       rows,
       showGreeting: true,
     }
-
     const pdf = await renderLabelPerusahaanPdf(data)
-
-    await logAudit(payload, {
-      action: "print_label",
-      page: "Print Label",
-      title: data.title,
-      total: rows.length,
-      format: "pdf",
-    })
+    if (!preview) {
+      await logAudit(payload, {
+        action: "print_label",
+        page: "Print Label",
+        title: data.title,
+        total,
+        format: "pdf",
+      })
+    }
 
     res.setHeader("Content-Type", "application/pdf")
     res.setHeader("Content-Disposition", 'inline; filename="print-label-government.pdf"')
@@ -293,7 +400,7 @@ export async function exportLabelPerusahaanExcel(req: Request, res: Response) {
     const nonGoverCondition = sql`(${goverField} IS NULL OR ${goverField} <> 'X')`
     const { where } = buildLabelQuery(payload, [nonGoverCondition])
     const tableSql = raw(`"GABUNG"`)
-    const items = await queryRaw<any[]>(sql`SELECT * FROM ${tableSql} ${where} ORDER BY "COMPANY"`)
+    const items = await fetchOrderedRows(tableSql, LABEL_SELECT_COLUMNS, where)
     const rows = (items ?? []).map(mapDbRowToLabel)
 
     const buffer = await buildLabelExcel(rows)
@@ -319,7 +426,7 @@ export async function exportLabelGoverExcel(req: Request, res: Response) {
     const goverCondition = sql`${goverField} = 'X'`
     const { where } = buildLabelQuery(payload, [goverCondition])
     const tableSql = raw(`"vgabung"`)
-    const items = await queryRaw<any[]>(sql`SELECT * FROM ${tableSql} ${where} ORDER BY "COMPANY"`)
+    const items = await fetchOrderedRows(tableSql, LABEL_SELECT_COLUMNS, where)
     const rows = (items ?? []).map(mapDbRowToLabel)
 
     const buffer = await buildLabelExcel(rows)
@@ -345,19 +452,26 @@ export async function exportLabelPerusahaanWord(req: Request, res: Response) {
     const nonGoverCondition = sql`(${goverField} IS NULL OR ${goverField} <> 'X')`
     const { where } = buildLabelQuery(payload, [nonGoverCondition])
     const tableSql = raw(`"GABUNG"`)
-    const items = await queryRaw<any[]>(sql`SELECT * FROM ${tableSql} ${where} ORDER BY "COMPANY"`)
+    const total = await fetchCount(tableSql, where)
+    const preview = isPreviewAction(payload)
+    if (!preview) {
+      ensureDocumentLimit(total, "Word", MAX_WORD_EXPORT_ROWS)
+    }
+    const items = await fetchOrderedRows(tableSql, LABEL_SELECT_COLUMNS, where, preview
+      ? { limit: getPreviewLimit(payload), offset: 0 }
+      : undefined)
     const rows = (items ?? []).map(mapDbRowToLabel)
-
     const title = (payload?.judul_label as string) || "Print Label Perusahaan"
     const buffer = await buildLabelDocx(rows, title)
-
-    await logAudit(payload, {
-      action: "print_label",
-      page: "Print Label",
-      title,
-      total: rows.length,
-      format: "word",
-    })
+    if (!preview) {
+      await logAudit(payload, {
+        action: "print_label",
+        page: "Print Label",
+        title,
+        total,
+        format: "word",
+      })
+    }
 
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
     res.setHeader("Content-Disposition", 'attachment; filename="print-label-perusahaan.docx"')
@@ -374,19 +488,26 @@ export async function exportLabelGoverWord(req: Request, res: Response) {
     const goverCondition = sql`${goverField} = 'X'`
     const { where } = buildLabelQuery(payload, [goverCondition])
     const tableSql = raw(`"vgabung"`)
-    const items = await queryRaw<any[]>(sql`SELECT * FROM ${tableSql} ${where} ORDER BY "COMPANY"`)
+    const total = await fetchCount(tableSql, where)
+    const preview = isPreviewAction(payload)
+    if (!preview) {
+      ensureDocumentLimit(total, "Word", MAX_WORD_EXPORT_ROWS)
+    }
+    const items = await fetchOrderedRows(tableSql, LABEL_SELECT_COLUMNS, where, preview
+      ? { limit: getPreviewLimit(payload), offset: 0 }
+      : undefined)
     const rows = (items ?? []).map(mapDbRowToLabel)
-
     const title = (payload?.judul_label as string) || "Print Label Government"
     const buffer = await buildLabelDocx(rows, title)
-
-    await logAudit(payload, {
-      action: "print_label",
-      page: "Print Label",
-      title,
-      total: rows.length,
-      format: "word",
-    })
+    if (!preview) {
+      await logAudit(payload, {
+        action: "print_label",
+        page: "Print Label",
+        title,
+        total,
+        format: "word",
+      })
+    }
 
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
     res.setHeader("Content-Disposition", 'attachment; filename="print-label-government.docx"')
@@ -425,7 +546,14 @@ export async function exportReportPerusahaanPdf(req: Request, res: Response) {
     const nonGoverCondition = sql`(${goverField} IS NULL OR ${goverField} <> 'X')`
     const { where } = buildLabelQuery(payload, [nonGoverCondition])
     const tableSql = raw(`"GABUNG"`)
-    const items = await queryRaw<any[]>(sql`SELECT * FROM ${tableSql} ${where} ORDER BY "COMPANY"`)
+    const total = await fetchCount(tableSql, where)
+    const preview = isPreviewAction(payload)
+    if (!preview) {
+      ensureDocumentLimit(total, "PDF", MAX_PDF_EXPORT_ROWS)
+    }
+    const items = await fetchOrderedRows(tableSql, REPORT_SELECT_COLUMNS, where, preview
+      ? { limit: getPreviewLimit(payload), offset: 0 }
+      : undefined)
     const rows = (items ?? []).map(mapDbRowToReport)
 
     const title =
@@ -434,19 +562,19 @@ export async function exportReportPerusahaanPdf(req: Request, res: Response) {
     const data = {
       title,
       reportDate,
-      totalCount: rows.length,
+      totalCount: total,
       rows,
     }
-
     const pdf = await renderReportPdf(data)
-
-    await logAudit(payload, {
-      action: "report",
-      page: "Report",
-      title,
-      total: rows.length,
-      format: "pdf",
-    })
+    if (!preview) {
+      await logAudit(payload, {
+        action: "report",
+        page: "Report",
+        title,
+        total,
+        format: "pdf",
+      })
+    }
 
     res.setHeader("Content-Type", "application/pdf")
     res.setHeader("Content-Disposition", 'inline; filename="report-perusahaan.pdf"')
@@ -464,7 +592,14 @@ export async function exportReportGovernmentPdf(req: Request, res: Response) {
     const goverCondition = sql`${goverField} = 'X'`
     const { where } = buildLabelQuery(payload, [goverCondition])
     const tableSql = raw(`"vgabung"`)
-    const items = await queryRaw<any[]>(sql`SELECT * FROM ${tableSql} ${where} ORDER BY "COMPANY"`)
+    const total = await fetchCount(tableSql, where)
+    const preview = isPreviewAction(payload)
+    if (!preview) {
+      ensureDocumentLimit(total, "PDF", MAX_PDF_EXPORT_ROWS)
+    }
+    const items = await fetchOrderedRows(tableSql, REPORT_SELECT_COLUMNS, where, preview
+      ? { limit: getPreviewLimit(payload), offset: 0 }
+      : undefined)
     const rows = (items ?? []).map(mapDbRowToReport)
 
     const title =
@@ -473,19 +608,19 @@ export async function exportReportGovernmentPdf(req: Request, res: Response) {
     const data = {
       title,
       reportDate,
-      totalCount: rows.length,
+      totalCount: total,
       rows,
     }
-
     const pdf = await renderReportPdf(data)
-
-    await logAudit(payload, {
-      action: "report",
-      page: "Report",
-      title,
-      total: rows.length,
-      format: "pdf",
-    })
+    if (!preview) {
+      await logAudit(payload, {
+        action: "report",
+        page: "Report",
+        title,
+        total,
+        format: "pdf",
+      })
+    }
 
     res.setHeader("Content-Type", "application/pdf")
     res.setHeader("Content-Disposition", 'inline; filename="report-government.pdf"')
@@ -503,21 +638,29 @@ export async function exportReportPerusahaanWord(req: Request, res: Response) {
     const nonGoverCondition = sql`(${goverField} IS NULL OR ${goverField} <> 'X')`
     const { where } = buildLabelQuery(payload, [nonGoverCondition])
     const tableSql = raw(`"GABUNG"`)
-    const items = await queryRaw<any[]>(sql`SELECT * FROM ${tableSql} ${where} ORDER BY "COMPANY"`)
+    const total = await fetchCount(tableSql, where)
+    const preview = isPreviewAction(payload)
+    if (!preview) {
+      ensureDocumentLimit(total, "Word", MAX_WORD_EXPORT_ROWS)
+    }
+    const items = await fetchOrderedRows(tableSql, REPORT_SELECT_COLUMNS, where, preview
+      ? { limit: getPreviewLimit(payload), offset: 0 }
+      : undefined)
     const rows = (items ?? []).map(mapDbRowToReport)
 
     const title =
       (payload?.judul_report as string) || (payload?.judul_label as string) || "Report Perusahaan"
     const reportDate = formatReportDate(new Date())
     const buffer = await buildReportDocx(rows, title, reportDate)
-
-    await logAudit(payload, {
-      action: "report",
-      page: "Report",
-      title,
-      total: rows.length,
-      format: "word",
-    })
+    if (!preview) {
+      await logAudit(payload, {
+        action: "report",
+        page: "Report",
+        title,
+        total,
+        format: "word",
+      })
+    }
 
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
     res.setHeader("Content-Disposition", 'attachment; filename="report-perusahaan.docx"')
@@ -534,21 +677,29 @@ export async function exportReportGovernmentWord(req: Request, res: Response) {
     const goverCondition = sql`${goverField} = 'X'`
     const { where } = buildLabelQuery(payload, [goverCondition])
     const tableSql = raw(`"vgabung"`)
-    const items = await queryRaw<any[]>(sql`SELECT * FROM ${tableSql} ${where} ORDER BY "COMPANY"`)
+    const total = await fetchCount(tableSql, where)
+    const preview = isPreviewAction(payload)
+    if (!preview) {
+      ensureDocumentLimit(total, "Word", MAX_WORD_EXPORT_ROWS)
+    }
+    const items = await fetchOrderedRows(tableSql, REPORT_SELECT_COLUMNS, where, preview
+      ? { limit: getPreviewLimit(payload), offset: 0 }
+      : undefined)
     const rows = (items ?? []).map(mapDbRowToReport)
 
     const title =
       (payload?.judul_report as string) || (payload?.judul_label as string) || "Report Government"
     const reportDate = formatReportDate(new Date())
     const buffer = await buildReportDocx(rows, title, reportDate)
-
-    await logAudit(payload, {
-      action: "report",
-      page: "Report",
-      title,
-      total: rows.length,
-      format: "word",
-    })
+    if (!preview) {
+      await logAudit(payload, {
+        action: "report",
+        page: "Report",
+        title,
+        total,
+        format: "word",
+      })
+    }
 
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
     res.setHeader("Content-Disposition", 'attachment; filename="report-government.docx"')
@@ -565,7 +716,7 @@ export async function exportReportPerusahaanExcel(req: Request, res: Response) {
     const nonGoverCondition = sql`(${goverField} IS NULL OR ${goverField} <> 'X')`
     const { where } = buildLabelQuery(payload, [nonGoverCondition])
     const tableSql = raw(`"GABUNG"`)
-    const items = await queryRaw<any[]>(sql`SELECT * FROM ${tableSql} ${where} ORDER BY "COMPANY"`)
+    const items = await fetchOrderedRows(tableSql, LABEL_SELECT_COLUMNS, where)
     const rows = (items ?? []).map(mapDbRowToLabel)
 
     const buffer = await buildLabelExcel(rows)
@@ -592,7 +743,7 @@ export async function exportReportGovernmentExcel(req: Request, res: Response) {
     const goverCondition = sql`${goverField} = 'X'`
     const { where } = buildLabelQuery(payload, [goverCondition])
     const tableSql = raw(`"vgabung"`)
-    const items = await queryRaw<any[]>(sql`SELECT * FROM ${tableSql} ${where} ORDER BY "COMPANY"`)
+    const items = await fetchOrderedRows(tableSql, LABEL_SELECT_COLUMNS, where)
     const rows = (items ?? []).map(mapDbRowToLabel)
 
     const buffer = await buildLabelExcel(rows)
@@ -619,13 +770,8 @@ export async function reportJumlahPerusahaan(req: Request, res: Response) {
     const nonGoverCondition = sql`(${goverField} IS NULL OR ${goverField} <> 'X')`
     const { where, selectionFormula } = buildLabelQuery(payload, [nonGoverCondition])
     const tableSql = raw(`"GABUNG"`)
-
-    const items = await queryRaw<any[]>(sql`SELECT "BUSINESS" FROM ${tableSql} ${where}`)
-    const countRows = await queryRaw<{ count: bigint }[]>(
-      sql`SELECT COUNT(*)::bigint as count FROM ${tableSql} ${where}`,
-    )
-    const total = countRows?.[0]?.count ? Number(countRows[0].count) : 0
-
+    const items = await fetchBusinessRows(tableSql, where)
+    const total = await fetchCount(tableSql, where)
     const rows = buildBusinessCounts(items ?? [])
 
     await logAudit(payload, {
@@ -659,13 +805,8 @@ export async function reportJumlahGovernment(req: Request, res: Response) {
     const goverCondition = sql`${goverField} = 'X'`
     const { where, selectionFormula } = buildLabelQuery(payload, [goverCondition])
     const tableSql = raw(`"vgabung"`)
-
-    const items = await queryRaw<any[]>(sql`SELECT "BUSINESS" FROM ${tableSql} ${where}`)
-    const countRows = await queryRaw<{ count: bigint }[]>(
-      sql`SELECT COUNT(*)::bigint as count FROM ${tableSql} ${where}`,
-    )
-    const total = countRows?.[0]?.count ? Number(countRows[0].count) : 0
-
+    const items = await fetchBusinessRows(tableSql, where)
+    const total = await fetchCount(tableSql, where)
     const rows = buildBusinessCounts(items ?? [])
 
     await logAudit(payload, {
@@ -699,7 +840,12 @@ export async function exportReportJumlahPerusahaanPdf(req: Request, res: Respons
     const nonGoverCondition = sql`(${goverField} IS NULL OR ${goverField} <> 'X')`
     const { where } = buildLabelQuery(payload, [nonGoverCondition])
     const tableSql = raw(`"GABUNG"`)
-    const items = await queryRaw<any[]>(sql`SELECT "BUSINESS" FROM ${tableSql} ${where}`)
+    const total = await fetchCount(tableSql, where)
+    const preview = isPreviewAction(payload)
+    if (!preview) {
+      ensureDocumentLimit(total, "PDF", MAX_PDF_EXPORT_ROWS)
+    }
+    const items = await fetchBusinessRows(tableSql, where)
     const rows = buildBusinessCounts(items ?? [])
 
     const title =
@@ -712,18 +858,18 @@ export async function exportReportJumlahPerusahaanPdf(req: Request, res: Respons
       title,
       reportDate,
       totalCount: rows.length,
-      rows,
+      rows: preview ? rows.slice(0, getPreviewLimit(payload)) : rows,
     }
-
     const pdf = await renderReportJumlahPdf(data)
-
-    await logAudit(payload, {
-      action: "report_jumlah",
-      page: "Report Jumlah",
-      title,
-      total: rows.length,
-      format: "pdf",
-    })
+    if (!preview) {
+      await logAudit(payload, {
+        action: "report_jumlah",
+        page: "Report Jumlah",
+        title,
+        total,
+        format: "pdf",
+      })
+    }
 
     res.setHeader("Content-Type", "application/pdf")
     res.setHeader("Content-Disposition", 'inline; filename="report-jumlah-perusahaan.pdf"')
@@ -741,7 +887,12 @@ export async function exportReportJumlahGovernmentPdf(req: Request, res: Respons
     const goverCondition = sql`${goverField} = 'X'`
     const { where } = buildLabelQuery(payload, [goverCondition])
     const tableSql = raw(`"vgabung"`)
-    const items = await queryRaw<any[]>(sql`SELECT "BUSINESS" FROM ${tableSql} ${where}`)
+    const total = await fetchCount(tableSql, where)
+    const preview = isPreviewAction(payload)
+    if (!preview) {
+      ensureDocumentLimit(total, "PDF", MAX_PDF_EXPORT_ROWS)
+    }
+    const items = await fetchBusinessRows(tableSql, where)
     const rows = buildBusinessCounts(items ?? [])
 
     const title =
@@ -754,18 +905,18 @@ export async function exportReportJumlahGovernmentPdf(req: Request, res: Respons
       title,
       reportDate,
       totalCount: rows.length,
-      rows,
+      rows: preview ? rows.slice(0, getPreviewLimit(payload)) : rows,
     }
-
     const pdf = await renderReportJumlahPdf(data)
-
-    await logAudit(payload, {
-      action: "report_jumlah",
-      page: "Report Jumlah",
-      title,
-      total: rows.length,
-      format: "pdf",
-    })
+    if (!preview) {
+      await logAudit(payload, {
+        action: "report_jumlah",
+        page: "Report Jumlah",
+        title,
+        total,
+        format: "pdf",
+      })
+    }
 
     res.setHeader("Content-Type", "application/pdf")
     res.setHeader("Content-Disposition", 'inline; filename="report-jumlah-government.pdf"')
@@ -783,7 +934,12 @@ export async function exportReportJumlahPerusahaanWord(req: Request, res: Respon
     const nonGoverCondition = sql`(${goverField} IS NULL OR ${goverField} <> 'X')`
     const { where } = buildLabelQuery(payload, [nonGoverCondition])
     const tableSql = raw(`"GABUNG"`)
-    const items = await queryRaw<any[]>(sql`SELECT "BUSINESS" FROM ${tableSql} ${where}`)
+    const total = await fetchCount(tableSql, where)
+    const preview = isPreviewAction(payload)
+    if (!preview) {
+      ensureDocumentLimit(total, "Word", MAX_WORD_EXPORT_ROWS)
+    }
+    const items = await fetchBusinessRows(tableSql, where)
     const rows = buildBusinessCounts(items ?? [])
 
     const title =
@@ -792,15 +948,21 @@ export async function exportReportJumlahPerusahaanWord(req: Request, res: Respon
       (payload?.judul_label as string) ||
       "Report Jumlah Perusahaan"
     const reportDate = formatReportDate(new Date())
-    const buffer = await buildReportJumlahDocx(rows, title, reportDate)
-
-    await logAudit(payload, {
-      action: "report_jumlah",
-      page: "Report Jumlah",
+    const buffer = await buildReportJumlahDocx(
+      preview ? rows.slice(0, getPreviewLimit(payload)) : rows,
       title,
-      total: rows.length,
-      format: "word",
-    })
+      reportDate,
+    )
+
+    if (!preview) {
+      await logAudit(payload, {
+        action: "report_jumlah",
+        page: "Report Jumlah",
+        title,
+        total,
+        format: "word",
+      })
+    }
 
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
     res.setHeader("Content-Disposition", 'attachment; filename="report-jumlah-perusahaan.docx"')
@@ -817,7 +979,12 @@ export async function exportReportJumlahGovernmentWord(req: Request, res: Respon
     const goverCondition = sql`${goverField} = 'X'`
     const { where } = buildLabelQuery(payload, [goverCondition])
     const tableSql = raw(`"vgabung"`)
-    const items = await queryRaw<any[]>(sql`SELECT "BUSINESS" FROM ${tableSql} ${where}`)
+    const total = await fetchCount(tableSql, where)
+    const preview = isPreviewAction(payload)
+    if (!preview) {
+      ensureDocumentLimit(total, "Word", MAX_WORD_EXPORT_ROWS)
+    }
+    const items = await fetchBusinessRows(tableSql, where)
     const rows = buildBusinessCounts(items ?? [])
 
     const title =
@@ -826,15 +993,21 @@ export async function exportReportJumlahGovernmentWord(req: Request, res: Respon
       (payload?.judul_label as string) ||
       "Report Jumlah Government"
     const reportDate = formatReportDate(new Date())
-    const buffer = await buildReportJumlahDocx(rows, title, reportDate)
-
-    await logAudit(payload, {
-      action: "report_jumlah",
-      page: "Report Jumlah",
+    const buffer = await buildReportJumlahDocx(
+      preview ? rows.slice(0, getPreviewLimit(payload)) : rows,
       title,
-      total: rows.length,
-      format: "word",
-    })
+      reportDate,
+    )
+
+    if (!preview) {
+      await logAudit(payload, {
+        action: "report_jumlah",
+        page: "Report Jumlah",
+        title,
+        total,
+        format: "word",
+      })
+    }
 
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
     res.setHeader("Content-Disposition", 'attachment; filename="report-jumlah-government.docx"')
@@ -851,7 +1024,7 @@ export async function exportReportJumlahPerusahaanExcel(req: Request, res: Respo
     const nonGoverCondition = sql`(${goverField} IS NULL OR ${goverField} <> 'X')`
     const { where } = buildLabelQuery(payload, [nonGoverCondition])
     const tableSql = raw(`"GABUNG"`)
-    const items = await queryRaw<any[]>(sql`SELECT "BUSINESS" FROM ${tableSql} ${where}`)
+    const items = await fetchBusinessRows(tableSql, where)
     const rows = buildBusinessCounts(items ?? [])
 
     const buffer = await buildReportJumlahExcel(rows)
@@ -881,7 +1054,7 @@ export async function exportReportJumlahGovernmentExcel(req: Request, res: Respo
     const goverCondition = sql`${goverField} = 'X'`
     const { where } = buildLabelQuery(payload, [goverCondition])
     const tableSql = raw(`"vgabung"`)
-    const items = await queryRaw<any[]>(sql`SELECT "BUSINESS" FROM ${tableSql} ${where}`)
+    const items = await fetchBusinessRows(tableSql, where)
     const rows = buildBusinessCounts(items ?? [])
 
     const buffer = await buildReportJumlahExcel(rows)

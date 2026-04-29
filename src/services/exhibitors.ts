@@ -37,6 +37,28 @@ export interface ExhibitorRow {
   raw: Record<string, any>
 }
 
+export type SegmentSortKey = 'company' | 'pic' | 'position' | 'city' | 'updatedAt'
+export type SegmentSortDirection = 'asc' | 'desc'
+
+export interface SegmentPageParams {
+  page?: number
+  pageSize?: number
+  q?: string
+  sortKey?: SegmentSortKey
+  sortDirection?: SegmentSortDirection
+  person?: 'exhibitor' | 'visitor'
+}
+
+export interface SegmentPageResult<T> {
+  rows: T[]
+  pagination: {
+    page: number
+    pageSize: number
+    total: number
+    totalPages: number
+  }
+}
+
 /**
  * Mapping dari segment di UI → segment code di backend (/api/gabung/:segment).
  */
@@ -283,6 +305,51 @@ async function invokeFetchExhibitors(
   return { success: true, rows: items }
 }
 
+async function invokeListSegmentRows(
+  segment: ExhibitorSegment,
+  params?: SegmentPageParams,
+): Promise<DatabaseResponse<{ items?: Record<string, any>[]; pagination?: SegmentPageResult<unknown>['pagination'] }>> {
+  const backendSegment = SEGMENT_TO_BACKEND[segment] ?? segment
+  const payload = {
+    page: params?.page ?? 1,
+    pageSize: params?.pageSize ?? 25,
+    q: params?.q?.trim() || '',
+    sortKey: params?.sortKey || 'company',
+    sortDirection: params?.sortDirection || 'asc',
+    person: params?.person || 'exhibitor',
+  }
+  const db = getDatabaseBridge()
+
+  if (db && typeof db.listSegmentRows === 'function') {
+    return db.listSegmentRows(backendSegment, payload) as Promise<
+      DatabaseResponse<{ items?: Record<string, any>[]; pagination?: SegmentPageResult<unknown>['pagination'] }>
+    >
+  }
+
+  const ipc = getIpcRenderer()
+  if (ipc && typeof ipc.invoke === 'function') {
+    return ipc.invoke('db:listSegmentRows', backendSegment, payload) as Promise<
+      DatabaseResponse<{ items?: Record<string, any>[]; pagination?: SegmentPageResult<unknown>['pagination'] }>
+    >
+  }
+
+  const search = new URLSearchParams({
+    page: String(payload.page),
+    pageSize: String(payload.pageSize),
+    q: payload.q,
+    sortKey: payload.sortKey,
+    sortDirection: payload.sortDirection,
+    person: payload.person,
+  })
+  const res = await fetch(buildApiUrl(`/gabung/segment/${encodeURIComponent(backendSegment)}?${search.toString()}`))
+  const body = await res.json()
+  if (!isApiOk(body)) {
+    return { success: false, message: extractErrorMessage(body?.message, 'Gagal mengambil data exhibitor') }
+  }
+  const data = pickApiData(body)
+  return { success: true, data }
+}
+
 /**
  * Ambil dan normalisasi data exhibitor untuk satu segment.
  */
@@ -300,6 +367,34 @@ export async function fetchExhibitors(
   const rows = (response.rows ?? []) as Record<string, any>[]
 
   return rows.map((row) => normalizeExhibitorRow(row, segment))
+}
+
+export async function fetchExhibitorPage(
+  segment: ExhibitorSegment,
+  params?: SegmentPageParams,
+): Promise<SegmentPageResult<ExhibitorRow>> {
+  const response = await invokeListSegmentRows(segment, { ...params, person: params?.person ?? 'exhibitor' })
+
+  if (!response || response.success === false) {
+    throw new Error(extractErrorMessage(response?.message, 'Gagal mengambil data exhibitor'))
+  }
+
+  const data = (response.data ?? {}) as { items?: Record<string, any>[]; pagination?: SegmentPageResult<unknown>['pagination'] }
+  const rows = (data.items ?? []) as Record<string, any>[]
+  const pagination = data.pagination ?? {
+    page: params?.page ?? 1,
+    pageSize: params?.pageSize ?? 25,
+    total: rows.length,
+    totalPages: rows.length > 0 ? 1 : 0,
+  }
+
+  return {
+    rows: rows.map((row) => normalizeExhibitorRow(row, segment)),
+    pagination: {
+      ...pagination,
+      totalPages: Math.max(pagination.totalPages || 0, 1),
+    },
+  }
 }
 
 /**
@@ -360,6 +455,7 @@ export async function fetchExpoChartData(): Promise<{
 
 export default {
   fetchExhibitors,
+  fetchExhibitorPage,
   getExhibitorsBySegment,
   getExhibitors,
   fetchExhibitorCountByExpo,

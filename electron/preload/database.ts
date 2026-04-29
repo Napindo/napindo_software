@@ -10,6 +10,17 @@ contextBridge.exposeInMainWorld('database', {
     limit = 200,
     person: 'exhibitor' | 'visitor' = 'exhibitor',
   ) => ipcRenderer.invoke('db:fetchExhibitors', segment, limit, person),
+  listSegmentRows: (
+    segment: string,
+    params?: {
+      page?: number
+      pageSize?: number
+      q?: string
+      sortKey?: string
+      sortDirection?: 'asc' | 'desc'
+      person?: 'exhibitor' | 'visitor'
+    },
+  ) => ipcRenderer.invoke('db:listSegmentRows', segment, params),
   fetchExhibitorCountByExpo: () => ipcRenderer.invoke('db:fetchExhibitorCountByExpo'),
   fetchExpoChartData: () => ipcRenderer.invoke('db:fetchExpoChartData'),
   fetchAuditLogs: (limit = 200) => ipcRenderer.invoke('db:fetchAuditLogs', limit),

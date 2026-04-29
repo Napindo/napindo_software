@@ -9,6 +9,7 @@ import {
   fetchExpoChartData,
   fetchTopRows,
   listGabungRecords,
+  listGabungSegmentRecords,
   fetchSourceOptions,
   fetchCode1Options,
   findCompanyByName,
@@ -72,6 +73,15 @@ ipcMain.handle('db:fetchExhibitors', async (_event, segment, limit = 0, person =
     try {
       const rows = await fetchExhibitorsBySegment(segment, limit, person)
       return { success: true, rows }
+    } catch (error) {
+      return errorResponse(error)
+    }
+  })
+
+  ipcMain.handle('db:listSegmentRows', async (_event, segment, params) => {
+    try {
+      const data = await listGabungSegmentRecords(segment, params)
+      return { success: true, data }
     } catch (error) {
       return errorResponse(error)
     }

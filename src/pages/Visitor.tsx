@@ -1,12 +1,15 @@
 import { useDeferredValue, useEffect, useMemo, useState } from 'react'
 import { InputDeck } from './Exhibitor'
+import type {
+  SegmentSortDirection,
+  SegmentSortKey,
+} from '../services/exhibitors'
 import type { VisitorRow, VisitorSegment } from '../services/visitors'
-import { fetchVisitors } from '../services/visitors'
+import { fetchVisitorPage } from '../services/visitors'
 import { deleteAddData } from '../services/addData'
 import { useAppStore } from '../store/appStore'
 import { getUserAccess } from '../utils/access'
 import { formatDateOnly } from '../utils/date'
-import { rowMatchesSegment } from '../utils/flags'
 
 const visitorDefenceGroup: VisitorSegment[] = ['defence', 'aerospace', 'marine']
 const visitorWaterGroup: VisitorSegment[] = ['water', 'waste', 'iismex', 'renergy', 'security', 'firex']
@@ -50,31 +53,23 @@ const visitorSegmentLabels: Record<VisitorSegment, string> = {
   horticulture: 'Horticulture',
 }
 
-const visitorFlagKey: Record<VisitorSegment, string> = {
-  defence: 'visdefence',
-  aerospace: 'visaero',
-  marine: 'vismarine',
-  water: 'viswater',
-  waste: 'viswaste',
-  iismex: 'vissmart',
-  renergy: 'visenergy',
-  security: 'vissecure',
-  firex: 'visfire',
-  livestock: 'vislives',
-  agrotech: 'visagritech',
-  vet: 'visindovet',
-  fisheries: 'visfish',
-  feed: 'visfeed',
-  dairy: 'visdairy',
-  horticulture: 'vishorti',
-}
+type SortState = { key: SegmentSortKey; direction: SegmentSortDirection } | null
 
 type VisitorTableProps = {
   segment: VisitorSegment
   rows: VisitorRow[]
   loading?: boolean
   error?: string | null
+  search: string
+  rowsPerPage: number
+  page: number
+  totalRows: number
+  sort: SortState
+  onSearchChange: (value: string) => void
+  onRowsPerPageChange: (value: number) => void
+  onPageChange: (page: number) => void
   onReload: () => void
+  onSortChange: (key: SegmentSortKey) => void
   onSegmentChange: (next: VisitorSegment) => void
   onBack: () => void
   onAdd: (row: Record<string, unknown> | null, id: string | number | null) => void
@@ -82,74 +77,38 @@ type VisitorTableProps = {
   canDelete: boolean
 }
 
-type SortKey = 'type' | 'city' | 'updatedAt'
-type SortDirection = 'asc' | 'desc'
-type SortState = { key: SortKey; direction: SortDirection } | null
-
 const VisitorTable = ({
   segment,
   rows,
   loading,
   error,
+  search,
+  rowsPerPage,
+  page,
+  totalRows,
+  sort,
+  onSearchChange,
+  onRowsPerPageChange,
+  onPageChange,
   onReload,
+  onSortChange,
   onSegmentChange,
   onBack,
   onAdd,
   onConfirmDelete,
   canDelete,
 }: VisitorTableProps) => {
-  const [search, setSearch] = useState('')
-  const deferredSearch = useDeferredValue(search)
-  const [rowsPerPage, setRowsPerPage] = useState(25)
-  const [page, setPage] = useState(1)
   const [selectedIds, setSelectedIds] = useState<(string | number)[]>([])
   const [tableError, setTableError] = useState<string | null>(null)
-  const [sort, setSort] = useState<SortState>(null)
 
   useEffect(() => {
     setSelectedIds([])
-    setPage(1)
-  }, [segment, rows.length])
+  }, [segment, rows, page])
 
-  const filteredRows = useMemo(() => {
-    const lower = deferredSearch.trim().toLowerCase()
-    const bySegment = rows.filter((row) => rowMatchesSegment(row.raw, segment, visitorFlagKey))
-
-    if (!lower) return bySegment
-
-    return bySegment.filter((row) =>
-      [row.company, row.pic, row.position, row.type, row.email, row.phone, row.city]
-        .filter(Boolean)
-        .some((value) => typeof value === 'string' && value.toLowerCase().includes(lower)),
-    )
-  }, [rows, deferredSearch, segment])
-
-  const sortedRows = useMemo(() => {
-    if (!sort) return filteredRows
-
-    const getValue = (row: VisitorRow) => {
-      if (sort.key === 'updatedAt') {
-        const time = row.updatedAt ? new Date(row.updatedAt).getTime() : 0
-        return Number.isNaN(time) ? 0 : time
-      }
-      return String(row[sort.key] ?? '').toLowerCase()
-    }
-
-    return [...filteredRows].sort((a, b) => {
-      const aValue = getValue(a)
-      const bValue = getValue(b)
-      const result = typeof aValue === 'number' && typeof bValue === 'number'
-        ? aValue - bValue
-        : String(aValue).localeCompare(String(bValue))
-      return sort.direction === 'asc' ? result : -result
-    })
-  }, [filteredRows, sort])
-
-  const totalPages = Math.max(1, Math.ceil(sortedRows.length / rowsPerPage))
+  const totalPages = Math.max(1, Math.ceil(totalRows / rowsPerPage))
   const currentPage = Math.min(page, totalPages)
-  const startIndex = (currentPage - 1) * rowsPerPage
-  const paginatedRows = sortedRows.slice(startIndex, startIndex + rowsPerPage)
-  const allSelected = paginatedRows.length > 0 && paginatedRows.every((row) => selectedIds.includes(row.id))
+  const startIndex = totalRows > 0 ? (currentPage - 1) * rowsPerPage : 0
+  const allSelected = rows.length > 0 && rows.every((row) => selectedIds.includes(row.id))
   const tabOptions = visitorSegmentTabs[segment] ?? [segment]
 
   const toggleRow = (id: string | number) => {
@@ -158,28 +117,20 @@ const VisitorTable = ({
 
   const toggleAll = () => {
     if (allSelected) {
-      setSelectedIds((prev) => prev.filter((id) => !paginatedRows.some((row) => row.id === id)))
+      setSelectedIds((prev) => prev.filter((id) => !rows.some((row) => row.id === id)))
     } else {
-      setSelectedIds((prev) => Array.from(new Set([...prev, ...paginatedRows.map((row) => row.id)])))
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...rows.map((row) => row.id)])))
     }
   }
 
-  const handleRowsChange = (value: number) => {
-    setRowsPerPage(value)
-    setPage(1)
+  const toggleSort = (key: SegmentSortKey) => {
+    setTableError(null)
+    onSortChange(key)
   }
 
-  const toggleSort = (key: SortKey) => {
-    setSort((prev) => {
-      if (!prev || prev.key !== key) return { key, direction: 'asc' }
-      return { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' }
-    })
-    setPage(1)
-  }
+  const sortMark = (key: SegmentSortKey) => (sort?.key === key ? (sort.direction === 'asc' ? ' ^' : ' v') : '')
 
-  const sortMark = (key: SortKey) => (sort?.key === key ? (sort.direction === 'asc' ? ' ^' : ' v') : '')
-
-  const renderSortHeader = (key: SortKey, label: string, className = 'px-4 py-3 border-b border-slate-200') => (
+  const renderSortHeader = (key: SegmentSortKey, label: string, className = 'px-4 py-3 border-b border-slate-200') => (
     <th className={className}>
       <button
         type="button"
@@ -269,14 +220,14 @@ const VisitorTable = ({
       </div>
 
       <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-5">
-        <div className="flex flex-wrap items-center gap-4 mb-5">
+        <div className="flex flex-wrap items-center gap-4 mb-3">
           <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
             <select
               value={rowsPerPage}
-              onChange={(e) => handleRowsChange(Number(e.target.value))}
+              onChange={(e) => onRowsPerPageChange(Number(e.target.value))}
               className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-200 bg-white"
             >
-              {[10, 25, 50].map((opt) => (
+              {[10, 25, 50, 100].map((opt) => (
                 <option key={opt} value={opt}>
                   {opt}
                 </option>
@@ -325,10 +276,7 @@ const VisitorTable = ({
                 type="search"
                 placeholder="Search"
                 value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value)
-                  setPage(1)
-                }}
+                onChange={(e) => onSearchChange(e.target.value)}
                 className="w-64 border border-slate-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-200"
               />
               <svg
@@ -345,16 +293,18 @@ const VisitorTable = ({
           </div>
         </div>
 
+        <p className="mb-5 text-xs text-slate-500">Pencarian dan paging diproses di server agar tabel muncul lebih cepat saat dibuka.</p>
+
         <div className="overflow-x-auto border border-slate-200 rounded-xl">
           <table className="min-w-full text-sm">
             <thead className="bg-slate-50 text-left text-slate-700 font-semibold">
               <tr>
                 <th className="px-4 py-3 border-b border-slate-200 w-20">Select</th>
                 <th className="px-4 py-3 border-b border-slate-200 w-12">No</th>
-                <th className="px-4 py-3 border-b border-slate-200">Company</th>
-                <th className="px-4 py-3 border-b border-slate-200">PIC</th>
-                <th className="px-4 py-3 border-b border-slate-200">Position</th>
-                {renderSortHeader('type', 'Type')}
+                {renderSortHeader('company', 'Company')}
+                {renderSortHeader('pic', 'PIC')}
+                {renderSortHeader('position', 'Position')}
+                <th className="px-4 py-3 border-b border-slate-200">Type</th>
                 <th className="px-4 py-3 border-b border-slate-200">Email</th>
                 <th className="px-4 py-3 border-b border-slate-200">Phone</th>
                 {renderSortHeader('city', 'City')}
@@ -370,7 +320,7 @@ const VisitorTable = ({
                 </tr>
               ) : null}
 
-              {!loading && paginatedRows.length === 0 ? (
+              {!loading && rows.length === 0 ? (
                 <tr>
                   <td className="px-4 py-6 text-center text-slate-500" colSpan={10}>
                     Tidak ada data untuk segmen ini.
@@ -379,7 +329,7 @@ const VisitorTable = ({
               ) : null}
 
               {!loading
-                ? paginatedRows.map((row, index) => (
+                ? rows.map((row, index) => (
                     <tr key={row.id} className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50/60'}>
                       <td className="px-4 py-3 border-b border-slate-200">
                         <input
@@ -407,14 +357,14 @@ const VisitorTable = ({
 
         <div className="flex items-center justify-between mt-4 text-sm font-semibold text-slate-700">
           <div>
-            {sortedRows.length > 0
-              ? `${startIndex + 1}-${Math.min(startIndex + paginatedRows.length, sortedRows.length)} dari ${sortedRows.length}`
+            {totalRows > 0
+              ? `${startIndex + 1}-${startIndex + rows.length} dari ${totalRows}`
               : '0 data'}
           </div>
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+              onClick={() => onPageChange(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
               className={`w-8 h-8 rounded-md border border-slate-300 flex items-center justify-center ${
                 currentPage === 1 ? 'text-slate-400 bg-slate-100' : 'hover:bg-slate-100'
@@ -424,11 +374,10 @@ const VisitorTable = ({
                 <path d="m14 18-6-6 6-6" />
               </svg>
             </button>
-            <span className="px-2">Prev</span>
-            <span className="px-2">Next</span>
+            <span className="px-2">{currentPage} / {totalPages}</span>
             <button
               type="button"
-              onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+              onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
               disabled={currentPage === totalPages}
               className={`w-8 h-8 rounded-md border border-slate-300 flex items-center justify-center ${
                 currentPage === totalPages ? 'text-slate-400 bg-slate-100' : 'hover:bg-slate-100'
@@ -453,30 +402,62 @@ const VisitorPage = () => {
   const [rows, setRows] = useState<VisitorRow[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
+  const deferredSearch = useDeferredValue(search)
+  const [rowsPerPage, setRowsPerPage] = useState(25)
+  const [page, setPage] = useState(1)
+  const [totalRows, setTotalRows] = useState(0)
+  const [sort, setSort] = useState<SortState>({ key: 'company', direction: 'asc' })
   const [deleteIds, setDeleteIds] = useState<(string | number)[] | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
-  const [tableNonce, setTableNonce] = useState(0)
-
-  const loadData = async (targetSegment: VisitorSegment) => {
-    setLoading(true)
-    setError(null)
-    try {
-      const data = await fetchVisitors(targetSegment, 0)
-      setRows(data)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Gagal memuat data visitor')
-      setGlobalMessage({ type: 'error', text: err instanceof Error ? err.message : 'Gagal memuat data visitor' })
-      setRows([])
-    } finally {
-      setLoading(false)
-    }
-  }
+  const [reloadNonce, setReloadNonce] = useState(0)
 
   useEffect(() => {
-    if (mode === 'table') {
-      loadData(segment)
+    if (mode !== 'table') return
+
+    let cancelled = false
+
+    const loadData = async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const data = await fetchVisitorPage(segment, {
+          page,
+          pageSize: rowsPerPage,
+          q: deferredSearch,
+          sortKey: sort?.key ?? 'company',
+          sortDirection: sort?.direction ?? 'asc',
+        })
+
+        if (cancelled) return
+
+        setRows(data.rows)
+        setTotalRows(data.pagination.total)
+
+        if (data.pagination.total === 0 && page !== 1) {
+          setPage(1)
+        } else if (page > data.pagination.totalPages) {
+          setPage(data.pagination.totalPages)
+        }
+      } catch (err) {
+        if (cancelled) return
+        setError(err instanceof Error ? err.message : 'Gagal memuat data visitor')
+        setGlobalMessage({ type: 'error', text: err instanceof Error ? err.message : 'Gagal memuat data visitor' })
+        setRows([])
+        setTotalRows(0)
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
     }
-  }, [segment, mode])
+
+    void loadData()
+
+    return () => {
+      cancelled = true
+    }
+  }, [segment, mode, page, rowsPerPage, deferredSearch, sort, reloadNonce, setGlobalMessage])
 
   if (mode === 'cards') {
     return (
@@ -484,6 +465,8 @@ const VisitorPage = () => {
         variant="visitor"
         onInput={(targetSegment) => {
           setSegment(targetSegment as VisitorSegment)
+          setSearch('')
+          setPage(1)
           setMode('table')
         }}
       />
@@ -493,16 +476,43 @@ const VisitorPage = () => {
   return (
     <>
       <VisitorTable
-        key={tableNonce}
         segment={segment}
         rows={rows}
         loading={loading}
         error={error ?? deleteError}
-        onReload={() => loadData(segment)}
+        search={search}
+        rowsPerPage={rowsPerPage}
+        page={page}
+        totalRows={totalRows}
+        sort={sort}
+        onSearchChange={(value) => {
+          setSearch(value)
+          setPage(1)
+        }}
+        onRowsPerPageChange={(value) => {
+          setRowsPerPage(value)
+          setPage(1)
+        }}
+        onPageChange={setPage}
+        onReload={() => setReloadNonce((prev) => prev + 1)}
+        onSortChange={(key) => {
+          setSort((prev) => {
+            if (!prev || prev.key !== key) return { key, direction: 'asc' }
+            return { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' }
+          })
+          setPage(1)
+        }}
         onSegmentChange={(next) => {
           setSegment(next)
+          setPage(1)
         }}
-        onBack={() => setMode('cards')}
+        onBack={() => {
+          setMode('cards')
+          setSearch('')
+          setPage(1)
+          setError(null)
+          setDeleteError(null)
+        }}
         onAdd={(row, id) => {
           setAddDataDraft({ row, id, returnPage: 'visitor' })
           setActivePage('addData')
@@ -536,8 +546,8 @@ const VisitorPage = () => {
                     setDeleteError(null)
                     await deleteAddData(deleteIds)
                     setDeleteIds(null)
-                    loadData(segment)
-                    setTableNonce((n) => n + 1)
+                    setPage(1)
+                    setReloadNonce((prev) => prev + 1)
                     setGlobalMessage({ type: 'success', text: 'Data berhasil dihapus' })
                   } catch (err) {
                     setDeleteError(err instanceof Error ? err.message : 'Gagal menghapus data')

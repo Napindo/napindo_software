@@ -1015,21 +1015,97 @@ export async function exportSearchExcel(req: Request, res: Response) {
 export async function listGabungBySegment(req: Request, res: Response) {
   try {
     const segment = req.params.segment as SegmentCode;
-    const limitInput = Number(req.query.limit ?? 200);
-    const limit = Number.isFinite(limitInput) ? Math.floor(limitInput) : 200;
-    const take = limit > 0 ? limit : undefined;
-
     const personParam = String(req.query.person || "exhibitor").toLowerCase();
     const person = personParam === "visitor" ? "visitor" : "exhibitor";
+    const hasPagedQuery =
+      typeof req.query.page !== "undefined" ||
+      typeof req.query.pageSize !== "undefined" ||
+      typeof req.query.q !== "undefined" ||
+      typeof req.query.sortKey !== "undefined" ||
+      typeof req.query.sortDirection !== "undefined";
 
-    const where = buildSegmentWhere(segment, person);
+    const baseWhere = buildSegmentWhere(segment, person);
 
-    const items = await prisma.gabung.findMany({
-      where,
-      take,
-    });
+    if (!hasPagedQuery) {
+      const limitInput = Number(req.query.limit ?? 200);
+      const limit = Number.isFinite(limitInput) ? Math.floor(limitInput) : 200;
+      const take = limit > 0 ? limit : undefined;
+      const items = await prisma.gabung.findMany({
+        where: baseWhere,
+        take,
+      });
 
-    return res.json(ok({ items, segment, limit: take ? limit : 0, person }));
+      return res.json(ok({ items, segment, limit: take ? limit : 0, person }));
+    }
+
+    const pageNum = Math.max(Number(req.query.page) || 1, 1);
+    const sizeNum = Math.min(Math.max(Number(req.query.pageSize) || 25, 1), 200);
+    const skip = (pageNum - 1) * sizeNum;
+    const query = String(req.query.q || "").trim();
+    const sortKey = String(req.query.sortKey || "company").trim().toLowerCase();
+    const sortDirection =
+      String(req.query.sortDirection || "asc").trim().toLowerCase() === "desc"
+        ? "desc"
+        : "asc";
+
+    const where: any = { ...baseWhere };
+    if (query) {
+      where.AND = [
+        ...(where.AND ?? []),
+        {
+          OR: [
+            { company: { contains: query, mode: "insensitive" } },
+            { name: { contains: query, mode: "insensitive" } },
+            { position: { contains: query, mode: "insensitive" } },
+            { email: { contains: query, mode: "insensitive" } },
+            { city: { contains: query, mode: "insensitive" } },
+            { phone: { contains: query, mode: "insensitive" } },
+            { handphone: { contains: query, mode: "insensitive" } },
+          ],
+        },
+      ];
+    }
+
+    const orderBy = (() => {
+      switch (sortKey) {
+        case "pic":
+          return [{ name: sortDirection }, { company: "asc" as const }];
+        case "position":
+          return [{ position: sortDirection }, { company: "asc" as const }];
+        case "city":
+          return [{ city: sortDirection }, { company: "asc" as const }];
+        case "updatedat":
+          return [{ lastupdate: sortDirection }, { company: "asc" as const }];
+        case "company":
+        default:
+          return [{ company: sortDirection }, { nourut: "asc" as const }];
+      }
+    })();
+
+    const [items, total] = await Promise.all([
+      prisma.gabung.findMany({
+        where,
+        orderBy,
+        skip,
+        take: sizeNum,
+        select: FULL_GABUNG_SELECT,
+      }),
+      prisma.gabung.count({ where }),
+    ]);
+
+    return res.json(
+      ok({
+        items,
+        segment,
+        person,
+        pagination: {
+          page: pageNum,
+          pageSize: sizeNum,
+          total,
+          totalPages: Math.max(1, Math.ceil(total / sizeNum)),
+        },
+      }),
+    );
   } catch (err: any) {
     return res.status(500).json(fail(err.message || String(err)));
   }

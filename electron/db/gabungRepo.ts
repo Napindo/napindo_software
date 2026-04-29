@@ -36,6 +36,41 @@ export async function fetchExhibitorsBySegment(
   return (data.items ?? data.rows ?? data ?? []) as Gabung[]
 }
 
+export async function listGabungSegmentRecords(
+  segment: string,
+  params?: {
+    page?: number
+    pageSize?: number
+    q?: string
+    sortKey?: string
+    sortDirection?: 'asc' | 'desc'
+    person?: PersonType
+  },
+) {
+  const page = params?.page ?? 1
+  const pageSize = params?.pageSize ?? 25
+  const person = params?.person ?? 'exhibitor'
+  const query = new URLSearchParams({
+    page: String(page),
+    pageSize: String(pageSize),
+    person,
+  })
+
+  if (params?.q?.trim()) query.set('q', params.q.trim())
+  if (params?.sortKey?.trim()) query.set('sortKey', params.sortKey.trim())
+  if (params?.sortDirection?.trim()) query.set('sortDirection', params.sortDirection.trim())
+
+  const { body } = await apiFetch(
+    `/gabung/segment/${encodeURIComponent(segment)}?${query.toString()}`,
+  )
+
+  if (!isResponseOk(body)) {
+    throw new Error(extractErrorMessage(body.message, 'Gagal memuat data segment'))
+  }
+
+  return pickData(body) ?? body
+}
+
 export async function fetchExhibitorCountByExpo() {
   const { body } = await apiFetch('/gabung/exhibitor-count')
   if (!isResponseOk(body)) {

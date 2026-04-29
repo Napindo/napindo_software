@@ -153,6 +153,43 @@ const GABUNG_FIELDS = [
 ];
 
 const SEARCH_EXPORT_FIELDS = ["nourut", ...GABUNG_FIELDS];
+const FULL_GABUNG_SELECT = Object.freeze(
+  ["nourut", ...GABUNG_FIELDS].reduce<Record<string, boolean>>((acc, field) => {
+    acc[field] = true;
+    return acc;
+  }, {}),
+);
+const SEARCH_GABUNG_SELECT = Object.freeze({
+  nourut: true,
+  ptCv: true,
+  company: true,
+  address1: true,
+  address2: true,
+  city: true,
+  zip: true,
+  propince: true,
+  code: true,
+  phone: true,
+  facsimile: true,
+  handphone: true,
+  sex: true,
+  name: true,
+  position: true,
+  email: true,
+  website: true,
+  mainActiv: true,
+  business: true,
+  source: true,
+  forum: true,
+  exhthn: true,
+  code1: true,
+  code2: true,
+  code3: true,
+  code4: true,
+  namauser: true,
+  lastupdate: true,
+  tglJamEdit: true,
+});
 
 const prettyFieldName = (field: string) =>
   field
@@ -365,8 +402,8 @@ export async function listGabung(req: Request, res: Response) {
     const hp = String(req.query.hp || "").trim();
     const city = String(req.query.city || "").trim();
 
-    const pageNum = Number(page) || 1;
-    const sizeNum = Number(pageSize) || 50;
+    const pageNum = Math.max(Number(page) || 1, 1);
+    const sizeNum = Math.min(Math.max(Number(pageSize) || 50, 1), 200);
     const skip = (pageNum - 1) * sizeNum;
     const take = sizeNum;
 
@@ -410,30 +447,7 @@ export async function listGabung(req: Request, res: Response) {
       ];
     }
 
-    const select =
-      fields === "search"
-        ? {
-            nourut: true,
-            ptCv: true,
-            company: true,
-            address1: true,
-            address2: true,
-            city: true,
-            zip: true,
-            propince: true,
-            code: true,
-            phone: true,
-            handphone: true,
-            email: true,
-            name: true,
-            position: true,
-            business: true,
-            source: true,
-            namauser: true,
-            lastupdate: true,
-            tglJamEdit: true,
-          }
-        : undefined;
+    const select = fields === "search" ? SEARCH_GABUNG_SELECT : FULL_GABUNG_SELECT;
 
     const [items, total] = await Promise.all([
       prisma.gabung.findMany({

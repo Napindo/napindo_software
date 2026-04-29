@@ -216,7 +216,139 @@ const rightFields: FieldName[] = [
   'tidakDikirim',
 ]
 
-  const defaultForm = (): AddDataForm => ({
+const dataSearchPreferredColumns = [
+  'nourut',
+  'ptCv',
+  'company',
+  'address1',
+  'address2',
+  'city',
+  'zip',
+  'propince',
+  'code',
+  'phone',
+  'facsimile',
+  'handphone',
+  'sex',
+  'name',
+  'position',
+  'email',
+  'website',
+  'mainActiv',
+  'business',
+  'source',
+  'lastupdate',
+  'forum',
+  'exhthn',
+  'code1',
+  'code2',
+  'code3',
+  'code4',
+  'welcoming',
+  'offlunch',
+  'society',
+  'demo1',
+  'demo2',
+  'demo3',
+  'seminar1',
+  'seminar2',
+  'seminar3',
+  'seminar4',
+  'courtesycall',
+  'courtesyvisit',
+  'visitcall',
+  'tpp1',
+  'tpp2',
+  'tpp3',
+  'tpp4',
+  'tdkkrmidd',
+  'tdkkrmidwjkt',
+  'tdkkrmidwsby',
+  'tdkkrmidljkt',
+  'tdkkrmidlsby',
+  'gover',
+  'visdefence',
+  'visaero',
+  'vismarine',
+  'viswater',
+  'viswaste',
+  'vissmart',
+  'visenergy',
+  'vissecure',
+  'visfire',
+  'vislives',
+  'visagritech',
+  'visfish',
+  'visindovet',
+  'visfeed',
+  'visdairy',
+  'vishorti',
+  'exhdefence',
+  'exhaero',
+  'exhmarine',
+  'exhwater',
+  'exhwaste',
+  'exhsmart',
+  'exhenergy',
+  'exhsecure',
+  'exhfire',
+  'exhlives',
+  'exhagritech',
+  'exhfish',
+  'exhindovet',
+  'exhfeed',
+  'exhdairy',
+  'exhhorti',
+  'vvip',
+  'vid',
+  'vipaero',
+  'vipmarine',
+  'viw',
+  'viwaste',
+  'vipiismex',
+  'vipidre',
+  'vis',
+  'vifire',
+  'vil',
+  'vipagri',
+  'vifish',
+  'vipindovet',
+  'vifeed',
+  'vidairy',
+  'vihorti',
+  'ocd',
+  'ocaero',
+  'ocmarine',
+  'ocwjkt',
+  'ocwsby',
+  'ocwaste',
+  'ocsmart',
+  'ocenergy',
+  'ocs',
+  'ocfire',
+  'ocljkt',
+  'oclsby',
+  'ocagri',
+  'ocfish',
+  'ocindovet',
+  'ocfeed',
+  'ocdairy',
+  'ochorti',
+  'ptrd',
+  'ptraero',
+  'ptrmarine',
+  'ptrw',
+  'ptrs',
+  'ptrl',
+  'kalender',
+  'lebaran',
+  'parcel',
+  'tahunbaru',
+  'namauser',
+  'tglJamEdit',
+]
+
+const defaultForm = (): AddDataForm => ({
   typeOfBusiness: '',
   company: '',
   address1: '',
@@ -305,7 +437,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
     null,
   )
   const [dataSearchPage, setDataSearchPage] = useState(1)
-  const [dataSearchPageSize, setDataSearchPageSize] = useState(100)
+  const [dataSearchPageSize, setDataSearchPageSize] = useState(50)
   const [dataSearchTotal, setDataSearchTotal] = useState(0)
   const [dataSearchFilters, setDataSearchFilters] = useState({
     hp: '',
@@ -588,27 +720,6 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
   }, [companyLookup.rows])
 
   const dataSearchColumns = useMemo(() => {
-    const preferred = [
-      'nourut',
-      'ptCv',
-      'company',
-      'address1',
-      'address2',
-      'city',
-      'zip',
-      'propince',
-      'code',
-      'phone',
-      'handphone',
-      'email',
-      'name',
-      'position',
-      'business',
-      'source',
-      'namauser',
-      'lastupdate',
-      'tglJamEdit',
-    ]
     const seen = new Set<string>()
     const columns: string[] = []
     const push = (key: string) => {
@@ -618,7 +729,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
       columns.push(key)
     }
 
-    preferred.forEach(push)
+    dataSearchPreferredColumns.forEach(push)
     dataSearchRows.forEach((row) => {
       Object.keys(row || {}).forEach(push)
     })
@@ -892,7 +1003,6 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
         page,
         pageSize,
         q: query,
-        fields: 'search',
         filters: {
           hp: filters.hp,
           company: filters.company,
@@ -2486,7 +2596,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
                   Reset Filter
                 </button>
                 <span className="text-xs text-slate-500">
-                  Menampilkan {filteredDataSearchRows.length} dari {dataSearchRows.length} baris (page {dataSearchPage}).
+                  Menampilkan {filteredDataSearchRows.length} dari {dataSearchRows.length} baris pada page {dataSearchPage}. Semua kolom tabel GABUNG dimuat per halaman agar bisa diedit seperti F3 di software lama.
                 </span>
               </div>
             </div>
@@ -2511,7 +2621,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
 
             <div className="px-3 sm:px-6 py-4 overflow-auto max-h-[55vh]">
               <div className="w-full overflow-x-auto">
-                <div className="min-w-[900px] sm:min-w-[1100px]">
+                <div className="min-w-[1800px]">
                 <table className="min-w-full text-xs border border-slate-200 rounded-lg overflow-hidden">
                   <thead className="bg-slate-50">
                     <tr>
@@ -2618,7 +2728,7 @@ const AddDataPage = ({ variant, onBack, initialRow = null, initialId = null, hea
                     }}
                     className="ml-2 rounded-md border border-slate-200 px-2 py-1 text-xs"
                   >
-                    {[50, 100, 200, 500].map((size) => (
+                    {[25, 50, 100, 200].map((size) => (
                       <option key={size} value={size}>
                         {size}
                       </option>

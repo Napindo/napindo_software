@@ -1069,23 +1069,23 @@ export async function listGabungBySegment(req: Request, res: Response) {
     const orderBy = (() => {
       switch (sortKey) {
         case "pic":
-          return [{ name: sortDirection }, { company: "asc" as const }];
+          return [{ name: sortDirection }, { company: "asc" }];
         case "position":
-          return [{ position: sortDirection }, { company: "asc" as const }];
+          return [{ position: sortDirection }, { company: "asc" }];
         case "city":
-          return [{ city: sortDirection }, { company: "asc" as const }];
+          return [{ city: sortDirection }, { company: "asc" }];
         case "updatedat":
-          return [{ lastupdate: sortDirection }, { company: "asc" as const }];
+          return [{ lastupdate: sortDirection }, { company: "asc" }];
         case "company":
         default:
-          return [{ company: sortDirection }, { nourut: "asc" as const }];
+          return [{ company: sortDirection }, { nourut: "asc" }];
       }
     })();
 
     const [items, total] = await Promise.all([
       prisma.gabung.findMany({
         where,
-        orderBy,
+        orderBy: orderBy as any,
         skip,
         take: sizeNum,
         select: FULL_GABUNG_SELECT,

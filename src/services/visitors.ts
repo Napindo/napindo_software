@@ -1,5 +1,5 @@
-﻿import type { ExhibitorSegment } from "./exhibitors"
-import { fetchExhibitors } from "./exhibitors"
+import type { ExhibitorSegment, SegmentPageParams, SegmentPageResult } from "./exhibitors"
+import { fetchExhibitorPage, fetchExhibitors } from "./exhibitors"
 
 export type VisitorSegment = ExhibitorSegment
 
@@ -17,9 +17,6 @@ export interface VisitorRow {
   raw: Record<string, any>
 }
 
-/**
- * Deteksi tipe visitor berdasarkan flag kolom di GABUNG, termasuk VIP per segment.
- */
 function detectVisitorType(raw: Record<string, any>, segment?: ExhibitorSegment): string {
   const lowerKeys = Object.keys(raw).map((k) => k.toLowerCase())
 
@@ -87,9 +84,6 @@ function detectVisitorType(raw: Record<string, any>, segment?: ExhibitorSegment)
   return "Business Visitor"
 }
 
-/**
- * Konversi ExhibitorRow menjadi VisitorRow dengan tipe terdeteksi.
- */
 function mapExhibitorToVisitor(ex: {
   id: number | string
   company: string
@@ -121,16 +115,24 @@ function mapExhibitorToVisitor(ex: {
   }
 }
 
-/**
- * Ambil data visitor berdasarkan segment (defence, water, dsb)
- * dengan memanfaatkan service exhibitor yang sudah ada.
- */
 export async function fetchVisitors(
   segment: ExhibitorSegment,
   limit = 0,
 ): Promise<VisitorRow[]> {
   const exhibitors = await fetchExhibitors(segment, limit, "visitor")
   return exhibitors.map((row) => mapExhibitorToVisitor({ ...row, segment }))
+}
+
+export async function fetchVisitorPage(
+  segment: ExhibitorSegment,
+  params?: Omit<SegmentPageParams, "person">,
+): Promise<SegmentPageResult<VisitorRow>> {
+  const exhibitors = await fetchExhibitorPage(segment, { ...params, person: "visitor" })
+
+  return {
+    rows: exhibitors.rows.map((row) => mapExhibitorToVisitor({ ...row, segment })),
+    pagination: exhibitors.pagination,
+  }
 }
 
 export async function getVisitorsBySegment(
@@ -142,5 +144,6 @@ export async function getVisitorsBySegment(
 
 export default {
   fetchVisitors,
+  fetchVisitorPage,
   getVisitorsBySegment,
 }
